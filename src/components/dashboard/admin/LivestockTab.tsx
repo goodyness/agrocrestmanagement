@@ -1,0 +1,103 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus } from "lucide-react";
+import AddLivestockDialog from "./dialogs/AddLivestockDialog";
+import AddCensusDialog from "./dialogs/AddCensusDialog";
+
+const LivestockTab = () => {
+  const [categories, setCategories] = useState<any[]>([]);
+  const [census, setCensus] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    const { data: categoriesData } = await supabase
+      .from("livestock_categories")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    const { data: censusData } = await supabase
+      .from("livestock_census")
+      .select("*, livestock_categories(name)")
+      .order("created_at", { ascending: false });
+
+    setCategories(categoriesData || []);
+    setCensus(censusData || []);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Livestock Management</h2>
+          <p className="text-muted-foreground">Manage livestock categories and census</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Livestock Categories</CardTitle>
+                <CardDescription>Define types of livestock</CardDescription>
+              </div>
+              <AddLivestockDialog onSuccess={fetchData} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {categories.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No categories added yet</p>
+              ) : (
+                categories.map((category) => (
+                  <div key={category.id} className="p-3 bg-muted/50 rounded-lg">
+                    <p className="font-medium text-foreground">{category.name}</p>
+                    {category.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{category.description}</p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Livestock Census</CardTitle>
+                <CardDescription>Track livestock counts</CardDescription>
+              </div>
+              <AddCensusDialog categories={categories} onSuccess={fetchData} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {census.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No census records yet</p>
+              ) : (
+                census.map((record) => (
+                  <div key={record.id} className="p-3 bg-muted/50 rounded-lg">
+                    <p className="font-medium text-foreground">{record.livestock_categories?.name}</p>
+                    <div className="flex justify-between text-sm text-muted-foreground mt-1">
+                      <span>Initial: {record.total_count}</span>
+                      <span className="font-medium text-foreground">Current: {record.updated_count}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default LivestockTab;
