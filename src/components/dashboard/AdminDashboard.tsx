@@ -27,55 +27,57 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card sticky top-0 z-10 shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Sprout className="h-6 w-6 text-primary" />
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <header className="border-b border-border/40 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 sticky top-0 z-10 shadow-sm">
+        <div className="container mx-auto px-4 lg:px-6 py-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg">
+                <Sprout className="h-7 w-7 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-foreground">Agrocrest Farm</h1>
+                <p className="text-sm text-muted-foreground">Admin Dashboard</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Agrocrest Farm</h1>
-              <p className="text-sm text-muted-foreground">Admin Dashboard</p>
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+              <div className="text-right flex-1 sm:flex-initial">
+                <p className="text-sm font-medium text-foreground truncate">{user?.email}</p>
+                <p className="text-xs text-muted-foreground">Administrator</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </Button>
             </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-medium text-foreground">{user?.email}</p>
-              <p className="text-xs text-muted-foreground">Administrator</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 lg:px-6 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 h-auto p-1">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
+          <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6 gap-2 h-auto p-1 bg-muted/50">
+            <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="livestock" className="flex items-center gap-2">
+            <TabsTrigger value="livestock" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Sprout className="h-4 w-4" />
               <span className="hidden sm:inline">Livestock</span>
             </TabsTrigger>
-            <TabsTrigger value="feed" className="flex items-center gap-2">
+            <TabsTrigger value="feed" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">Feed</span>
             </TabsTrigger>
-            <TabsTrigger value="production" className="flex items-center gap-2">
+            <TabsTrigger value="production" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <TrendingUp className="h-4 w-4" />
               <span className="hidden sm:inline">Production</span>
             </TabsTrigger>
-            <TabsTrigger value="sales" className="flex items-center gap-2">
+            <TabsTrigger value="sales" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <DollarSign className="h-4 w-4" />
               <span className="hidden sm:inline">Sales</span>
             </TabsTrigger>
-            <TabsTrigger value="expenses" className="flex items-center gap-2">
+            <TabsTrigger value="expenses" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <DollarSign className="h-4 w-4" />
               <span className="hidden sm:inline">Expenses</span>
             </TabsTrigger>
