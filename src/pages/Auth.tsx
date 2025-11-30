@@ -40,6 +40,16 @@ const Auth = () => {
     const password = formData.get("signup-password") as string;
     const role = formData.get("role") as string;
 
+    // Check if trying to create admin account
+    if (role === 'admin') {
+      const { data: adminCheck } = await supabase.rpc('admin_exists');
+      if (adminCheck) {
+        toast.error("An admin account already exists. Only one admin is allowed.");
+        setLoading(false);
+        return;
+      }
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,

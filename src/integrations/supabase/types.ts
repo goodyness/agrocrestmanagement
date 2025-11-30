@@ -52,6 +52,61 @@ export type Database = {
           },
         ]
       }
+      feed_consumption: {
+        Row: {
+          created_at: string | null
+          date: string
+          feed_type_id: string
+          id: string
+          livestock_category_id: string
+          quantity_used: number
+          recorded_by: string
+          unit: string
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string
+          feed_type_id: string
+          id?: string
+          livestock_category_id: string
+          quantity_used: number
+          recorded_by: string
+          unit: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          feed_type_id?: string
+          id?: string
+          livestock_category_id?: string
+          quantity_used?: number
+          recorded_by?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_consumption_feed_type_id_fkey"
+            columns: ["feed_type_id"]
+            isOneToOne: false
+            referencedRelation: "feed_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_consumption_livestock_category_id_fkey"
+            columns: ["livestock_category_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_consumption_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_inventory: {
         Row: {
           feed_type_id: string
@@ -329,6 +384,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_exists: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
