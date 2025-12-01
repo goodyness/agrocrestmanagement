@@ -1,10 +1,11 @@
 import { User } from "@supabase/supabase-js";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LogOut, Sprout, Plus, TrendingUp, AlertCircle, Package } from "lucide-react";
+import { LogOut, Sprout, Plus, TrendingUp, AlertCircle, Package, UserCircle } from "lucide-react";
 import { toast } from "sonner";
 import AddMortalityDialog from "./worker/AddMortalityDialog";
 import AddProductionDialog from "./worker/AddProductionDialog";
@@ -16,6 +17,7 @@ interface WorkerDashboardProps {
 }
 
 const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
+  const navigate = useNavigate();
   const [todayProduction, setTodayProduction] = useState({ crates: 0, pieces: 0 });
   const [todayMortality, setTodayMortality] = useState(0);
   const [todaySales, setTodaySales] = useState(0);
@@ -131,6 +133,10 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
                 <p className="text-sm font-medium text-foreground truncate">{user?.email}</p>
                 <p className="text-xs text-muted-foreground">Worker</p>
               </div>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/profile")}>
+                <UserCircle className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Profile</span>
+              </Button>
               <Button variant="outline" size="sm" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Sign Out</span>
