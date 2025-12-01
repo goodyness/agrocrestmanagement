@@ -25,20 +25,49 @@ const AddFeedInventoryDialog = ({ feedTypes, onSuccess }: AddFeedInventoryDialog
     const quantity_in_stock = parseFloat(formData.get("quantity") as string);
     const unit = formData.get("unit") as string;
 
-    const { error } = await supabase.from("feed_inventory").insert({
+    // Get user and feed type details
+    const { data: { user } } = await supabase.auth.getUser();
+    const feedType = feedTypes.find(f => f.id === feed_type_id);
+    
+    if (!user || !feedType) {
+      toast.error("Missing required information");
+      setLoading(false);
+      return;
+    }
+
+    // Calculate total cost
+    const totalCost = quantity_in_stock * feedType.price_per_unit;
+
+    // Insert inventory
+    const { error: inventoryError } = await supabase.from("feed_inventory").insert({
       feed_type_id,
       quantity_in_stock,
       unit,
     });
 
-    if (error) {
+    if (inventoryError) {
       toast.error("Failed to add inventory");
-    } else {
-      toast.success("Inventory added successfully");
-      setOpen(false);
-      onSuccess();
+      setLoading(false);
+      return;
     }
 
+    // Record as expense
+    const { error: expenseError } = await supabase.from("miscellaneous_expenses").insert({
+      expense_type: "Feed Purchase",
+      amount: totalCost,
+      description: `Purchased ${quantity_in_stock} ${unit} of ${feedType.feed_name} @ ₦${feedType.price_per_unit}/${feedType.unit_type}`,
+      created_by: user.id,
+      date: new Date().toISOString().split('T')[0],
+    });
+
+    if (expenseError) {
+      toast.error("Inventory added but failed to record expense");
+    } else {
+      toast.success("Inventory and expense recorded successfully");
+    }
+
+    setOpen(false);
+    onSuccess();
     setLoading(false);
   };
 
