@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import AddFeedTypeDialog from "./dialogs/AddFeedTypeDialog";
 import AddFeedInventoryDialog from "./dialogs/AddFeedInventoryDialog";
+import EditFeedTypeDialog from "./dialogs/EditFeedTypeDialog";
 
 const FeedTab = () => {
   const [feedTypes, setFeedTypes] = useState<any[]>([]);
@@ -52,14 +53,15 @@ const FeedTab = () => {
               ) : (
                 feedTypes.map((type) => (
                   <div key={type.id} className="p-3 bg-muted/50 rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div>
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1">
                         <p className="font-medium text-foreground">{type.feed_name}</p>
                         <p className="text-sm text-muted-foreground">Unit: {type.unit_type}</p>
+                        <p className="text-sm font-medium text-primary mt-1">
+                          ₦{Number(type.price_per_unit).toLocaleString()}/{type.unit_type}
+                        </p>
                       </div>
-                      <p className="text-sm font-medium text-primary">
-                        ₦{Number(type.price_per_unit).toLocaleString()}/{type.unit_type}
-                      </p>
+                      <EditFeedTypeDialog feedType={type} onSuccess={fetchData} />
                     </div>
                   </div>
                 ))
