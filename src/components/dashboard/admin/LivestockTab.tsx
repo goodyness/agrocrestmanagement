@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus } from "lucide-react";
 import AddLivestockDialog from "./dialogs/AddLivestockDialog";
 import AddCensusDialog from "./dialogs/AddCensusDialog";
+import EditCensusDialog from "./dialogs/EditCensusDialog";
 
 const LivestockTab = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -84,10 +83,22 @@ const LivestockTab = () => {
               ) : (
                 census.map((record) => (
                   <div key={record.id} className="p-3 bg-muted/50 rounded-lg">
-                    <p className="font-medium text-foreground">{record.livestock_categories?.name}</p>
-                    <div className="flex justify-between text-sm text-muted-foreground mt-1">
-                      <span>Initial: {record.total_count}</span>
-                      <span className="font-medium text-foreground">Current: {record.updated_count}</span>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-foreground">{record.livestock_categories?.name}</p>
+                        <div className="flex gap-4 text-sm text-muted-foreground mt-1">
+                          <span>Initial: {record.total_count}</span>
+                          <span className={`font-medium ${record.updated_count < record.total_count ? 'text-destructive' : 'text-foreground'}`}>
+                            Current: {record.updated_count}
+                          </span>
+                        </div>
+                        {record.updated_count < record.total_count && (
+                          <p className="text-xs text-destructive mt-1">
+                            -{record.total_count - record.updated_count} from mortality
+                          </p>
+                        )}
+                      </div>
+                      <EditCensusDialog census={record} onSuccess={fetchData} />
                     </div>
                   </div>
                 ))
