@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +21,8 @@ const handler = async (req: Request): Promise<Response> => {
     const gmailPassword = Deno.env.get("GMAIL_APP_PASSWORD")!;
     const receiverEmail = Deno.env.get("GMAIL_RECEIVER")!;
 
+    console.log("Starting email summary generation...");
+
     const today = new Date();
     const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000);
     const dateRangeStart = threeDaysAgo.toISOString().split('T')[0];
@@ -32,7 +35,7 @@ const handler = async (req: Request): Promise<Response> => {
       .gte("date", dateRangeStart)
       .lte("date", dateRangeEnd);
 
-    const totalSales = sales?.reduce((acc, s) => acc + Number(s.total_amount), 0) || 0;
+    const totalSales = sales?.reduce((acc: number, s: any) => acc + Number(s.total_amount), 0) || 0;
     const salesCount = sales?.length || 0;
 
     // Fetch production data
@@ -42,8 +45,8 @@ const handler = async (req: Request): Promise<Response> => {
       .gte("date", dateRangeStart)
       .lte("date", dateRangeEnd);
 
-    const totalCrates = production?.reduce((acc, p) => acc + p.crates, 0) || 0;
-    const totalPieces = production?.reduce((acc, p) => acc + p.pieces, 0) || 0;
+    const totalCrates = production?.reduce((acc: number, p: any) => acc + p.crates, 0) || 0;
+    const totalPieces = production?.reduce((acc: number, p: any) => acc + p.pieces, 0) || 0;
 
     // Fetch mortality data
     const { data: mortality } = await supabase
@@ -52,7 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
       .gte("date", dateRangeStart)
       .lte("date", dateRangeEnd);
 
-    const totalMortality = mortality?.reduce((acc, m) => acc + m.quantity_dead, 0) || 0;
+    const totalMortality = mortality?.reduce((acc: number, m: any) => acc + m.quantity_dead, 0) || 0;
 
     // Fetch expenses
     const { data: expenses } = await supabase
@@ -61,7 +64,7 @@ const handler = async (req: Request): Promise<Response> => {
       .gte("date", dateRangeStart)
       .lte("date", dateRangeEnd);
 
-    const totalExpenses = expenses?.reduce((acc, e) => acc + Number(e.amount), 0) || 0;
+    const totalExpenses = expenses?.reduce((acc: number, e: any) => acc + Number(e.amount), 0) || 0;
 
     // Fetch feed consumption
     const { data: feedConsumption } = await supabase
@@ -70,7 +73,7 @@ const handler = async (req: Request): Promise<Response> => {
       .gte("date", dateRangeStart)
       .lte("date", dateRangeEnd);
 
-    const totalFeedCost = feedConsumption?.reduce((acc, f) => {
+    const totalFeedCost = feedConsumption?.reduce((acc: number, f: any) => {
       return acc + (f.quantity_used * (f.feed_types?.price_per_unit || 0));
     }, 0) || 0;
 
@@ -79,11 +82,11 @@ const handler = async (req: Request): Promise<Response> => {
       .from("livestock_census")
       .select("updated_count, livestock_categories(name)");
 
-    const totalLivestock = census?.reduce((acc, c) => acc + c.updated_count, 0) || 0;
+    const totalLivestock = census?.reduce((acc: number, c: any) => acc + c.updated_count, 0) || 0;
 
     // Build email content
     const profit = totalSales - totalExpenses - totalFeedCost;
-    const mortalityDetails = mortality?.map(m => 
+    const mortalityDetails = mortality?.map((m: any) => 
       `  • ${m.livestock_categories?.name}: ${m.quantity_dead} (${m.reason || 'No reason specified'})`
     ).join('\n') || '  No mortality recorded';
 
@@ -130,58 +133,36 @@ Date Generated: ${new Date().toLocaleString()}
 ===============================================
     `.trim();
 
-    // Send email using Gmail SMTP via fetch to smtp2go or similar service
-    // For Gmail SMTP, we'll use a different approach with nodemailer-like syntax
-    const smtpEndpoint = "https://api.smtp2go.com/v3/email/send";
-    
-    // Since Gmail SMTP requires nodemailer which isn't available in Deno,
-    // we'll use the simpler approach of encoding and sending via HTTPS
-    const emailData = {
-      sender: gmailUser,
-      to: [receiverEmail],
-      subject: `Agrocrest Farm Summary Report - ${dateRangeStart} to ${dateRangeEnd}`,
-      text_body: emailBody,
-    };
+    console.log("Sending email via Gmail SMTP...");
 
-    // Using Gmail via built-in Deno SMTP
-    const encoder = new TextEncoder();
-    const credentials = btoa(`${gmailUser}:${gmailPassword}`);
-    
-    // Connect to Gmail SMTP
-    const conn = await Deno.connectTls({
-      hostname: "smtp.gmail.com",
-      port: 465,
+    // Create SMTP client
+    const client = new SMTPClient({
+      connection: {
+        hostname: "smtp.gmail.com",
+        port: 465,
+        tls: true,
+        auth: {
+          username: gmailUser,
+          password: gmailPassword,
+        },
+      },
     });
 
-    const write = async (text: string) => {
-      await conn.write(encoder.encode(text + "\r\n"));
-      const buffer = new Uint8Array(1024);
-      await conn.read(buffer);
-      return new TextDecoder().decode(buffer);
-    };
+    await client.send({
+      from: gmailUser,
+      to: receiverEmail,
+      subject: `Agrocrest Farm Summary Report - ${dateRangeStart} to ${dateRangeEnd}`,
+      content: emailBody,
+    });
 
-    await conn.read(new Uint8Array(1024)); // Read greeting
-    await write(`EHLO localhost`);
-    await write(`AUTH LOGIN`);
-    await write(btoa(gmailUser));
-    await write(btoa(gmailPassword));
-    await write(`MAIL FROM:<${gmailUser}>`);
-    await write(`RCPT TO:<${receiverEmail}>`);
-    await write(`DATA`);
-    
-    const message = `From: ${gmailUser}\r\nTo: ${receiverEmail}\r\nSubject: Agrocrest Farm Summary Report - ${dateRangeStart} to ${dateRangeEnd}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${emailBody}`;
-    await write(message);
-    await write(`.`);
-    await write(`QUIT`);
-    
-    conn.close();
+    await client.close();
 
-    console.log("Email sent successfully");
+    console.log("Email sent successfully!");
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Summary email sent",
+        message: "Summary email sent successfully",
         summary: {
           period: { start: dateRangeStart, end: dateRangeEnd },
           sales: totalSales,
