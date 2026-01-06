@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sprout, TrendingUp, AlertCircle, DollarSign, Package } from "lucide-react";
+import FeedAnalyticsWidget from "./FeedAnalyticsWidget";
 
 const OverviewTab = () => {
   const [stats, setStats] = useState({
@@ -199,6 +200,11 @@ const OverviewTab = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-4">Feed Analytics</h3>
+        <FeedAnalyticsWidget />
       </div>
     </div>
   );

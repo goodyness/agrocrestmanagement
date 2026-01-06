@@ -11,6 +11,8 @@ import AddMortalityDialog from "./worker/AddMortalityDialog";
 import AddProductionDialog from "./worker/AddProductionDialog";
 import AddSalesDialog from "./worker/AddSalesDialog";
 import AddFeedConsumptionDialog from "./worker/AddFeedConsumptionDialog";
+import BulkMortalityDialog from "./worker/BulkMortalityDialog";
+import BulkProductionDialog from "./worker/BulkProductionDialog";
 
 interface WorkerDashboardProps {
   user: User | null;
@@ -156,12 +158,16 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
             </CardTitle>
             <CardDescription>Record daily farm activities</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <AddProductionDialog onSuccess={fetchDashboardData} />
               <AddMortalityDialog onSuccess={fetchDashboardData} />
               <AddSalesDialog onSuccess={fetchDashboardData} />
               <AddFeedConsumptionDialog user={user!} onSuccess={fetchDashboardData} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <BulkProductionDialog onSuccess={fetchDashboardData} />
+              <BulkMortalityDialog onSuccess={fetchDashboardData} />
             </div>
           </CardContent>
         </Card>
