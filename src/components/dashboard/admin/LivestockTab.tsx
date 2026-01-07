@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import AddLivestockDialog from "./dialogs/AddLivestockDialog";
 import AddCensusDialog from "./dialogs/AddCensusDialog";
 import EditCensusDialog from "./dialogs/EditCensusDialog";
+import EditLivestockCategoryDialog from "./dialogs/EditLivestockCategoryDialog";
 
 const LivestockTab = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -55,10 +56,15 @@ const LivestockTab = () => {
               ) : (
                 categories.map((category) => (
                   <div key={category.id} className="p-3 bg-muted/50 rounded-lg">
-                    <p className="font-medium text-foreground">{category.name}</p>
-                    {category.description && (
-                      <p className="text-sm text-muted-foreground mt-1">{category.description}</p>
-                    )}
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-foreground">{category.name}</p>
+                        {category.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{category.description}</p>
+                        )}
+                      </div>
+                      <EditLivestockCategoryDialog category={category} onSuccess={fetchData} />
+                    </div>
                   </div>
                 ))
               )}

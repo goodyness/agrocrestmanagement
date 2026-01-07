@@ -177,6 +177,60 @@ export type Database = {
           },
         ]
       }
+      feed_purchases: {
+        Row: {
+          created_at: string
+          date: string
+          feed_type_id: string
+          id: string
+          notes: string | null
+          price_per_unit: number
+          purchased_by: string
+          quantity: number
+          total_cost: number
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          feed_type_id: string
+          id?: string
+          notes?: string | null
+          price_per_unit: number
+          purchased_by: string
+          quantity: number
+          total_cost: number
+          unit: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          feed_type_id?: string
+          id?: string
+          notes?: string | null
+          price_per_unit?: number
+          purchased_by?: string
+          quantity?: number
+          total_cost?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_purchases_feed_type_id_fkey"
+            columns: ["feed_type_id"]
+            isOneToOne: false
+            referencedRelation: "feed_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_purchases_purchased_by_fkey"
+            columns: ["purchased_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_types: {
         Row: {
           created_at: string | null
@@ -253,6 +307,47 @@ export type Database = {
             columns: ["livestock_category_id"]
             isOneToOne: false
             referencedRelation: "livestock_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      low_stock_alerts: {
+        Row: {
+          created_at: string
+          feed_type_id: string
+          id: string
+          is_active: boolean
+          last_alert_sent: string | null
+          threshold_quantity: number
+          threshold_unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          feed_type_id: string
+          id?: string
+          is_active?: boolean
+          last_alert_sent?: string | null
+          threshold_quantity?: number
+          threshold_unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          feed_type_id?: string
+          id?: string
+          is_active?: boolean
+          last_alert_sent?: string | null
+          threshold_quantity?: number
+          threshold_unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "low_stock_alerts_feed_type_id_fkey"
+            columns: ["feed_type_id"]
+            isOneToOne: false
+            referencedRelation: "feed_types"
             referencedColumns: ["id"]
           },
         ]
