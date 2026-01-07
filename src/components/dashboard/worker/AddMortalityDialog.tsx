@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLogger";
 
 interface AddMortalityDialogProps {
   onSuccess: () => void;
@@ -56,6 +57,14 @@ const AddMortalityDialog = ({ onSuccess }: AddMortalityDialogProps) => {
     if (error) {
       toast.error("Failed to add mortality record");
     } else {
+      const categoryName = categories.find(c => c.id === livestock_category_id)?.name || 'Unknown';
+      
+      await logActivity("create", "mortality", undefined, {
+        category: categoryName,
+        quantity_dead,
+        reason: reason || null,
+      });
+      
       toast.success("Mortality recorded successfully");
       setOpen(false);
       onSuccess();

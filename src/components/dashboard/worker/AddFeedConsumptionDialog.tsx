@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { User } from "@supabase/supabase-js";
 import { PackageOpen } from "lucide-react";
+import { logActivity } from "@/lib/activityLogger";
 
 interface AddFeedConsumptionDialogProps {
   user: User;
@@ -64,6 +65,16 @@ const AddFeedConsumptionDialog = ({ user, onSuccess }: AddFeedConsumptionDialogP
       toast.error("Failed to record feed consumption");
       console.error(error);
     } else {
+      const feedName = feedTypes.find(f => f.id === formData.feed_type_id)?.feed_name || 'Unknown';
+      const livestockName = livestockCategories.find(l => l.id === formData.livestock_category_id)?.name || 'Unknown';
+      
+      await logActivity("create", "feed_consumption", undefined, {
+        feed_type: feedName,
+        livestock: livestockName,
+        quantity: `${formData.quantity_used} ${formData.unit}`,
+        date: formData.date,
+      });
+      
       toast.success("Feed consumption recorded successfully");
       setOpen(false);
       setFormData({

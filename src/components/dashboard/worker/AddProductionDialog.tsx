@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TrendingUp } from "lucide-react";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLogger";
 
 interface AddProductionDialogProps {
   onSuccess: () => void;
@@ -44,6 +45,13 @@ const AddProductionDialog = ({ onSuccess }: AddProductionDialogProps) => {
     if (error) {
       toast.error("Failed to add production record");
     } else {
+      await logActivity("create", "daily_production", undefined, {
+        crates,
+        pieces,
+        total_eggs: (crates * 30) + pieces,
+        comment: comment || null,
+      });
+      
       toast.success("Production recorded successfully");
       setOpen(false);
       onSuccess();

@@ -2,7 +2,7 @@ import { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle } from "lucide-react";
+import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,6 +15,7 @@ import ExpensesTab from "./admin/ExpensesTab";
 import ActivityTab from "./admin/ActivityTab";
 import ReportsTab from "./admin/ReportsTab";
 import UsersTab from "./admin/UsersTab";
+import CostPerBirdAnalytics from "./admin/CostPerBirdAnalytics";
 
 interface AdminDashboardProps {
   user: User | null;
@@ -65,7 +66,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
       <main className="container mx-auto px-4 lg:px-6 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="w-full grid grid-cols-5 sm:grid-cols-9 gap-2 h-auto p-1 bg-muted/50 overflow-x-auto">
+          <TabsList className="w-full grid grid-cols-5 sm:grid-cols-10 gap-2 h-auto p-1 bg-muted/50 overflow-x-auto">
             <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -77,6 +78,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
             <TabsTrigger value="feed" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">Feed</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Calculator className="h-4 w-4" />
+              <span className="hidden sm:inline">Analytics</span>
             </TabsTrigger>
             <TabsTrigger value="production" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <TrendingUp className="h-4 w-4" />
@@ -114,6 +119,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="feed" className="space-y-4">
             <FeedTab />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-4">
+            <CostPerBirdAnalytics />
           </TabsContent>
 
           <TabsContent value="production" className="space-y-4">

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLogger";
 
 interface AddSalesDialogProps {
   onSuccess: () => void;
@@ -59,6 +60,14 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
     if (error) {
       toast.error("Failed to add sales record");
     } else {
+      await logActivity("create", "sales", undefined, {
+        product_name,
+        product_type,
+        quantity: `${quantity} ${unit}`,
+        total_amount: quantity * price_per_unit,
+        buyer: buyer_name || 'Unknown',
+      });
+      
       toast.success("Sale recorded successfully");
       setOpen(false);
       onSuccess();
