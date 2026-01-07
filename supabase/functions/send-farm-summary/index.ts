@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import nodemailer from "https://esm.sh/nodemailer@6.9.10";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -290,20 +290,27 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending email via Gmail SMTP...");
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: gmailUser,
-        pass: gmailPassword,
+    const client = new SMTPClient({
+      connection: {
+        hostname: "smtp.gmail.com",
+        port: 465,
+        tls: true,
+        auth: {
+          username: gmailUser,
+          password: gmailPassword,
+        },
       },
     });
 
-    await transporter.sendMail({
-      from: `"Agrocrest Farm" <${gmailUser}>`,
+    await client.send({
+      from: gmailUser,
       to: receiverEmail,
       subject: `🌾 Agrocrest Farm Summary Report - ${dateRangeStart} to ${dateRangeEnd}`,
+      content: "Please view this email in HTML format.",
       html: htmlEmail,
     });
+
+    await client.close();
 
     console.log("Email sent successfully!");
 
