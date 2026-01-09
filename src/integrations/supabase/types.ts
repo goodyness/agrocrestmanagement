@@ -52,6 +52,63 @@ export type Database = {
           },
         ]
       }
+      cleaning_records: {
+        Row: {
+          cleaning_date: string
+          completed_at: string
+          completed_by: string
+          created_at: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          cleaning_date: string
+          completed_at?: string
+          completed_by: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          cleaning_date?: string
+          completed_at?: string
+          completed_by?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
+      cleaning_schedules: {
+        Row: {
+          created_at: string
+          id: string
+          interval_days: number
+          is_active: boolean
+          start_date: string
+          tasks: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interval_days?: number
+          is_active?: boolean
+          start_date?: string
+          tasks?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interval_days?: number
+          is_active?: boolean
+          start_date?: string
+          tasks?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_production: {
         Row: {
           comment: string | null

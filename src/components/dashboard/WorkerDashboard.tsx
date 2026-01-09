@@ -13,6 +13,9 @@ import AddSalesDialog from "./worker/AddSalesDialog";
 import AddFeedConsumptionDialog from "./worker/AddFeedConsumptionDialog";
 import BulkMortalityDialog from "./worker/BulkMortalityDialog";
 import BulkProductionDialog from "./worker/BulkProductionDialog";
+import CleaningReminderPopup from "./worker/CleaningReminderPopup";
+import CleaningStatusCard from "./worker/CleaningStatusCard";
+import { useCleaningSchedule } from "@/hooks/useCleaningSchedule";
 
 interface WorkerDashboardProps {
   user: User | null;
@@ -20,6 +23,7 @@ interface WorkerDashboardProps {
 
 const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
   const navigate = useNavigate();
+  const cleaningSchedule = useCleaningSchedule();
   const [todayProduction, setTodayProduction] = useState({ crates: 0, pieces: 0 });
   const [todayMortality, setTodayMortality] = useState(0);
   const [todaySales, setTodaySales] = useState(0);
@@ -147,6 +151,14 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
           </div>
         </div>
       </header>
+      <CleaningReminderPopup
+        isCleaningDay={cleaningSchedule.isCleaningDay}
+        isReminderDay={cleaningSchedule.isReminderDay}
+        isCleaningCompleted={cleaningSchedule.isCleaningCompleted}
+        tasks={cleaningSchedule.tasks}
+        nextCleaningDate={cleaningSchedule.nextCleaningDate}
+        onMarkComplete={cleaningSchedule.markCleaningComplete}
+      />
 
       <main className="container mx-auto px-4 lg:px-6 py-6 space-y-6">
         {/* Quick Actions */}
@@ -173,7 +185,15 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
         </Card>
 
         {/* Today's Summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <CleaningStatusCard
+            nextCleaningDate={cleaningSchedule.nextCleaningDate}
+            daysUntilCleaning={cleaningSchedule.daysUntilCleaning}
+            isCleaningDay={cleaningSchedule.isCleaningDay}
+            isCleaningCompleted={cleaningSchedule.isCleaningCompleted}
+            tasks={cleaningSchedule.tasks}
+            onMarkComplete={cleaningSchedule.markCleaningComplete}
+          />
           <Card className="border-l-4 border-l-primary shadow-md hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
