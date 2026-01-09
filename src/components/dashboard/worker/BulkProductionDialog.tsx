@@ -108,7 +108,7 @@ const BulkProductionDialog = ({ onSuccess }: BulkProductionDialogProps) => {
                   </Button>
                 )}
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Date</Label>
                   <Input
@@ -117,6 +117,7 @@ const BulkProductionDialog = ({ onSuccess }: BulkProductionDialogProps) => {
                     onChange={(e) => updateEntry(entry.id, "date", e.target.value)}
                     max={today}
                     required
+                    className="w-full"
                   />
                 </div>
                 <div className="space-y-1">
@@ -126,6 +127,8 @@ const BulkProductionDialog = ({ onSuccess }: BulkProductionDialogProps) => {
                     min="0"
                     value={entry.crates || ""}
                     onChange={(e) => updateEntry(entry.id, "crates", parseInt(e.target.value) || 0)}
+                    placeholder="0"
+                    className="w-full"
                   />
                 </div>
                 <div className="space-y-1">
@@ -135,6 +138,8 @@ const BulkProductionDialog = ({ onSuccess }: BulkProductionDialogProps) => {
                     min="0"
                     value={entry.pieces || ""}
                     onChange={(e) => updateEntry(entry.id, "pieces", parseInt(e.target.value) || 0)}
+                    placeholder="0"
+                    className="w-full"
                   />
                 </div>
               </div>

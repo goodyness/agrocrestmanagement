@@ -5,6 +5,7 @@ import AddLivestockDialog from "./dialogs/AddLivestockDialog";
 import AddCensusDialog from "./dialogs/AddCensusDialog";
 import EditCensusDialog from "./dialogs/EditCensusDialog";
 import EditLivestockCategoryDialog from "./dialogs/EditLivestockCategoryDialog";
+import DeleteCensusDialog from "./dialogs/DeleteCensusDialog";
 
 const LivestockTab = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -100,11 +101,14 @@ const LivestockTab = () => {
                         </div>
                         {record.updated_count < record.total_count && (
                           <p className="text-xs text-destructive mt-1">
-                            -{record.total_count - record.updated_count} from mortality
+                            -{record.total_count - record.updated_count} from mortality/sold
                           </p>
                         )}
                       </div>
-                      <EditCensusDialog census={record} onSuccess={fetchData} />
+                      <div className="flex items-center gap-1">
+                        <EditCensusDialog census={record} onSuccess={fetchData} />
+                        <DeleteCensusDialog census={record} onSuccess={fetchData} />
+                      </div>
                     </div>
                   </div>
                 ))
