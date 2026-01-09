@@ -569,6 +569,133 @@ export type Database = {
           },
         ]
       }
+      vaccination_records: {
+        Row: {
+          administered_by: string
+          administered_date: string
+          created_at: string | null
+          id: string
+          livestock_category_id: string
+          next_due_date: string
+          notes: string | null
+          vaccination_type_id: string
+        }
+        Insert: {
+          administered_by: string
+          administered_date?: string
+          created_at?: string | null
+          id?: string
+          livestock_category_id: string
+          next_due_date: string
+          notes?: string | null
+          vaccination_type_id: string
+        }
+        Update: {
+          administered_by?: string
+          administered_date?: string
+          created_at?: string | null
+          id?: string
+          livestock_category_id?: string
+          next_due_date?: string
+          notes?: string | null
+          vaccination_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaccination_records_administered_by_fkey"
+            columns: ["administered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccination_records_livestock_category_id_fkey"
+            columns: ["livestock_category_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccination_records_vaccination_type_id_fkey"
+            columns: ["vaccination_type_id"]
+            isOneToOne: false
+            referencedRelation: "vaccination_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vaccination_schedules: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean
+          last_reminder_sent: string | null
+          livestock_category_id: string
+          start_date: string
+          updated_at: string | null
+          vaccination_type_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_reminder_sent?: string | null
+          livestock_category_id: string
+          start_date?: string
+          updated_at?: string | null
+          vaccination_type_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_reminder_sent?: string | null
+          livestock_category_id?: string
+          start_date?: string
+          updated_at?: string | null
+          vaccination_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaccination_schedules_livestock_category_id_fkey"
+            columns: ["livestock_category_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccination_schedules_vaccination_type_id_fkey"
+            columns: ["vaccination_type_id"]
+            isOneToOne: false
+            referencedRelation: "vaccination_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vaccination_types: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          interval_weeks: number
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          interval_weeks?: number
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          interval_weeks?: number
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
