@@ -2,7 +2,7 @@ import { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Settings } from "lucide-react";
+import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +18,8 @@ import UsersTab from "./admin/UsersTab";
 import CostPerBirdAnalytics from "./admin/CostPerBirdAnalytics";
 import VaccinationTab from "./admin/VaccinationTab";
 import CleaningScheduleDialog from "./admin/dialogs/CleaningScheduleDialog";
+import { HealthDashboard } from "./admin/HealthDashboard";
+import { NotesTab } from "./admin/NotesTab";
 
 interface AdminDashboardProps {
   user: User | null;
@@ -72,7 +74,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
             <div className="flex justify-end">
               <CleaningScheduleDialog onSuccess={() => {}} />
             </div>
-            <TabsList className="w-full grid grid-cols-6 sm:grid-cols-11 gap-2 h-auto p-1 bg-muted/50 overflow-x-auto">
+            <TabsList className="w-full flex flex-wrap gap-2 h-auto p-1 bg-muted/50">
               <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden sm:inline">Overview</span>
@@ -80,6 +82,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
               <TabsTrigger value="livestock" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Sprout className="h-4 w-4" />
                 <span className="hidden sm:inline">Livestock</span>
+              </TabsTrigger>
+              <TabsTrigger value="health" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Heart className="h-4 w-4" />
+                <span className="hidden sm:inline">Health</span>
               </TabsTrigger>
               <TabsTrigger value="vaccination" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Syringe className="h-4 w-4" />
@@ -105,6 +111,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
                 <DollarSign className="h-4 w-4" />
                 <span className="hidden sm:inline">Expenses</span>
               </TabsTrigger>
+              <TabsTrigger value="notes" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <StickyNote className="h-4 w-4" />
+                <span className="hidden sm:inline">Notes</span>
+              </TabsTrigger>
               <TabsTrigger value="users" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <UsersIcon className="h-4 w-4" />
                 <span className="hidden sm:inline">Users</span>
@@ -126,6 +136,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="livestock" className="space-y-4">
             <LivestockTab />
+          </TabsContent>
+
+          <TabsContent value="health" className="space-y-4">
+            <HealthDashboard />
           </TabsContent>
 
           <TabsContent value="vaccination" className="space-y-4">
@@ -154,6 +168,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="users" className="space-y-4">
             <UsersTab />
+          </TabsContent>
+
+          <TabsContent value="notes" className="space-y-4">
+            <NotesTab />
           </TabsContent>
 
           <TabsContent value="activity" className="space-y-4">
