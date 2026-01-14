@@ -17,6 +17,7 @@ export type Database = {
       activity_logs: {
         Row: {
           action: string
+          branch_id: string | null
           created_at: string | null
           details: Json | null
           entity_id: string | null
@@ -26,6 +27,7 @@ export type Database = {
         }
         Insert: {
           action: string
+          branch_id?: string | null
           created_at?: string | null
           details?: Json | null
           entity_id?: string | null
@@ -35,6 +37,7 @@ export type Database = {
         }
         Update: {
           action?: string
+          branch_id?: string | null
           created_at?: string | null
           details?: Json | null
           entity_id?: string | null
@@ -43,6 +46,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "activity_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "activity_logs_user_id_fkey"
             columns: ["user_id"]
@@ -54,33 +64,72 @@ export type Database = {
       }
       admin_notes: {
         Row: {
+          branch_id: string | null
           content: string
           created_at: string
           created_by: string
           id: string
+          image_url: string | null
           title: string
           updated_at: string
         }
         Insert: {
+          branch_id?: string | null
           content: string
           created_at?: string
           created_by: string
           id?: string
+          image_url?: string | null
           title: string
           updated_at?: string
         }
         Update: {
+          branch_id?: string | null
           content?: string
           created_at?: string
           created_by?: string
           id?: string
+          image_url?: string | null
           title?: string
           updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branches: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          location: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          name?: string
         }
         Relationships: []
       }
       cleaning_records: {
         Row: {
+          branch_id: string | null
           cleaning_date: string
           completed_at: string
           completed_by: string
@@ -89,6 +138,7 @@ export type Database = {
           notes: string | null
         }
         Insert: {
+          branch_id?: string | null
           cleaning_date: string
           completed_at?: string
           completed_by: string
@@ -97,6 +147,7 @@ export type Database = {
           notes?: string | null
         }
         Update: {
+          branch_id?: string | null
           cleaning_date?: string
           completed_at?: string
           completed_by?: string
@@ -104,10 +155,19 @@ export type Database = {
           id?: string
           notes?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cleaning_records_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cleaning_schedules: {
         Row: {
+          branch_id: string | null
           created_at: string
           id: string
           interval_days: number
@@ -117,6 +177,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           id?: string
           interval_days?: number
@@ -126,6 +187,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           id?: string
           interval_days?: number
@@ -134,10 +196,19 @@ export type Database = {
           tasks?: string[] | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cleaning_schedules_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_production: {
         Row: {
+          branch_id: string | null
           comment: string | null
           crates: number
           created_at: string | null
@@ -147,6 +218,7 @@ export type Database = {
           recorded_by: string
         }
         Insert: {
+          branch_id?: string | null
           comment?: string | null
           crates?: number
           created_at?: string | null
@@ -156,6 +228,7 @@ export type Database = {
           recorded_by: string
         }
         Update: {
+          branch_id?: string | null
           comment?: string | null
           crates?: number
           created_at?: string | null
@@ -165,6 +238,13 @@ export type Database = {
           recorded_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "daily_production_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "daily_production_recorded_by_fkey"
             columns: ["recorded_by"]
@@ -176,6 +256,7 @@ export type Database = {
       }
       feed_consumption: {
         Row: {
+          branch_id: string | null
           created_at: string | null
           date: string
           feed_type_id: string
@@ -186,6 +267,7 @@ export type Database = {
           unit: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string | null
           date?: string
           feed_type_id: string
@@ -196,6 +278,7 @@ export type Database = {
           unit: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string | null
           date?: string
           feed_type_id?: string
@@ -206,6 +289,13 @@ export type Database = {
           unit?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "feed_consumption_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "feed_consumption_feed_type_id_fkey"
             columns: ["feed_type_id"]
@@ -231,6 +321,7 @@ export type Database = {
       }
       feed_inventory: {
         Row: {
+          branch_id: string | null
           feed_type_id: string
           id: string
           quantity_in_stock: number
@@ -238,6 +329,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          branch_id?: string | null
           feed_type_id: string
           id?: string
           quantity_in_stock?: number
@@ -245,6 +337,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          branch_id?: string | null
           feed_type_id?: string
           id?: string
           quantity_in_stock?: number
@@ -252,6 +345,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "feed_inventory_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "feed_inventory_feed_type_id_fkey"
             columns: ["feed_type_id"]
@@ -263,6 +363,7 @@ export type Database = {
       }
       feed_purchases: {
         Row: {
+          branch_id: string | null
           created_at: string
           date: string
           feed_type_id: string
@@ -275,6 +376,7 @@ export type Database = {
           unit: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           date?: string
           feed_type_id: string
@@ -287,6 +389,7 @@ export type Database = {
           unit: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           date?: string
           feed_type_id?: string
@@ -299,6 +402,13 @@ export type Database = {
           unit?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "feed_purchases_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "feed_purchases_feed_type_id_fkey"
             columns: ["feed_type_id"]
@@ -317,6 +427,7 @@ export type Database = {
       }
       feed_types: {
         Row: {
+          branch_id: string | null
           created_at: string | null
           feed_name: string
           id: string
@@ -324,6 +435,7 @@ export type Database = {
           unit_type: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string | null
           feed_name: string
           id?: string
@@ -331,37 +443,58 @@ export type Database = {
           unit_type: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string | null
           feed_name?: string
           id?: string
           price_per_unit?: number
           unit_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "feed_types_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       livestock_categories: {
         Row: {
+          branch_id: string | null
           created_at: string | null
           description: string | null
           id: string
           name: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           name: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "livestock_categories_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       livestock_census: {
         Row: {
+          branch_id: string | null
           created_at: string | null
           id: string
           livestock_category_id: string
@@ -370,6 +503,7 @@ export type Database = {
           updated_count: number
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string | null
           id?: string
           livestock_category_id: string
@@ -378,6 +512,7 @@ export type Database = {
           updated_count?: number
         }
         Update: {
+          branch_id?: string | null
           created_at?: string | null
           id?: string
           livestock_category_id?: string
@@ -386,6 +521,13 @@ export type Database = {
           updated_count?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "livestock_census_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "livestock_census_livestock_category_id_fkey"
             columns: ["livestock_category_id"]
@@ -397,6 +539,7 @@ export type Database = {
       }
       low_stock_alerts: {
         Row: {
+          branch_id: string | null
           created_at: string
           feed_type_id: string
           id: string
@@ -407,6 +550,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           feed_type_id: string
           id?: string
@@ -417,6 +561,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           feed_type_id?: string
           id?: string
@@ -427,6 +572,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "low_stock_alerts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "low_stock_alerts_feed_type_id_fkey"
             columns: ["feed_type_id"]
@@ -439,6 +591,7 @@ export type Database = {
       miscellaneous_expenses: {
         Row: {
           amount: number
+          branch_id: string | null
           created_at: string | null
           created_by: string
           date: string
@@ -448,6 +601,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          branch_id?: string | null
           created_at?: string | null
           created_by: string
           date?: string
@@ -457,6 +611,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          branch_id?: string | null
           created_at?: string | null
           created_by?: string
           date?: string
@@ -465,6 +620,13 @@ export type Database = {
           id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "miscellaneous_expenses_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "miscellaneous_expenses_created_by_fkey"
             columns: ["created_by"]
@@ -476,6 +638,7 @@ export type Database = {
       }
       mortality_records: {
         Row: {
+          branch_id: string | null
           created_at: string | null
           date: string
           id: string
@@ -485,6 +648,7 @@ export type Database = {
           recorded_by: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string | null
           date?: string
           id?: string
@@ -494,6 +658,7 @@ export type Database = {
           recorded_by: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string | null
           date?: string
           id?: string
@@ -503,6 +668,13 @@ export type Database = {
           recorded_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "mortality_records_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "mortality_records_livestock_category_id_fkey"
             columns: ["livestock_category_id"]
@@ -521,6 +693,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          branch_id: string | null
           created_at: string | null
           id: string
           name: string
@@ -529,6 +702,7 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string | null
           id: string
           name: string
@@ -537,6 +711,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
         }
         Update: {
+          branch_id?: string | null
           created_at?: string | null
           id?: string
           name?: string
@@ -544,10 +719,19 @@ export type Database = {
           profile_photo?: string | null
           role?: Database["public"]["Enums"]["app_role"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sales_records: {
         Row: {
+          branch_id: string | null
           buyer_name: string | null
           created_at: string | null
           date: string
@@ -561,6 +745,7 @@ export type Database = {
           unit: string
         }
         Insert: {
+          branch_id?: string | null
           buyer_name?: string | null
           created_at?: string | null
           date?: string
@@ -574,6 +759,7 @@ export type Database = {
           unit: string
         }
         Update: {
+          branch_id?: string | null
           buyer_name?: string | null
           created_at?: string | null
           date?: string
@@ -588,6 +774,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "sales_records_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sales_records_recorded_by_fkey"
             columns: ["recorded_by"]
             isOneToOne: false
@@ -600,6 +793,7 @@ export type Database = {
         Row: {
           administered_by: string
           administered_date: string
+          branch_id: string | null
           created_at: string | null
           id: string
           livestock_category_id: string
@@ -610,6 +804,7 @@ export type Database = {
         Insert: {
           administered_by: string
           administered_date?: string
+          branch_id?: string | null
           created_at?: string | null
           id?: string
           livestock_category_id: string
@@ -620,6 +815,7 @@ export type Database = {
         Update: {
           administered_by?: string
           administered_date?: string
+          branch_id?: string | null
           created_at?: string | null
           id?: string
           livestock_category_id?: string
@@ -633,6 +829,13 @@ export type Database = {
             columns: ["administered_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccination_records_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
             referencedColumns: ["id"]
           },
           {
@@ -653,6 +856,7 @@ export type Database = {
       }
       vaccination_schedules: {
         Row: {
+          branch_id: string | null
           created_at: string | null
           id: string
           is_active: boolean
@@ -663,6 +867,7 @@ export type Database = {
           vaccination_type_id: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean
@@ -673,6 +878,7 @@ export type Database = {
           vaccination_type_id: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean
@@ -683,6 +889,13 @@ export type Database = {
           vaccination_type_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "vaccination_schedules_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vaccination_schedules_livestock_category_id_fkey"
             columns: ["livestock_category_id"]
@@ -701,6 +914,7 @@ export type Database = {
       }
       vaccination_types: {
         Row: {
+          branch_id: string | null
           created_at: string | null
           description: string | null
           id: string
@@ -708,6 +922,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -715,13 +930,22 @@ export type Database = {
           name: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           interval_weeks?: number
           name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vaccination_types_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
