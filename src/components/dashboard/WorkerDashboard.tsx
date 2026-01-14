@@ -2,6 +2,7 @@ import { User } from "@supabase/supabase-js";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,6 +17,7 @@ import BulkProductionDialog from "./worker/BulkProductionDialog";
 import CleaningReminderPopup from "./worker/CleaningReminderPopup";
 import CleaningStatusCard from "./worker/CleaningStatusCard";
 import { useCleaningSchedule } from "@/hooks/useCleaningSchedule";
+import { BranchSelectionPrompt } from "./worker/BranchSelectionPrompt";
 
 interface WorkerDashboardProps {
   user: User | null;
@@ -32,6 +34,21 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
   const [recentProduction, setRecentProduction] = useState<any[]>([]);
   const [recentSales, setRecentSales] = useState<any[]>([]);
 
+  // Fetch user's branch assignment
+  const { data: userProfile } = useQuery({
+    queryKey: ["user-profile", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("branch_id")
+        .eq("id", user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -151,6 +168,12 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
           </div>
         </div>
       </header>
+      
+      {/* Branch Selection Prompt for workers without branch */}
+      {user && userProfile !== undefined && (
+        <BranchSelectionPrompt userId={user.id} userBranchId={userProfile?.branch_id || null} />
+      )}
+      
       <CleaningReminderPopup
         isCleaningDay={cleaningSchedule.isCleaningDay}
         isReminderDay={cleaningSchedule.isReminderDay}

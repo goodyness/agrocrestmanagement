@@ -20,6 +20,9 @@ import VaccinationTab from "./admin/VaccinationTab";
 import CleaningScheduleDialog from "./admin/dialogs/CleaningScheduleDialog";
 import { HealthDashboard } from "./admin/HealthDashboard";
 import { NotesTab } from "./admin/NotesTab";
+import { BranchSelector } from "./BranchSelector";
+import { useBranch } from "@/contexts/BranchContext";
+import { WorkerBranchAssignment } from "./admin/WorkerBranchAssignment";
 
 interface AdminDashboardProps {
   user: User | null;
@@ -28,6 +31,7 @@ interface AdminDashboardProps {
 const AdminDashboard = ({ user }: AdminDashboardProps) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
+  const { currentBranch } = useBranch();
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -47,9 +51,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">Agrocrest Farm</h1>
-                <p className="text-sm text-muted-foreground">Admin Dashboard</p>
+                <p className="text-sm text-muted-foreground">Admin Dashboard - {currentBranch?.name || "All Branches"}</p>
               </div>
             </div>
+            <BranchSelector />
             <div className="flex items-center gap-4 w-full sm:w-auto">
               <div className="text-right flex-1 sm:flex-initial">
                 <p className="text-sm font-medium text-foreground truncate">{user?.email}</p>
@@ -168,6 +173,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="users" className="space-y-4">
             <UsersTab />
+            <WorkerBranchAssignment />
           </TabsContent>
 
           <TabsContent value="notes" className="space-y-4">

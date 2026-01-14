@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBranch } from "@/contexts/BranchContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { format, subDays, differenceInDays } from "date-fns";
 import {
   LineChart,
@@ -18,15 +20,19 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Activity, AlertTriangle, Calendar, TrendingDown, Syringe, Utensils } from "lucide-react";
+import { Activity, AlertTriangle, Calendar, TrendingDown, Syringe, Utensils, FileDown } from "lucide-react";
+import { generateHealthReportPdf } from "@/lib/healthReportPdf";
+import { toast } from "sonner";
 
 export function HealthDashboard() {
+  const { currentBranchId, currentBranch } = useBranch();
+
   // Fetch mortality records
   const { data: mortalityData } = useQuery({
-    queryKey: ["mortality-trends"],
+    queryKey: ["mortality-trends", currentBranchId],
     queryFn: async () => {
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString().split("T")[0];
-      const { data, error } = await supabase
+      let query = supabase
         .from("mortality_records")
         .select(`
           *,
@@ -34,6 +40,12 @@ export function HealthDashboard() {
         `)
         .gte("date", thirtyDaysAgo)
         .order("date", { ascending: true });
+      
+      if (currentBranchId) {
+        query = query.eq("branch_id", currentBranchId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -41,9 +53,9 @@ export function HealthDashboard() {
 
   // Fetch vaccination records and schedules
   const { data: vaccinationData } = useQuery({
-    queryKey: ["vaccination-health"],
+    queryKey: ["vaccination-health", currentBranchId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("vaccination_records")
         .select(`
           *,
@@ -52,6 +64,12 @@ export function HealthDashboard() {
         `)
         .order("administered_date", { ascending: false })
         .limit(50);
+      
+      if (currentBranchId) {
+        query = query.eq("branch_id", currentBranchId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -59,11 +77,11 @@ export function HealthDashboard() {
 
   // Fetch upcoming vaccinations
   const { data: upcomingVaccinations } = useQuery({
-    queryKey: ["upcoming-vaccinations"],
+    queryKey: ["upcoming-vaccinations", currentBranchId],
     queryFn: async () => {
       const today = new Date().toISOString().split("T")[0];
       const nextWeek = subDays(new Date(), -7).toISOString().split("T")[0];
-      const { data, error } = await supabase
+      let query = supabase
         .from("vaccination_records")
         .select(`
           *,
@@ -73,6 +91,12 @@ export function HealthDashboard() {
         .gte("next_due_date", today)
         .lte("next_due_date", nextWeek)
         .order("next_due_date", { ascending: true });
+      
+      if (currentBranchId) {
+        query = query.eq("branch_id", currentBranchId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -80,10 +104,10 @@ export function HealthDashboard() {
 
   // Fetch feed consumption data
   const { data: feedData } = useQuery({
-    queryKey: ["feed-health"],
+    queryKey: ["feed-health", currentBranchId],
     queryFn: async () => {
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString().split("T")[0];
-      const { data, error } = await supabase
+      let query = supabase
         .from("feed_consumption")
         .select(`
           *,
@@ -92,6 +116,12 @@ export function HealthDashboard() {
         `)
         .gte("date", thirtyDaysAgo)
         .order("date", { ascending: true });
+      
+      if (currentBranchId) {
+        query = query.eq("branch_id", currentBranchId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -99,14 +129,20 @@ export function HealthDashboard() {
 
   // Fetch livestock census for context
   const { data: censusData } = useQuery({
-    queryKey: ["census-health"],
+    queryKey: ["census-health", currentBranchId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("livestock_census")
         .select(`
           *,
           livestock_categories (name)
         `);
+      
+      if (currentBranchId) {
+        query = query.eq("branch_id", currentBranchId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -163,8 +199,33 @@ export function HealthDashboard() {
 
   const COLORS = ["hsl(var(--primary))", "hsl(var(--destructive))", "hsl(var(--warning))", "hsl(var(--secondary))", "hsl(var(--accent))"];
 
+  const handleExportPdf = () => {
+    try {
+      generateHealthReportPdf({
+        branchName: currentBranch?.name || "All Branches",
+        mortalityRecords: mortalityData || [],
+        vaccinationRecords: vaccinationData || [],
+        feedConsumption: feedData || [],
+        censusData: censusData || [],
+        reportDate: new Date(),
+      });
+      toast.success("Health report PDF generated successfully!");
+    } catch (error: any) {
+      toast.error("Failed to generate PDF: " + error.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Header with Export Button */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Health Dashboard</h2>
+        <Button onClick={handleExportPdf} variant="outline">
+          <FileDown className="h-4 w-4 mr-2" />
+          Export Weekly Report (PDF)
+        </Button>
+      </div>
+
       {/* Health Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
