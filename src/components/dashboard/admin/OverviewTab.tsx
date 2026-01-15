@@ -3,8 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sprout, TrendingUp, AlertCircle, DollarSign, Package } from "lucide-react";
 import FeedAnalyticsWidget from "./FeedAnalyticsWidget";
+import { useBranch } from "@/contexts/BranchContext";
 
 const OverviewTab = () => {
+  const { currentBranchId } = useBranch();
   const [stats, setStats] = useState({
     totalLivestock: 0,
     todayProduction: 0,
@@ -19,58 +21,52 @@ const OverviewTab = () => {
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [currentBranchId]);
 
   const fetchStats = async () => {
     const today = new Date().toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     // Total livestock
-    const { data: livestock } = await supabase
-      .from("livestock_census")
-      .select("updated_count");
+    let livestockQuery = supabase.from("livestock_census").select("updated_count");
+    if (currentBranchId) livestockQuery = livestockQuery.eq("branch_id", currentBranchId);
+    const { data: livestock } = await livestockQuery;
     const totalLivestock = livestock?.reduce((acc, curr) => acc + curr.updated_count, 0) || 0;
 
     // Today's production
-    const { data: production } = await supabase
-      .from("daily_production")
-      .select("crates")
-      .eq("date", today);
+    let productionQuery = supabase.from("daily_production").select("crates").eq("date", today);
+    if (currentBranchId) productionQuery = productionQuery.eq("branch_id", currentBranchId);
+    const { data: production } = await productionQuery;
     const todayProduction = production?.reduce((acc, curr) => acc + curr.crates, 0) || 0;
 
     // Today's mortality
-    const { data: mortality } = await supabase
-      .from("mortality_records")
-      .select("quantity_dead")
-      .eq("date", today);
+    let mortalityQuery = supabase.from("mortality_records").select("quantity_dead").eq("date", today);
+    if (currentBranchId) mortalityQuery = mortalityQuery.eq("branch_id", currentBranchId);
+    const { data: mortality } = await mortalityQuery;
     const todayMortality = mortality?.reduce((acc, curr) => acc + curr.quantity_dead, 0) || 0;
 
     // Today's sales
-    const { data: todaySalesData } = await supabase
-      .from("sales_records")
-      .select("total_amount")
-      .eq("date", today);
+    let todaySalesQuery = supabase.from("sales_records").select("total_amount").eq("date", today);
+    if (currentBranchId) todaySalesQuery = todaySalesQuery.eq("branch_id", currentBranchId);
+    const { data: todaySalesData } = await todaySalesQuery;
     const todaySales = todaySalesData?.reduce((acc, curr) => acc + Number(curr.total_amount), 0) || 0;
 
     // Today's expenses
-    const { data: todayExpensesData } = await supabase
-      .from("miscellaneous_expenses")
-      .select("amount")
-      .eq("date", today);
+    let todayExpensesQuery = supabase.from("miscellaneous_expenses").select("amount").eq("date", today);
+    if (currentBranchId) todayExpensesQuery = todayExpensesQuery.eq("branch_id", currentBranchId);
+    const { data: todayExpensesData } = await todayExpensesQuery;
     const todayExpenses = todayExpensesData?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0;
 
     // Week's sales
-    const { data: weekSalesData } = await supabase
-      .from("sales_records")
-      .select("total_amount")
-      .gte("date", weekAgo);
+    let weekSalesQuery = supabase.from("sales_records").select("total_amount").gte("date", weekAgo);
+    if (currentBranchId) weekSalesQuery = weekSalesQuery.eq("branch_id", currentBranchId);
+    const { data: weekSalesData } = await weekSalesQuery;
     const weekSales = weekSalesData?.reduce((acc, curr) => acc + Number(curr.total_amount), 0) || 0;
 
     // Week's expenses
-    const { data: weekExpensesData } = await supabase
-      .from("miscellaneous_expenses")
-      .select("amount")
-      .gte("date", weekAgo);
+    let weekExpensesQuery = supabase.from("miscellaneous_expenses").select("amount").gte("date", weekAgo);
+    if (currentBranchId) weekExpensesQuery = weekExpensesQuery.eq("branch_id", currentBranchId);
+    const { data: weekExpensesData } = await weekExpensesQuery;
     const weekExpenses = weekExpensesData?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0;
 
     setStats({
