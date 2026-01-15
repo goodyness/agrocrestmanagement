@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingDown, DollarSign, Clock, AlertTriangle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface FeedConsumptionData {
   date: string;
@@ -19,6 +20,7 @@ interface FeedStock {
 }
 
 const FeedAnalyticsWidget = () => {
+  const { currentBranchId } = useBranch();
   const [consumptionTrend, setConsumptionTrend] = useState<FeedConsumptionData[]>([]);
   const [feedStock, setFeedStock] = useState<FeedStock[]>([]);
   const [todayCost, setTodayCost] = useState(0);
@@ -26,28 +28,33 @@ const FeedAnalyticsWidget = () => {
 
   useEffect(() => {
     fetchAnalytics();
-  }, []);
+  }, [currentBranchId]);
 
   const fetchAnalytics = async () => {
     const today = new Date();
-    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     // Get feed types with prices
-    const { data: feedTypes } = await supabase.from("feed_types").select("*");
+    let feedTypesQuery = supabase.from("feed_types").select("*");
+    if (currentBranchId) feedTypesQuery = feedTypesQuery.eq("branch_id", currentBranchId);
+    const { data: feedTypes } = await feedTypesQuery;
     const feedTypeMap = new Map(feedTypes?.map(f => [f.id, f]) || []);
 
     // Get consumption data for the last 30 days
-    const { data: consumption } = await supabase
+    let consumptionQuery = supabase
       .from("feed_consumption")
       .select("*")
       .gte("date", monthAgo.toISOString().split('T')[0])
       .order("date", { ascending: true });
+    if (currentBranchId) consumptionQuery = consumptionQuery.eq("branch_id", currentBranchId);
+    const { data: consumption } = await consumptionQuery;
 
     // Get inventory data
-    const { data: inventory } = await supabase
+    let inventoryQuery = supabase
       .from("feed_inventory")
       .select("*, feed_types(feed_name, price_per_unit)");
+    if (currentBranchId) inventoryQuery = inventoryQuery.eq("branch_id", currentBranchId);
+    const { data: inventory } = await inventoryQuery;
 
     // Calculate daily consumption trends
     const dailyData = new Map<string, { totalUsed: number; cost: number }>();

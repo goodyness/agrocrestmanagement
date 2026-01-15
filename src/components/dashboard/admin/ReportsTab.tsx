@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Download, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { useBranch } from "@/contexts/BranchContext";
 import {
   exportProductionReport,
   exportSalesReport,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/exportUtils";
 
 const ReportsTab = () => {
+  const { currentBranchId } = useBranch();
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState({
     startDate: "",
@@ -22,7 +24,7 @@ const ReportsTab = () => {
   const handleExport = async (exportFn: Function, reportName: string) => {
     setLoading(true);
     try {
-      await exportFn(dateRange.startDate || undefined, dateRange.endDate || undefined);
+      await exportFn(dateRange.startDate || undefined, dateRange.endDate || undefined, currentBranchId || undefined);
       toast.success(`${reportName} exported successfully!`);
     } catch (error) {
       toast.error(`Failed to export ${reportName}`);

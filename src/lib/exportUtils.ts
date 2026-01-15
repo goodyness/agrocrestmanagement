@@ -35,14 +35,15 @@ export const exportToCSV = (data: any[], filename: string) => {
   document.body.removeChild(link);
 };
 
-export const exportProductionReport = async (startDate?: string, endDate?: string) => {
-  const query = supabase
+export const exportProductionReport = async (startDate?: string, endDate?: string, branchId?: string) => {
+  let query = supabase
     .from("daily_production")
     .select("*, profiles(name)")
     .order("date", { ascending: false });
 
-  if (startDate) query.gte("date", startDate);
-  if (endDate) query.lte("date", endDate);
+  if (startDate) query = query.gte("date", startDate);
+  if (endDate) query = query.lte("date", endDate);
+  if (branchId) query = query.eq("branch_id", branchId);
 
   const { data, error } = await query;
 
@@ -63,14 +64,15 @@ export const exportProductionReport = async (startDate?: string, endDate?: strin
   exportToCSV(exportData || [], "production_report");
 };
 
-export const exportSalesReport = async (startDate?: string, endDate?: string) => {
-  const query = supabase
+export const exportSalesReport = async (startDate?: string, endDate?: string, branchId?: string) => {
+  let query = supabase
     .from("sales_records")
     .select("*, profiles(name)")
     .order("date", { ascending: false });
 
-  if (startDate) query.gte("date", startDate);
-  if (endDate) query.lte("date", endDate);
+  if (startDate) query = query.gte("date", startDate);
+  if (endDate) query = query.lte("date", endDate);
+  if (branchId) query = query.eq("branch_id", branchId);
 
   const { data, error } = await query;
 
@@ -94,14 +96,15 @@ export const exportSalesReport = async (startDate?: string, endDate?: string) =>
   exportToCSV(exportData || [], "sales_report");
 };
 
-export const exportExpensesReport = async (startDate?: string, endDate?: string) => {
-  const query = supabase
+export const exportExpensesReport = async (startDate?: string, endDate?: string, branchId?: string) => {
+  let query = supabase
     .from("miscellaneous_expenses")
     .select("*, profiles(name)")
     .order("date", { ascending: false });
 
-  if (startDate) query.gte("date", startDate);
-  if (endDate) query.lte("date", endDate);
+  if (startDate) query = query.gte("date", startDate);
+  if (endDate) query = query.lte("date", endDate);
+  if (branchId) query = query.eq("branch_id", branchId);
 
   const { data, error } = await query;
 
@@ -121,11 +124,15 @@ export const exportExpensesReport = async (startDate?: string, endDate?: string)
   exportToCSV(exportData || [], "expenses_report");
 };
 
-export const exportLivestockReport = async () => {
-  const { data, error } = await supabase
+export const exportLivestockReport = async (startDate?: string, endDate?: string, branchId?: string) => {
+  let query = supabase
     .from("livestock_census")
     .select("*, livestock_categories(name)")
     .order("created_at", { ascending: false });
+
+  if (branchId) query = query.eq("branch_id", branchId);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Export error:", error);

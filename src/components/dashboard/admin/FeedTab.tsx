@@ -7,8 +7,10 @@ import AddFeedTypeDialog from "./dialogs/AddFeedTypeDialog";
 import AddFeedPurchaseDialog from "./dialogs/AddFeedPurchaseDialog";
 import EditFeedTypeDialog from "./dialogs/EditFeedTypeDialog";
 import LowStockAlertDialog from "./dialogs/LowStockAlertDialog";
+import { useBranch } from "@/contexts/BranchContext";
 
 const FeedTab = () => {
+  const { currentBranchId } = useBranch();
   const [feedTypes, setFeedTypes] = useState<any[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
@@ -16,29 +18,24 @@ const FeedTab = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentBranchId]);
 
   const fetchData = async () => {
-    const { data: typesData } = await supabase
-      .from("feed_types")
-      .select("*")
-      .order("created_at", { ascending: false });
+    let typesQuery = supabase.from("feed_types").select("*").order("created_at", { ascending: false });
+    if (currentBranchId) typesQuery = typesQuery.eq("branch_id", currentBranchId);
+    const { data: typesData } = await typesQuery;
 
-    const { data: inventoryData } = await supabase
-      .from("feed_inventory")
-      .select("*, feed_types(feed_name, unit_type, price_per_unit)")
-      .order("updated_at", { ascending: false });
+    let inventoryQuery = supabase.from("feed_inventory").select("*, feed_types(feed_name, unit_type, price_per_unit)").order("updated_at", { ascending: false });
+    if (currentBranchId) inventoryQuery = inventoryQuery.eq("branch_id", currentBranchId);
+    const { data: inventoryData } = await inventoryQuery;
 
-    const { data: purchasesData } = await supabase
-      .from("feed_purchases")
-      .select("*, feed_types(feed_name), profiles(name)")
-      .order("created_at", { ascending: false })
-      .limit(10);
+    let purchasesQuery = supabase.from("feed_purchases").select("*, feed_types(feed_name), profiles(name)").order("created_at", { ascending: false }).limit(10);
+    if (currentBranchId) purchasesQuery = purchasesQuery.eq("branch_id", currentBranchId);
+    const { data: purchasesData } = await purchasesQuery;
 
-    const { data: alertsData } = await supabase
-      .from("low_stock_alerts")
-      .select("*, feed_types(feed_name)")
-      .eq("is_active", true);
+    let alertsQuery = supabase.from("low_stock_alerts").select("*, feed_types(feed_name)").eq("is_active", true);
+    if (currentBranchId) alertsQuery = alertsQuery.eq("branch_id", currentBranchId);
+    const { data: alertsData } = await alertsQuery;
 
     setFeedTypes(typesData || []);
     setInventory(inventoryData || []);

@@ -3,34 +3,50 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Syringe, Calendar, AlertTriangle, CheckCircle, Plus } from "lucide-react";
-import { format, addWeeks, differenceInDays, isPast, isFuture } from "date-fns";
+import { Syringe, Calendar, AlertTriangle, CheckCircle, Mail } from "lucide-react";
+import { format, addWeeks, differenceInDays, isPast } from "date-fns";
 import AddVaccinationDialog from "./dialogs/AddVaccinationDialog";
 import AddVaccinationTypeDialog from "./dialogs/AddVaccinationTypeDialog";
 import VaccinationScheduleDialog from "./dialogs/VaccinationScheduleDialog";
+import { useBranch } from "@/contexts/BranchContext";
+import { toast } from "sonner";
 
 const VaccinationTab = () => {
+  const { currentBranchId, currentBranch } = useBranch();
   const [vaccinationTypes, setVaccinationTypes] = useState<any[]>([]);
   const [vaccinationRecords, setVaccinationRecords] = useState<any[]>([]);
   const [schedules, setSchedules] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [upcomingVaccinations, setUpcomingVaccinations] = useState<any[]>([]);
+  const [sendingReminder, setSendingReminder] = useState(false);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentBranchId]);
 
   const fetchData = async () => {
+    let typesQuery = supabase.from("vaccination_types").select("*").order("name");
+    if (currentBranchId) typesQuery = typesQuery.eq("branch_id", currentBranchId);
+
+    let recordsQuery = supabase.from("vaccination_records")
+      .select("*, vaccination_types(name), livestock_categories(name), profiles(name)")
+      .order("administered_date", { ascending: false })
+      .limit(20);
+    if (currentBranchId) recordsQuery = recordsQuery.eq("branch_id", currentBranchId);
+
+    let schedulesQuery = supabase.from("vaccination_schedules")
+      .select("*, vaccination_types(name, interval_weeks), livestock_categories(name)")
+      .eq("is_active", true);
+    if (currentBranchId) schedulesQuery = schedulesQuery.eq("branch_id", currentBranchId);
+
+    let categoriesQuery = supabase.from("livestock_categories").select("*").order("name");
+    if (currentBranchId) categoriesQuery = categoriesQuery.eq("branch_id", currentBranchId);
+
     const [typesRes, recordsRes, schedulesRes, categoriesRes] = await Promise.all([
-      supabase.from("vaccination_types").select("*").order("name"),
-      supabase.from("vaccination_records")
-        .select("*, vaccination_types(name), livestock_categories(name), profiles(name)")
-        .order("administered_date", { ascending: false })
-        .limit(20),
-      supabase.from("vaccination_schedules")
-        .select("*, vaccination_types(name, interval_weeks), livestock_categories(name)")
-        .eq("is_active", true),
-      supabase.from("livestock_categories").select("*").order("name"),
+      typesQuery,
+      recordsQuery,
+      schedulesQuery,
+      categoriesQuery,
     ]);
 
     setVaccinationTypes(typesRes.data || []);
@@ -65,6 +81,29 @@ const VaccinationTab = () => {
     setUpcomingVaccinations(upcoming.sort((a, b) => a.daysUntil - b.daysUntil));
   };
 
+  const sendTestReminder = async () => {
+    setSendingReminder(true);
+    try {
+      const response = await supabase.functions.invoke("send-vaccination-reminder", {
+        body: { 
+          test: true, 
+          branchId: currentBranchId,
+          branchName: currentBranch?.name || "All Branches"
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      toast.success("Test vaccination reminder email sent!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send test email");
+    } finally {
+      setSendingReminder(false);
+    }
+  };
+
   const getStatusBadge = (item: any) => {
     if (item.isOverdue) {
       return <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> Overdue</Badge>;
@@ -83,6 +122,14 @@ const VaccinationTab = () => {
           <p className="text-muted-foreground">Track vaccinations and schedule reminders</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={sendTestReminder}
+            disabled={sendingReminder}
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            {sendingReminder ? "Sending..." : "Send Test Reminder"}
+          </Button>
           <AddVaccinationTypeDialog onSuccess={fetchData} />
           <VaccinationScheduleDialog 
             vaccinationTypes={vaccinationTypes} 

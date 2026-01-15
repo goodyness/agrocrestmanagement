@@ -3,21 +3,29 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { useBranch } from "@/contexts/BranchContext";
 
 const SalesTab = () => {
+  const { currentBranchId } = useBranch();
   const [sales, setSales] = useState<any[]>([]);
   const [totalSales, setTotalSales] = useState(0);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentBranchId]);
 
   const fetchData = async () => {
-    const { data } = await supabase
+    let query = supabase
       .from("sales_records")
       .select("*, profiles(name)")
       .order("date", { ascending: false })
       .limit(30);
+
+    if (currentBranchId) {
+      query = query.eq("branch_id", currentBranchId);
+    }
+
+    const { data } = await query;
 
     if (data) {
       setSales(data);

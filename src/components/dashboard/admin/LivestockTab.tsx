@@ -6,25 +6,31 @@ import AddCensusDialog from "./dialogs/AddCensusDialog";
 import EditCensusDialog from "./dialogs/EditCensusDialog";
 import EditLivestockCategoryDialog from "./dialogs/EditLivestockCategoryDialog";
 import DeleteCensusDialog from "./dialogs/DeleteCensusDialog";
+import { useBranch } from "@/contexts/BranchContext";
 
 const LivestockTab = () => {
+  const { currentBranchId } = useBranch();
   const [categories, setCategories] = useState<any[]>([]);
   const [census, setCensus] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentBranchId]);
 
   const fetchData = async () => {
-    const { data: categoriesData } = await supabase
+    let categoriesQuery = supabase
       .from("livestock_categories")
       .select("*")
       .order("created_at", { ascending: false });
+    if (currentBranchId) categoriesQuery = categoriesQuery.eq("branch_id", currentBranchId);
+    const { data: categoriesData } = await categoriesQuery;
 
-    const { data: censusData } = await supabase
+    let censusQuery = supabase
       .from("livestock_census")
       .select("*, livestock_categories(name)")
       .order("created_at", { ascending: false });
+    if (currentBranchId) censusQuery = censusQuery.eq("branch_id", currentBranchId);
+    const { data: censusData } = await censusQuery;
 
     setCategories(categoriesData || []);
     setCensus(censusData || []);

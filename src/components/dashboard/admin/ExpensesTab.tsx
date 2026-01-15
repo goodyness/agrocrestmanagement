@@ -4,22 +4,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import AddExpenseDialog from "./dialogs/AddExpenseDialog";
+import { useBranch } from "@/contexts/BranchContext";
 
 const ExpensesTab = () => {
+  const { currentBranchId } = useBranch();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [categoryBreakdown, setCategoryBreakdown] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentBranchId]);
 
   const fetchData = async () => {
-    const { data } = await supabase
+    let query = supabase
       .from("miscellaneous_expenses")
       .select("*, profiles(name)")
       .order("date", { ascending: false })
       .limit(30);
+
+    if (currentBranchId) {
+      query = query.eq("branch_id", currentBranchId);
+    }
+
+    const { data } = await query;
 
     if (data) {
       setExpenses(data);

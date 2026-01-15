@@ -4,22 +4,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Activity } from "lucide-react";
+import { useBranch } from "@/contexts/BranchContext";
 
 const ActivityTab = () => {
+  const { currentBranchId } = useBranch();
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchActivities();
-  }, []);
+  }, [currentBranchId]);
 
   const fetchActivities = async () => {
     setLoading(true);
-    const { data: logs } = await supabase
+    let query = supabase
       .from("activity_logs")
       .select("*, profiles(name)")
       .order("created_at", { ascending: false })
       .limit(100);
+
+    if (currentBranchId) {
+      query = query.eq("branch_id", currentBranchId);
+    }
+
+    const { data: logs } = await query;
 
     setActivities(logs || []);
     setLoading(false);
