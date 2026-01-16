@@ -7,6 +7,7 @@ interface CleaningSchedule {
   interval_days: number;
   tasks: string[];
   is_active: boolean;
+  branch_id: string | null;
 }
 
 interface CleaningInfo {
@@ -19,7 +20,7 @@ interface CleaningInfo {
   isCleaningCompleted: boolean;
 }
 
-export const useCleaningSchedule = () => {
+export const useCleaningSchedule = (branchId?: string | null) => {
   const [cleaningInfo, setCleaningInfo] = useState<CleaningInfo>({
     nextCleaningDate: null,
     daysUntilCleaning: -1,
@@ -60,12 +61,17 @@ export const useCleaningSchedule = () => {
   const fetchSchedule = useCallback(async () => {
     setLoading(true);
     
-    const { data: scheduleData } = await supabase
+    let query = supabase
       .from("cleaning_schedules")
       .select("*")
-      .eq("is_active", true)
-      .limit(1)
-      .single();
+      .eq("is_active", true);
+    
+    // Filter by branch if provided
+    if (branchId) {
+      query = query.eq("branch_id", branchId);
+    }
+    
+    const { data: scheduleData } = await query.limit(1).single();
 
     if (scheduleData) {
       const schedule = scheduleData as unknown as CleaningSchedule;
@@ -78,13 +84,18 @@ export const useCleaningSchedule = () => {
       const diffTime = nextCleaningDate.getTime() - today.getTime();
       const daysUntilCleaning = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
-      // Check if today's cleaning is already completed
+      // Check if today's cleaning is already completed for this branch
       const todayStr = today.toISOString().split('T')[0];
-      const { data: completedToday } = await supabase
+      let completedQuery = supabase
         .from("cleaning_records")
         .select("id")
-        .eq("cleaning_date", todayStr)
-        .limit(1);
+        .eq("cleaning_date", todayStr);
+      
+      if (branchId) {
+        completedQuery = completedQuery.eq("branch_id", branchId);
+      }
+      
+      const { data: completedToday } = await completedQuery.limit(1);
 
       setCleaningInfo({
         nextCleaningDate,
@@ -95,10 +106,21 @@ export const useCleaningSchedule = () => {
         schedule,
         isCleaningCompleted: (completedToday && completedToday.length > 0) || false,
       });
+    } else {
+      // No schedule found for this branch
+      setCleaningInfo({
+        nextCleaningDate: null,
+        daysUntilCleaning: -1,
+        isCleaningDay: false,
+        isReminderDay: false,
+        tasks: [],
+        schedule: null,
+        isCleaningCompleted: false,
+      });
     }
     
     setLoading(false);
-  }, []);
+  }, [branchId]);
 
   const markCleaningComplete = async (notes?: string) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -110,6 +132,7 @@ export const useCleaningSchedule = () => {
       cleaning_date: today,
       completed_by: user.id,
       notes,
+      branch_id: branchId || null,
     });
 
     if (!error) {

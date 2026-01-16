@@ -25,7 +25,6 @@ interface WorkerDashboardProps {
 
 const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
   const navigate = useNavigate();
-  const cleaningSchedule = useCleaningSchedule();
   const [todayProduction, setTodayProduction] = useState({ crates: 0, pieces: 0 });
   const [todayMortality, setTodayMortality] = useState(0);
   const [todaySales, setTodaySales] = useState(0);
@@ -49,6 +48,10 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
     },
     enabled: !!user?.id,
   });
+
+  // Use the user's branch for cleaning schedule
+  const userBranchId = userProfile?.branch_id || null;
+  const cleaningSchedule = useCleaningSchedule(userBranchId);
   useEffect(() => {
     fetchDashboardData();
   }, []);
