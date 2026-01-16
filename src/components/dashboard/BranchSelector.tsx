@@ -6,10 +6,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MapPin } from "lucide-react";
+import { MapPin, Loader2 } from "lucide-react";
 
 export function BranchSelector() {
-  const { branches, currentBranchId, setCurrentBranchId, isLoading } = useBranch();
+  const { branches, currentBranchId, setCurrentBranchId, isLoading, isSwitching } = useBranch();
 
   if (isLoading) {
     return (
@@ -22,9 +22,17 @@ export function BranchSelector() {
 
   return (
     <div className="flex items-center gap-2">
-      <MapPin className="h-4 w-4 text-primary" />
-      <Select value={currentBranchId || ""} onValueChange={setCurrentBranchId}>
-        <SelectTrigger className="w-[160px]">
+      {isSwitching ? (
+        <Loader2 className="h-4 w-4 text-primary animate-spin" />
+      ) : (
+        <MapPin className="h-4 w-4 text-primary" />
+      )}
+      <Select 
+        value={currentBranchId || ""} 
+        onValueChange={setCurrentBranchId}
+        disabled={isSwitching}
+      >
+        <SelectTrigger className={`w-[160px] ${isSwitching ? 'opacity-70' : ''}`}>
           <SelectValue placeholder="Select branch" />
         </SelectTrigger>
         <SelectContent>
@@ -35,6 +43,9 @@ export function BranchSelector() {
           ))}
         </SelectContent>
       </Select>
+      {isSwitching && (
+        <span className="text-xs text-muted-foreground animate-pulse">Switching...</span>
+      )}
     </div>
   );
 }
