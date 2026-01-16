@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface AddSalesDialogProps {
   onSuccess: () => void;
@@ -18,6 +19,7 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
   const [quantity, setQuantity] = useState("");
   const [pricePerUnit, setPricePerUnit] = useState("");
   const [total, setTotal] = useState(0);
+  const { currentBranchId } = useBranch();
 
   const calculateTotal = (qty: string, price: string) => {
     const q = parseFloat(qty) || 0;
@@ -45,6 +47,17 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
       return;
     }
 
+    // Get user's branch_id from profile if no currentBranchId
+    let branchId = currentBranchId;
+    if (!branchId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("branch_id")
+        .eq("id", user.id)
+        .single();
+      branchId = profile?.branch_id || null;
+    }
+
     const { error } = await supabase.from("sales_records").insert({
       product_name,
       product_type,
@@ -55,6 +68,7 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
       buyer_name: buyer_name || null,
       recorded_by: user.id,
       date: new Date().toISOString().split('T')[0],
+      branch_id: branchId,
     });
 
     if (error) {
@@ -66,7 +80,7 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
         quantity: `${quantity} ${unit}`,
         total_amount: quantity * price_per_unit,
         buyer: buyer_name || 'Unknown',
-      });
+      }, branchId);
       
       toast.success("Sale recorded successfully");
       setOpen(false);

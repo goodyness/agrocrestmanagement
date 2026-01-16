@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TrendingUp, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface ProductionEntry {
   id: string;
@@ -24,6 +25,7 @@ const BulkProductionDialog = ({ onSuccess }: BulkProductionDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const today = new Date().toISOString().split('T')[0];
+  const { currentBranchId } = useBranch();
   const [entries, setEntries] = useState<ProductionEntry[]>([
     { id: crypto.randomUUID(), date: today, crates: 0, pieces: 0, comment: "" }
   ]);
@@ -62,12 +64,24 @@ const BulkProductionDialog = ({ onSuccess }: BulkProductionDialogProps) => {
       return;
     }
 
+    // Get user's branch_id from profile if no currentBranchId
+    let branchId = currentBranchId;
+    if (!branchId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("branch_id")
+        .eq("id", user.id)
+        .single();
+      branchId = profile?.branch_id || null;
+    }
+
     const records = validEntries.map(entry => ({
       date: entry.date,
       crates: entry.crates,
       pieces: entry.pieces,
       comment: entry.comment || null,
       recorded_by: user.id,
+      branch_id: branchId,
     }));
 
     const { error } = await supabase.from("daily_production").insert(records);

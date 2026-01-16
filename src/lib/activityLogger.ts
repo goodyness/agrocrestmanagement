@@ -4,7 +4,8 @@ export const logActivity = async (
   action: string,
   entityType: string,
   entityId?: string,
-  details?: Record<string, any>
+  details?: Record<string, any>,
+  branchId?: string | null
 ) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -18,6 +19,7 @@ export const logActivity = async (
         entity_type: entityType,
         entity_id: entityId,
         details: details || null,
+        branch_id: branchId || null,
       },
     ]);
   } catch (error) {

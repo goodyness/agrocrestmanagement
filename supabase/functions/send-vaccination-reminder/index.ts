@@ -17,10 +17,25 @@ serve(async (req: Request) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Use Gmail SMTP credentials (same as farm summary)
+    const gmailUser = Deno.env.get("GMAIL_USER")!;
+    const gmailPassword = Deno.env.get("GMAIL_APP_PASSWORD")!;
+    const receiverEmail = Deno.env.get("GMAIL_RECEIVER")!;
+
+    if (!gmailUser || !gmailPassword || !receiverEmail) {
+      console.error("Gmail SMTP not configured");
+      return new Response(JSON.stringify({ error: "Gmail SMTP not configured. Please add GMAIL_USER, GMAIL_APP_PASSWORD, and GMAIL_RECEIVER secrets." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json().catch(() => ({}));
     const isTest = body.test === true;
     const branchId = body.branchId;
     const branchName = body.branchName || "All Branches";
+
+    console.log(`Processing vaccination reminder - Test: ${isTest}, Branch: ${branchName}`);
 
     // Get active vaccination schedules
     let schedulesQuery = supabase
@@ -36,10 +51,19 @@ serve(async (req: Request) => {
       schedulesQuery = schedulesQuery.eq("branch_id", branchId);
     }
 
-    const { data: schedules } = await schedulesQuery;
+    const { data: schedules, error: schedulesError } = await schedulesQuery;
+
+    if (schedulesError) {
+      console.error("Error fetching schedules:", schedulesError);
+      return new Response(JSON.stringify({ error: schedulesError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!schedules || schedules.length === 0) {
-      return new Response(JSON.stringify({ message: "No active schedules" }), {
+      console.log("No active vaccination schedules found");
+      return new Response(JSON.stringify({ message: "No active vaccination schedules" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -81,42 +105,8 @@ serve(async (req: Request) => {
     }
 
     if (upcomingVaccinations.length === 0 && !isTest) {
-      return new Response(JSON.stringify({ message: "No vaccinations due" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Get workers for notification (optionally filter by branch)
-    let workersQuery = supabase
-      .from("profiles")
-      .select("id, name")
-      .eq("role", "worker");
-
-    if (branchId) {
-      workersQuery = workersQuery.eq("branch_id", branchId);
-    }
-
-    const { data: workers } = await workersQuery;
-
-    if (!workers || workers.length === 0) {
-      return new Response(JSON.stringify({ message: "No workers found" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Get worker emails from auth
-    const workerEmails: string[] = [];
-    for (const worker of workers) {
-      const { data: authUser } = await supabase.auth.admin.getUserById(worker.id);
-      if (authUser?.user?.email) {
-        workerEmails.push(authUser.user.email);
-      }
-    }
-
-    if (workerEmails.length === 0) {
-      return new Response(JSON.stringify({ message: "No worker emails found" }), {
+      console.log("No vaccinations due soon");
+      return new Response(JSON.stringify({ message: "No vaccinations due soon" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -146,7 +136,10 @@ serve(async (req: Request) => {
 <body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
   <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <div style="background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); border-radius: 16px 16px 0 0; padding: 30px; text-align: center;">
-      <h1 style="color: white; margin: 0; font-size: 28px;">💉 Vaccination Reminder</h1>
+      <div style="width: 72px; height: 72px; background-color: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 36px;">💉</span>
+      </div>
+      <h1 style="color: white; margin: 0; font-size: 28px;">Vaccination Reminder</h1>
       <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Agrocrest Farm - ${branchName}</p>
     </div>
     
@@ -164,9 +157,9 @@ serve(async (req: Request) => {
             ⚠️ OVERDUE Vaccinations
           </h2>
           <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 15px;">
-            ${overdueItems.map(v => `
-              <div style="padding: 12px 0; ${overdueItems.indexOf(v) < overdueItems.length - 1 ? 'border-bottom: 1px solid #fecaca;' : ''}">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+            ${overdueItems.map((v, i) => `
+              <div style="padding: 12px 0; ${i < overdueItems.length - 1 ? 'border-bottom: 1px solid #fecaca;' : ''}">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                   <div>
                     <p style="margin: 0; font-weight: bold; color: #dc2626; font-size: 16px;">${v.vaccineName}</p>
                     <p style="margin: 4px 0 0 0; color: #71717a; font-size: 14px;">${v.livestockCategory}</p>
@@ -190,9 +183,9 @@ serve(async (req: Request) => {
             📅 Due TODAY
           </h2>
           <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 15px;">
-            ${dueTodayItems.map(v => `
-              <div style="padding: 12px 0; ${dueTodayItems.indexOf(v) < dueTodayItems.length - 1 ? 'border-bottom: 1px solid #fde68a;' : ''}">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+            ${dueTodayItems.map((v, i) => `
+              <div style="padding: 12px 0; ${i < dueTodayItems.length - 1 ? 'border-bottom: 1px solid #fde68a;' : ''}">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                   <div>
                     <p style="margin: 0; font-weight: bold; color: #b45309; font-size: 16px;">${v.vaccineName}</p>
                     <p style="margin: 4px 0 0 0; color: #71717a; font-size: 14px;">${v.livestockCategory}</p>
@@ -213,9 +206,9 @@ serve(async (req: Request) => {
             📆 Due TOMORROW
           </h2>
           <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 15px;">
-            ${dueTomorrowItems.map(v => `
-              <div style="padding: 12px 0; ${dueTomorrowItems.indexOf(v) < dueTomorrowItems.length - 1 ? 'border-bottom: 1px solid #bfdbfe;' : ''}">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+            ${dueTomorrowItems.map((v, i) => `
+              <div style="padding: 12px 0; ${i < dueTomorrowItems.length - 1 ? 'border-bottom: 1px solid #bfdbfe;' : ''}">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                   <div>
                     <p style="margin: 0; font-weight: bold; color: #1d4ed8; font-size: 16px;">${v.vaccineName}</p>
                     <p style="margin: 4px 0 0 0; color: #71717a; font-size: 14px;">${v.livestockCategory}</p>
@@ -239,9 +232,9 @@ serve(async (req: Request) => {
             ✅ Upcoming (For Reference)
           </h2>
           <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 15px;">
-            ${upcomingItems.slice(0, 5).map(v => `
-              <div style="padding: 12px 0; ${upcomingItems.indexOf(v) < Math.min(upcomingItems.length, 5) - 1 ? 'border-bottom: 1px solid #bbf7d0;' : ''}">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+            ${upcomingItems.slice(0, 5).map((v, i) => `
+              <div style="padding: 12px 0; ${i < Math.min(upcomingItems.length, 5) - 1 ? 'border-bottom: 1px solid #bbf7d0;' : ''}">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                   <div>
                     <p style="margin: 0; font-weight: bold; color: #15803d; font-size: 16px;">${v.vaccineName}</p>
                     <p style="margin: 4px 0 0 0; color: #71717a; font-size: 14px;">${v.livestockCategory}</p>
@@ -278,27 +271,16 @@ serve(async (req: Request) => {
 </body>
 </html>`;
 
-    // Send email
-    const smtpHost = Deno.env.get("SMTP_HOST");
-    const smtpUser = Deno.env.get("SMTP_USER");
-    const smtpPass = Deno.env.get("SMTP_PASS");
-    const smtpFrom = Deno.env.get("SMTP_FROM") || smtpUser;
-
-    if (!smtpHost || !smtpUser || !smtpPass) {
-      return new Response(JSON.stringify({ error: "SMTP not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    // Send email using Gmail SMTP
+    console.log("Connecting to Gmail SMTP...");
     const client = new SMTPClient({
       connection: {
-        hostname: smtpHost,
+        hostname: "smtp.gmail.com",
         port: 465,
         tls: true,
         auth: {
-          username: smtpUser,
-          password: smtpPass,
+          username: gmailUser,
+          password: gmailPassword,
         },
       },
     });
@@ -308,18 +290,21 @@ serve(async (req: Request) => {
       : `💉 Vaccination Reminder - Action Required - ${branchName}`;
 
     await client.send({
-      from: smtpFrom || smtpUser,
-      to: workerEmails,
+      from: gmailUser,
+      to: receiverEmail,
       subject,
+      content: "Please view this email in an HTML-compatible email client.",
       html: htmlContent,
     });
 
     await client.close();
+    console.log("Email sent successfully!");
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: `Reminder sent to ${workerEmails.length} workers`,
+      message: `Vaccination reminder sent successfully`,
       vaccinations: upcomingVaccinations.length,
+      recipient: receiverEmail,
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

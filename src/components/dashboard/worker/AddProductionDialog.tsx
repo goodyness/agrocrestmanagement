@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface AddProductionDialogProps {
   onSuccess: () => void;
@@ -16,6 +17,7 @@ interface AddProductionDialogProps {
 const AddProductionDialog = ({ onSuccess }: AddProductionDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { currentBranchId } = useBranch();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -34,12 +36,24 @@ const AddProductionDialog = ({ onSuccess }: AddProductionDialogProps) => {
       return;
     }
 
+    // Get user's branch_id from profile if no currentBranchId
+    let branchId = currentBranchId;
+    if (!branchId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("branch_id")
+        .eq("id", user.id)
+        .single();
+      branchId = profile?.branch_id || null;
+    }
+
     const { error } = await supabase.from("daily_production").insert({
       crates,
       pieces,
       comment: comment || null,
       recorded_by: user.id,
       date: new Date().toISOString().split('T')[0],
+      branch_id: branchId,
     });
 
     if (error) {
@@ -50,7 +64,7 @@ const AddProductionDialog = ({ onSuccess }: AddProductionDialogProps) => {
         pieces,
         total_eggs: (crates * 30) + pieces,
         comment: comment || null,
-      });
+      }, branchId);
       
       toast.success("Production recorded successfully");
       setOpen(false);

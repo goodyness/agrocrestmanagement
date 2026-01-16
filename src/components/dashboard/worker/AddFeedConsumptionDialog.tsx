@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { User } from "@supabase/supabase-js";
 import { PackageOpen } from "lucide-react";
 import { logActivity } from "@/lib/activityLogger";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface AddFeedConsumptionDialogProps {
   user: User;
@@ -20,6 +21,7 @@ const AddFeedConsumptionDialog = ({ user, onSuccess }: AddFeedConsumptionDialogP
   const [loading, setLoading] = useState(false);
   const [feedTypes, setFeedTypes] = useState<any[]>([]);
   const [livestockCategories, setLivestockCategories] = useState<any[]>([]);
+  const { currentBranchId } = useBranch();
   const [formData, setFormData] = useState({
     feed_type_id: "",
     livestock_category_id: "",
@@ -32,18 +34,19 @@ const AddFeedConsumptionDialog = ({ user, onSuccess }: AddFeedConsumptionDialogP
     if (open) {
       fetchData();
     }
-  }, [open]);
+  }, [open, currentBranchId]);
 
   const fetchData = async () => {
-    const { data: feeds } = await supabase
-      .from("feed_types")
-      .select("*")
-      .order("feed_name");
+    let feedsQuery = supabase.from("feed_types").select("*").order("feed_name");
+    let livestockQuery = supabase.from("livestock_categories").select("*").order("name");
     
-    const { data: livestock } = await supabase
-      .from("livestock_categories")
-      .select("*")
-      .order("name");
+    if (currentBranchId) {
+      feedsQuery = feedsQuery.eq("branch_id", currentBranchId);
+      livestockQuery = livestockQuery.eq("branch_id", currentBranchId);
+    }
+
+    const { data: feeds } = await feedsQuery;
+    const { data: livestock } = await livestockQuery;
 
     setFeedTypes(feeds || []);
     setLivestockCategories(livestock || []);
@@ -53,11 +56,23 @@ const AddFeedConsumptionDialog = ({ user, onSuccess }: AddFeedConsumptionDialogP
     e.preventDefault();
     setLoading(true);
 
+    // Get user's branch_id from profile if no currentBranchId
+    let branchId = currentBranchId;
+    if (!branchId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("branch_id")
+        .eq("id", user.id)
+        .single();
+      branchId = profile?.branch_id || null;
+    }
+
     const { error } = await supabase.from("feed_consumption").insert([
       {
         ...formData,
         quantity_used: parseFloat(formData.quantity_used),
         recorded_by: user.id,
+        branch_id: branchId,
       },
     ]);
 
@@ -73,7 +88,7 @@ const AddFeedConsumptionDialog = ({ user, onSuccess }: AddFeedConsumptionDialogP
         livestock: livestockName,
         quantity: `${formData.quantity_used} ${formData.unit}`,
         date: formData.date,
-      });
+      }, branchId);
       
       toast.success("Feed consumption recorded successfully");
       setOpen(false);

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface AddMortalityDialogProps {
   onSuccess: () => void;
@@ -17,15 +18,20 @@ const AddMortalityDialog = ({ onSuccess }: AddMortalityDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
+  const { currentBranchId } = useBranch();
 
   useEffect(() => {
     if (open) {
       fetchCategories();
     }
-  }, [open]);
+  }, [open, currentBranchId]);
 
   const fetchCategories = async () => {
-    const { data } = await supabase.from("livestock_categories").select("*");
+    let query = supabase.from("livestock_categories").select("*");
+    if (currentBranchId) {
+      query = query.eq("branch_id", currentBranchId);
+    }
+    const { data } = await query;
     setCategories(data || []);
   };
 
@@ -46,12 +52,24 @@ const AddMortalityDialog = ({ onSuccess }: AddMortalityDialogProps) => {
       return;
     }
 
+    // Get user's branch_id from profile if no currentBranchId
+    let branchId = currentBranchId;
+    if (!branchId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("branch_id")
+        .eq("id", user.id)
+        .single();
+      branchId = profile?.branch_id || null;
+    }
+
     const { error } = await supabase.from("mortality_records").insert({
       livestock_category_id,
       quantity_dead,
       reason: reason || null,
       recorded_by: user.id,
       date: new Date().toISOString().split('T')[0],
+      branch_id: branchId,
     });
 
     if (error) {
@@ -63,7 +81,7 @@ const AddMortalityDialog = ({ onSuccess }: AddMortalityDialogProps) => {
         category: categoryName,
         quantity_dead,
         reason: reason || null,
-      });
+      }, branchId);
       
       toast.success("Mortality recorded successfully");
       setOpen(false);
