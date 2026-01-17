@@ -2,7 +2,7 @@ import { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2 } from "lucide-react";
+import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,7 +17,7 @@ import ReportsTab from "./admin/ReportsTab";
 import UsersTab from "./admin/UsersTab";
 import CostPerBirdAnalytics from "./admin/CostPerBirdAnalytics";
 import VaccinationTab from "./admin/VaccinationTab";
-import CleaningScheduleDialog from "./admin/dialogs/CleaningScheduleDialog";
+import CleaningManagementTab from "./admin/CleaningManagementTab";
 import { HealthDashboard } from "./admin/HealthDashboard";
 import { NotesTab } from "./admin/NotesTab";
 import { BranchSelector } from "./BranchSelector";
@@ -77,9 +77,6 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
       <main className="container mx-auto px-4 lg:px-6 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="flex flex-col gap-4">
-            <div className="flex justify-end">
-              <CleaningScheduleDialog onSuccess={() => {}} />
-            </div>
             <TabsList className="w-full flex flex-wrap gap-2 h-auto p-1 bg-muted/50">
               <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <BarChart3 className="h-4 w-4" />
@@ -132,6 +129,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
               <TabsTrigger value="reports" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">Reports</span>
+              </TabsTrigger>
+              <TabsTrigger value="cleaning" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Brush className="h-4 w-4" />
+                <span className="hidden sm:inline">Cleaning</span>
               </TabsTrigger>
               <TabsTrigger value="branches" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Building2 className="h-4 w-4" />
@@ -191,6 +192,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="reports" className="space-y-4">
             <ReportsTab />
+          </TabsContent>
+
+          <TabsContent value="cleaning" className="space-y-4">
+            <CleaningManagementTab />
           </TabsContent>
 
           <TabsContent value="branches" className="space-y-4">

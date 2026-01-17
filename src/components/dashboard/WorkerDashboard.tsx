@@ -52,18 +52,23 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
   // Use the user's branch for cleaning schedule
   const userBranchId = userProfile?.branch_id || null;
   const cleaningSchedule = useCleaningSchedule(userBranchId);
+  
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (userProfile !== undefined) {
+      fetchDashboardData(userBranchId);
+    }
+  }, [userProfile, userBranchId]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (branchId: string | null) => {
     const today = new Date().toISOString().split('T')[0];
 
-    // Fetch today's production
-    const { data: productionData } = await supabase
+    // Fetch today's production (filtered by branch)
+    let productionQuery = supabase
       .from("daily_production")
       .select("crates, pieces")
       .eq("date", today);
+    if (branchId) productionQuery = productionQuery.eq("branch_id", branchId);
+    const { data: productionData } = await productionQuery;
 
     if (productionData && productionData.length > 0) {
       const totals = productionData.reduce(
@@ -74,61 +79,79 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
         { crates: 0, pieces: 0 }
       );
       setTodayProduction(totals);
+    } else {
+      setTodayProduction({ crates: 0, pieces: 0 });
     }
 
-    // Fetch today's mortality
-    const { data: mortalityData } = await supabase
+    // Fetch today's mortality (filtered by branch)
+    let mortalityQuery = supabase
       .from("mortality_records")
       .select("quantity_dead")
       .eq("date", today);
+    if (branchId) mortalityQuery = mortalityQuery.eq("branch_id", branchId);
+    const { data: mortalityData } = await mortalityQuery;
 
     if (mortalityData) {
       const total = mortalityData.reduce((acc, curr) => acc + curr.quantity_dead, 0);
       setTodayMortality(total);
+    } else {
+      setTodayMortality(0);
     }
 
-    // Fetch today's sales
-    const { data: salesData } = await supabase
+    // Fetch today's sales (filtered by branch)
+    let salesQuery = supabase
       .from("sales_records")
       .select("total_amount")
       .eq("date", today);
+    if (branchId) salesQuery = salesQuery.eq("branch_id", branchId);
+    const { data: salesData } = await salesQuery;
 
     if (salesData) {
       const total = salesData.reduce((acc, curr) => acc + Number(curr.total_amount), 0);
       setTodaySales(total);
+    } else {
+      setTodaySales(0);
     }
 
-    // Fetch livestock census
-    const { data: livestock } = await supabase
+    // Fetch livestock census (filtered by branch)
+    let livestockQuery = supabase
       .from("livestock_census")
       .select("*, livestock_categories(name)")
       .order("created_at", { ascending: false });
+    if (branchId) livestockQuery = livestockQuery.eq("branch_id", branchId);
+    const { data: livestock } = await livestockQuery;
 
     setLivestockData(livestock || []);
 
-    // Fetch feed inventory
-    const { data: feed } = await supabase
+    // Fetch feed inventory (filtered by branch)
+    let feedQuery = supabase
       .from("feed_inventory")
       .select("*, feed_types(feed_name, unit_type)")
       .order("updated_at", { ascending: false });
+    if (branchId) feedQuery = feedQuery.eq("branch_id", branchId);
+    const { data: feed } = await feedQuery;
 
     setFeedData(feed || []);
 
-    // Fetch last 10 days production
-    const { data: productionRecords } = await supabase
+    // Fetch last 10 days production (filtered by branch)
+    let recentProductionQuery = supabase
       .from("daily_production")
       .select("*")
       .order("date", { ascending: false })
       .limit(10);
+    if (branchId) recentProductionQuery = recentProductionQuery.eq("branch_id", branchId);
+    const { data: productionRecords } = await recentProductionQuery;
 
     setRecentProduction(productionRecords || []);
 
-    // Fetch last 10 days sales
-    const { data: salesRecords } = await supabase
+    // Fetch last 10 days sales (filtered by branch)
+    let recentSalesQuery = supabase
       .from("sales_records")
       .select("*")
       .order("date", { ascending: false })
       .limit(10);
+    if (branchId) recentSalesQuery = recentSalesQuery.eq("branch_id", branchId);
+    const { data: salesRecords } = await recentSalesQuery;
 
     setRecentSales(salesRecords || []);
   };
@@ -138,6 +161,11 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
     if (error) {
       toast.error("Error signing out");
     }
+  };
+
+  // Wrapper for onSuccess callbacks
+  const handleRefresh = () => {
+    fetchDashboardData(userBranchId);
   };
 
   return (
@@ -198,14 +226,14 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <AddProductionDialog onSuccess={fetchDashboardData} />
-              <AddMortalityDialog onSuccess={fetchDashboardData} />
-              <AddSalesDialog onSuccess={fetchDashboardData} />
-              <AddFeedConsumptionDialog user={user!} onSuccess={fetchDashboardData} />
+              <AddProductionDialog onSuccess={handleRefresh} />
+              <AddMortalityDialog onSuccess={handleRefresh} />
+              <AddSalesDialog onSuccess={handleRefresh} />
+              <AddFeedConsumptionDialog user={user!} onSuccess={handleRefresh} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <BulkProductionDialog onSuccess={fetchDashboardData} />
-              <BulkMortalityDialog onSuccess={fetchDashboardData} />
+              <BulkProductionDialog onSuccess={handleRefresh} />
+              <BulkMortalityDialog onSuccess={handleRefresh} />
             </div>
           </CardContent>
         </Card>
