@@ -49,7 +49,7 @@ const ExpensesTab = () => {
           <h2 className="text-2xl font-bold text-foreground">Expenses Management</h2>
           <p className="text-muted-foreground">Track all farm expenses</p>
         </div>
-        <AddExpenseDialog onSuccess={fetchData} />
+        <AddExpenseDialog onSuccess={fetchData} branchId={currentBranchId} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

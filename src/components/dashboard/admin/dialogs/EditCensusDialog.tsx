@@ -16,11 +16,13 @@ interface EditCensusDialogProps {
     updated_count: number;
     livestock_category_id: string;
     livestock_categories?: { name: string } | null;
+    branch_id?: string | null;
   };
   onSuccess: () => void;
+  branchId: string | null;
 }
 
-const EditCensusDialog = ({ census, onSuccess }: EditCensusDialogProps) => {
+const EditCensusDialog = ({ census, onSuccess, branchId }: EditCensusDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(census.total_count);
@@ -55,19 +57,20 @@ const EditCensusDialog = ({ census, onSuccess }: EditCensusDialogProps) => {
           quantity_dead: difference,
           recorded_by: user.id,
           reason: "Recorded via census edit",
+          branch_id: branchId,
         });
         await logActivity("created", "mortality", undefined, {
           category: census.livestock_categories?.name,
           quantity: difference,
           source: "census_edit",
-        });
+        }, branchId);
       }
     } else if (changeReason === "sold") {
       await logActivity("updated", "census", census.id, {
         category: census.livestock_categories?.name,
         change: -difference,
         reason: "sold",
-      });
+      }, branchId);
     }
 
     setUpdatedCount(pendingCount);

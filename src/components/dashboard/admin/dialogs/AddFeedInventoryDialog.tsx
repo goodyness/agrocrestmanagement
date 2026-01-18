@@ -10,9 +10,10 @@ import { toast } from "sonner";
 interface AddFeedInventoryDialogProps {
   feedTypes: any[];
   onSuccess: () => void;
+  branchId: string | null;
 }
 
-const AddFeedInventoryDialog = ({ feedTypes, onSuccess }: AddFeedInventoryDialogProps) => {
+const AddFeedInventoryDialog = ({ feedTypes, onSuccess, branchId }: AddFeedInventoryDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -43,6 +44,7 @@ const AddFeedInventoryDialog = ({ feedTypes, onSuccess }: AddFeedInventoryDialog
       feed_type_id,
       quantity_in_stock,
       unit,
+      branch_id: branchId,
     });
 
     if (inventoryError) {
@@ -58,6 +60,7 @@ const AddFeedInventoryDialog = ({ feedTypes, onSuccess }: AddFeedInventoryDialog
       description: `Purchased ${quantity_in_stock} ${unit} of ${feedType.feed_name} @ ₦${feedType.price_per_unit}/${feedType.unit_type}`,
       created_by: user.id,
       date: new Date().toISOString().split('T')[0],
+      branch_id: branchId,
     });
 
     if (expenseError) {

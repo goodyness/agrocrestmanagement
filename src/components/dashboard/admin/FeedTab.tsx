@@ -60,7 +60,7 @@ const FeedTab = () => {
           <h2 className="text-2xl font-bold text-foreground">Feed Management</h2>
           <p className="text-muted-foreground">Manage feed types, purchases, and inventory</p>
         </div>
-        <LowStockAlertDialog feedTypes={feedTypes} onSuccess={fetchData} />
+        <LowStockAlertDialog feedTypes={feedTypes} onSuccess={fetchData} branchId={currentBranchId} />
       </div>
 
       {/* Low Stock Warning Banner */}
@@ -85,7 +85,7 @@ const FeedTab = () => {
                 <CardTitle>Feed Types</CardTitle>
                 <CardDescription>Define types of feed and pricing</CardDescription>
               </div>
-              <AddFeedTypeDialog onSuccess={fetchData} />
+              <AddFeedTypeDialog onSuccess={fetchData} branchId={currentBranchId} />
             </div>
           </CardHeader>
           <CardContent>
@@ -123,7 +123,7 @@ const FeedTab = () => {
                 </CardTitle>
                 <CardDescription>Available feed stock levels</CardDescription>
               </div>
-              <AddFeedPurchaseDialog feedTypes={feedTypes} onSuccess={fetchData} />
+              <AddFeedPurchaseDialog feedTypes={feedTypes} onSuccess={fetchData} branchId={currentBranchId} />
             </div>
           </CardHeader>
           <CardContent>

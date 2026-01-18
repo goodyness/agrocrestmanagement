@@ -9,9 +9,10 @@ import { toast } from "sonner";
 
 interface AddFeedTypeDialogProps {
   onSuccess: () => void;
+  branchId: string | null;
 }
 
-const AddFeedTypeDialog = ({ onSuccess }: AddFeedTypeDialogProps) => {
+const AddFeedTypeDialog = ({ onSuccess, branchId }: AddFeedTypeDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -28,6 +29,7 @@ const AddFeedTypeDialog = ({ onSuccess }: AddFeedTypeDialogProps) => {
       feed_name,
       unit_type,
       price_per_unit,
+      branch_id: branchId,
     });
 
     if (error) {

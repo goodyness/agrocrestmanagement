@@ -10,9 +10,10 @@ import { toast } from "sonner";
 
 interface AddLivestockDialogProps {
   onSuccess: () => void;
+  branchId: string | null;
 }
 
-const AddLivestockDialog = ({ onSuccess }: AddLivestockDialogProps) => {
+const AddLivestockDialog = ({ onSuccess, branchId }: AddLivestockDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -27,6 +28,7 @@ const AddLivestockDialog = ({ onSuccess }: AddLivestockDialogProps) => {
     const { error } = await supabase.from("livestock_categories").insert({
       name,
       description: description || null,
+      branch_id: branchId,
     });
 
     if (error) {

@@ -130,11 +130,12 @@ const VaccinationTab = () => {
             <Mail className="h-4 w-4 mr-2" />
             {sendingReminder ? "Sending..." : "Send Test Reminder"}
           </Button>
-          <AddVaccinationTypeDialog onSuccess={fetchData} />
+          <AddVaccinationTypeDialog onSuccess={fetchData} branchId={currentBranchId} />
           <VaccinationScheduleDialog 
             vaccinationTypes={vaccinationTypes} 
             categories={categories} 
             onSuccess={fetchData} 
+            branchId={currentBranchId}
           />
         </div>
       </div>
@@ -255,6 +256,7 @@ const VaccinationTab = () => {
               vaccinationTypes={vaccinationTypes} 
               categories={categories} 
               onSuccess={fetchData} 
+              branchId={currentBranchId}
             />
           </div>
         </CardHeader>
