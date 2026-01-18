@@ -15,9 +15,10 @@ interface AddVaccinationDialogProps {
   vaccinationTypes: any[];
   categories: any[];
   onSuccess: () => void;
+  branchId: string | null;
 }
 
-const AddVaccinationDialog = ({ vaccinationTypes, categories, onSuccess }: AddVaccinationDialogProps) => {
+const AddVaccinationDialog = ({ vaccinationTypes, categories, onSuccess, branchId }: AddVaccinationDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [vaccinationTypeId, setVaccinationTypeId] = useState("");
@@ -49,6 +50,7 @@ const AddVaccinationDialog = ({ vaccinationTypes, categories, onSuccess }: AddVa
         next_due_date: nextDueDate,
         administered_by: user.id,
         notes: notes || null,
+        branch_id: branchId,
       })
       .select()
       .single();
@@ -65,7 +67,8 @@ const AddVaccinationDialog = ({ vaccinationTypes, categories, onSuccess }: AddVa
           vaccination_type: selectedType?.name,
           livestock_category: selectedCategory?.name,
           date 
-        }
+        },
+        branchId
       );
       toast.success("Vaccination recorded!");
       setOpen(false);

@@ -10,9 +10,10 @@ import { toast } from "sonner";
 
 interface AddVaccinationTypeDialogProps {
   onSuccess: () => void;
+  branchId: string | null;
 }
 
-const AddVaccinationTypeDialog = ({ onSuccess }: AddVaccinationTypeDialogProps) => {
+const AddVaccinationTypeDialog = ({ onSuccess, branchId }: AddVaccinationTypeDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
@@ -29,6 +30,7 @@ const AddVaccinationTypeDialog = ({ onSuccess }: AddVaccinationTypeDialogProps) 
         name,
         description: description || null,
         interval_weeks: intervalWeeks,
+        branch_id: branchId,
       });
 
     if (error) {

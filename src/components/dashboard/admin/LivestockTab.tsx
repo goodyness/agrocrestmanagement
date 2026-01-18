@@ -53,7 +53,7 @@ const LivestockTab = () => {
                 <CardTitle>Livestock Categories</CardTitle>
                 <CardDescription>Define types of livestock</CardDescription>
               </div>
-              <AddLivestockDialog onSuccess={fetchData} />
+              <AddLivestockDialog onSuccess={fetchData} branchId={currentBranchId} />
             </div>
           </CardHeader>
           <CardContent>
@@ -86,7 +86,7 @@ const LivestockTab = () => {
                 <CardTitle>Livestock Census</CardTitle>
                 <CardDescription>Track livestock counts</CardDescription>
               </div>
-              <AddCensusDialog categories={categories} onSuccess={fetchData} />
+              <AddCensusDialog categories={categories} onSuccess={fetchData} branchId={currentBranchId} />
             </div>
           </CardHeader>
           <CardContent>
@@ -112,7 +112,7 @@ const LivestockTab = () => {
                         )}
                       </div>
                       <div className="flex items-center gap-1">
-                        <EditCensusDialog census={record} onSuccess={fetchData} />
+                        <EditCensusDialog census={record} onSuccess={fetchData} branchId={currentBranchId} />
                         <DeleteCensusDialog census={record} onSuccess={fetchData} />
                       </div>
                     </div>

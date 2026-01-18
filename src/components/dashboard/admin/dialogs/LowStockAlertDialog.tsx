@@ -11,6 +11,7 @@ import { toast } from "sonner";
 interface LowStockAlertDialogProps {
   feedTypes: any[];
   onSuccess: () => void;
+  branchId: string | null;
 }
 
 interface AlertSetting {
@@ -22,7 +23,7 @@ interface AlertSetting {
   feed_name?: string;
 }
 
-const LowStockAlertDialog = ({ feedTypes, onSuccess }: LowStockAlertDialogProps) => {
+const LowStockAlertDialog = ({ feedTypes, onSuccess, branchId }: LowStockAlertDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [alerts, setAlerts] = useState<AlertSetting[]>([]);
@@ -31,12 +32,18 @@ const LowStockAlertDialog = ({ feedTypes, onSuccess }: LowStockAlertDialogProps)
     if (open) {
       fetchAlerts();
     }
-  }, [open, feedTypes]);
+  }, [open, feedTypes, branchId]);
 
   const fetchAlerts = async () => {
-    const { data } = await supabase
+    let query = supabase
       .from("low_stock_alerts")
       .select("*, feed_types(feed_name)");
+
+    if (branchId) {
+      query = query.eq("branch_id", branchId);
+    }
+
+    const { data } = await query;
 
     // Merge existing alerts with feed types
     const alertMap = new Map(data?.map(a => [a.feed_type_id, a]) || []);
@@ -85,6 +92,7 @@ const LowStockAlertDialog = ({ feedTypes, onSuccess }: LowStockAlertDialogProps)
             threshold_quantity: alert.threshold_quantity,
             threshold_unit: alert.threshold_unit,
             is_active: alert.is_active,
+            branch_id: branchId,
           });
         }
       }

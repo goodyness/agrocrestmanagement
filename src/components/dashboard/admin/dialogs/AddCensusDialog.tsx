@@ -10,9 +10,10 @@ import { toast } from "sonner";
 interface AddCensusDialogProps {
   categories: any[];
   onSuccess: () => void;
+  branchId: string | null;
 }
 
-const AddCensusDialog = ({ categories, onSuccess }: AddCensusDialogProps) => {
+const AddCensusDialog = ({ categories, onSuccess, branchId }: AddCensusDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -28,6 +29,7 @@ const AddCensusDialog = ({ categories, onSuccess }: AddCensusDialogProps) => {
       livestock_category_id,
       total_count,
       updated_count: total_count,
+      branch_id: branchId,
     });
 
     if (error) {

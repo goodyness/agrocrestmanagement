@@ -11,9 +11,10 @@ import { toast } from "sonner";
 interface AddFeedPurchaseDialogProps {
   feedTypes: any[];
   onSuccess: () => void;
+  branchId: string | null;
 }
 
-const AddFeedPurchaseDialog = ({ feedTypes, onSuccess }: AddFeedPurchaseDialogProps) => {
+const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurchaseDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedFeedType, setSelectedFeedType] = useState<string>("");
@@ -53,6 +54,7 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess }: AddFeedPurchaseDialogPr
       total_cost: totalCost,
       purchased_by: user.id,
       notes: notes || null,
+      branch_id: branchId,
     });
 
     if (purchaseError) {
@@ -69,6 +71,7 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess }: AddFeedPurchaseDialogPr
       description: `Purchased ${quantity} ${unit} of ${feedType.feed_name} @ ₦${parseFloat(pricePerUnit).toLocaleString()}/${unit}`,
       created_by: user.id,
       date: new Date().toISOString().split('T')[0],
+      branch_id: branchId,
     });
 
     if (expenseError) {

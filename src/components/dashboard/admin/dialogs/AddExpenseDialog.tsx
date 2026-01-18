@@ -10,9 +10,10 @@ import { toast } from "sonner";
 
 interface AddExpenseDialogProps {
   onSuccess: () => void;
+  branchId: string | null;
 }
 
-const AddExpenseDialog = ({ onSuccess }: AddExpenseDialogProps) => {
+const AddExpenseDialog = ({ onSuccess, branchId }: AddExpenseDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -39,6 +40,7 @@ const AddExpenseDialog = ({ onSuccess }: AddExpenseDialogProps) => {
       description: description || null,
       created_by: user.id,
       date: new Date().toISOString().split('T')[0],
+      branch_id: branchId,
     });
 
     if (error) {

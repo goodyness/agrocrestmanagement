@@ -14,9 +14,10 @@ interface VaccinationScheduleDialogProps {
   vaccinationTypes: any[];
   categories: any[];
   onSuccess: () => void;
+  branchId: string | null;
 }
 
-const VaccinationScheduleDialog = ({ vaccinationTypes, categories, onSuccess }: VaccinationScheduleDialogProps) => {
+const VaccinationScheduleDialog = ({ vaccinationTypes, categories, onSuccess, branchId }: VaccinationScheduleDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [existingSchedules, setExistingSchedules] = useState<any[]>([]);
@@ -28,14 +29,19 @@ const VaccinationScheduleDialog = ({ vaccinationTypes, categories, onSuccess }: 
     if (open) {
       fetchSchedules();
     }
-  }, [open]);
+  }, [open, branchId]);
 
   const fetchSchedules = async () => {
-    const { data } = await supabase
+    let query = supabase
       .from("vaccination_schedules")
       .select("*, vaccination_types(name, interval_weeks), livestock_categories(name)")
       .order("created_at", { ascending: false });
 
+    if (branchId) {
+      query = query.eq("branch_id", branchId);
+    }
+
+    const { data } = await query;
     setExistingSchedules(data || []);
   };
 
@@ -50,6 +56,7 @@ const VaccinationScheduleDialog = ({ vaccinationTypes, categories, onSuccess }: 
         livestock_category_id: categoryId,
         start_date: startDate,
         is_active: true,
+        branch_id: branchId,
       }, {
         onConflict: "livestock_category_id,vaccination_type_id"
       });
