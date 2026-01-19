@@ -12,24 +12,27 @@ import { useBranch } from "@/contexts/BranchContext";
 
 interface AddMortalityDialogProps {
   onSuccess: () => void;
+  branchId?: string | null;
 }
 
-const AddMortalityDialog = ({ onSuccess }: AddMortalityDialogProps) => {
+const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
-  const { currentBranchId } = useBranch();
+  // Use passed branchId prop if available, otherwise fall back to context
+  const { currentBranchId: contextBranchId } = useBranch();
+  const effectiveBranchId = branchId !== undefined ? branchId : contextBranchId;
 
   useEffect(() => {
     if (open) {
       fetchCategories();
     }
-  }, [open, currentBranchId]);
+  }, [open, effectiveBranchId]);
 
   const fetchCategories = async () => {
     let query = supabase.from("livestock_categories").select("*");
-    if (currentBranchId) {
-      query = query.eq("branch_id", currentBranchId);
+    if (effectiveBranchId) {
+      query = query.eq("branch_id", effectiveBranchId);
     }
     const { data } = await query;
     setCategories(data || []);
@@ -52,15 +55,15 @@ const AddMortalityDialog = ({ onSuccess }: AddMortalityDialogProps) => {
       return;
     }
 
-    // Get user's branch_id from profile if no currentBranchId
-    let branchId = currentBranchId;
-    if (!branchId) {
+    // Get user's branch_id from profile if no effectiveBranchId
+    let finalBranchId = effectiveBranchId;
+    if (!finalBranchId) {
       const { data: profile } = await supabase
         .from("profiles")
         .select("branch_id")
         .eq("id", user.id)
         .single();
-      branchId = profile?.branch_id || null;
+      finalBranchId = profile?.branch_id || null;
     }
 
     const { error } = await supabase.from("mortality_records").insert({
@@ -69,7 +72,7 @@ const AddMortalityDialog = ({ onSuccess }: AddMortalityDialogProps) => {
       reason: reason || null,
       recorded_by: user.id,
       date: new Date().toISOString().split('T')[0],
-      branch_id: branchId,
+      branch_id: finalBranchId,
     });
 
     if (error) {
@@ -81,7 +84,7 @@ const AddMortalityDialog = ({ onSuccess }: AddMortalityDialogProps) => {
         category: categoryName,
         quantity_dead,
         reason: reason || null,
-      }, branchId);
+      }, finalBranchId);
       
       toast.success("Mortality recorded successfully");
       setOpen(false);
