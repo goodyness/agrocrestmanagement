@@ -789,6 +789,160 @@ export type Database = {
           },
         ]
       }
+      stock_adjustments: {
+        Row: {
+          adjustment_type: string
+          branch_id: string | null
+          crates: number
+          created_at: string
+          description: string | null
+          id: string
+          pieces: number
+          reconciliation_id: string
+          recorded_by: string
+        }
+        Insert: {
+          adjustment_type: string
+          branch_id?: string | null
+          crates?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          pieces?: number
+          reconciliation_id: string
+          recorded_by: string
+        }
+        Update: {
+          adjustment_type?: string
+          branch_id?: string | null
+          crates?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          pieces?: number
+          reconciliation_id?: string
+          recorded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_adjustments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_adjustments_reconciliation_id_fkey"
+            columns: ["reconciliation_id"]
+            isOneToOne: false
+            referencedRelation: "stock_reconciliations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_adjustments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_reconciliations: {
+        Row: {
+          adjustment_crates: number
+          adjustment_pieces: number
+          balanced_at: string | null
+          balanced_by: string | null
+          branch_id: string | null
+          closing_stock_crates: number
+          closing_stock_pieces: number
+          created_at: string
+          expected_closing_crates: number
+          expected_closing_pieces: number
+          id: string
+          is_balanced: boolean
+          notes: string | null
+          opening_stock_crates: number
+          opening_stock_pieces: number
+          period_end: string
+          period_start: string
+          period_type: string
+          status: string
+          total_production_crates: number
+          total_production_pieces: number
+          total_sales_crates: number
+          total_sales_pieces: number
+          updated_at: string
+        }
+        Insert: {
+          adjustment_crates?: number
+          adjustment_pieces?: number
+          balanced_at?: string | null
+          balanced_by?: string | null
+          branch_id?: string | null
+          closing_stock_crates?: number
+          closing_stock_pieces?: number
+          created_at?: string
+          expected_closing_crates?: number
+          expected_closing_pieces?: number
+          id?: string
+          is_balanced?: boolean
+          notes?: string | null
+          opening_stock_crates?: number
+          opening_stock_pieces?: number
+          period_end: string
+          period_start: string
+          period_type: string
+          status?: string
+          total_production_crates?: number
+          total_production_pieces?: number
+          total_sales_crates?: number
+          total_sales_pieces?: number
+          updated_at?: string
+        }
+        Update: {
+          adjustment_crates?: number
+          adjustment_pieces?: number
+          balanced_at?: string | null
+          balanced_by?: string | null
+          branch_id?: string | null
+          closing_stock_crates?: number
+          closing_stock_pieces?: number
+          created_at?: string
+          expected_closing_crates?: number
+          expected_closing_pieces?: number
+          id?: string
+          is_balanced?: boolean
+          notes?: string | null
+          opening_stock_crates?: number
+          opening_stock_pieces?: number
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          status?: string
+          total_production_crates?: number
+          total_production_pieces?: number
+          total_sales_crates?: number
+          total_sales_pieces?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_reconciliations_balanced_by_fkey"
+            columns: ["balanced_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reconciliations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vaccination_records: {
         Row: {
           administered_by: string
