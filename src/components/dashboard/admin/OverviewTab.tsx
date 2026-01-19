@@ -3,7 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sprout, TrendingUp, AlertCircle, DollarSign, Package } from "lucide-react";
 import FeedAnalyticsWidget from "./FeedAnalyticsWidget";
+import AllBranchesSummary from "./AllBranchesSummary";
 import { useBranch } from "@/contexts/BranchContext";
+import { Separator } from "@/components/ui/separator";
 
 const OverviewTab = () => {
   const { currentBranchId } = useBranch();
@@ -83,10 +85,22 @@ const OverviewTab = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* All Branches Summary - shown when no specific branch is selected */}
+      {!currentBranchId && (
+        <>
+          <AllBranchesSummary />
+          <Separator className="my-8" />
+        </>
+      )}
+
       <div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Dashboard Overview</h2>
-        <p className="text-muted-foreground">Key metrics and performance indicators</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">
+          {currentBranchId ? "Branch Overview" : "Global Dashboard Overview"}
+        </h2>
+        <p className="text-muted-foreground">
+          {currentBranchId ? "Metrics for selected branch" : "Key metrics and performance indicators"}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
