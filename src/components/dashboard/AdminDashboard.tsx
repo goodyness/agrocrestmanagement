@@ -2,7 +2,7 @@ import { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush } from "lucide-react";
+import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +18,7 @@ import UsersTab from "./admin/UsersTab";
 import CostPerBirdAnalytics from "./admin/CostPerBirdAnalytics";
 import VaccinationTab from "./admin/VaccinationTab";
 import CleaningManagementTab from "./admin/CleaningManagementTab";
+import BalancingTab from "./admin/BalancingTab";
 import { HealthDashboard } from "./admin/HealthDashboard";
 import { NotesTab } from "./admin/NotesTab";
 import { BranchSelector } from "./BranchSelector";
@@ -134,6 +135,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
                 <Brush className="h-4 w-4" />
                 <span className="hidden sm:inline">Cleaning</span>
               </TabsTrigger>
+              <TabsTrigger value="balancing" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Scale className="h-4 w-4" />
+                <span className="hidden sm:inline">Balancing</span>
+              </TabsTrigger>
               <TabsTrigger value="branches" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Building2 className="h-4 w-4" />
                 <span className="hidden sm:inline">Branches</span>
@@ -196,6 +201,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="cleaning" className="space-y-4">
             <CleaningManagementTab />
+          </TabsContent>
+
+          <TabsContent value="balancing" className="space-y-4">
+            <BalancingTab />
           </TabsContent>
 
           <TabsContent value="branches" className="space-y-4">
