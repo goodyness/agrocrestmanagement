@@ -7,14 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths, addDays } from "date-fns";
-import { Scale, CheckCircle, AlertTriangle, Clock, Plus, RefreshCw, FileText, Calculator } from "lucide-react";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths } from "date-fns";
+import { Scale, CheckCircle, AlertTriangle, Clock, Plus, RefreshCw, FileText, Calculator, CalendarIcon, Package, TrendingUp, TrendingDown } from "lucide-react";
 import { logActivity } from "@/lib/activityLogger";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { cn } from "@/lib/utils";
 
 interface Reconciliation {
   id: string;
@@ -71,7 +75,9 @@ const BalancingTab = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdjustmentDialog, setShowAdjustmentDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showOpeningStockDialog, setShowOpeningStockDialog] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [activeView, setActiveView] = useState<"records" | "chart">("records");
 
   // Form states
   const [adjustmentForm, setAdjustmentForm] = useState({
@@ -82,6 +88,22 @@ const BalancingTab = () => {
   });
 
   const [notesForm, setNotesForm] = useState("");
+  
+  // New period form with custom dates
+  const [periodForm, setPeriodForm] = useState({
+    startDate: undefined as Date | undefined,
+    endDate: undefined as Date | undefined,
+    openingCrates: "",
+    openingPieces: "",
+    useCustomOpening: false,
+  });
+
+  // Opening stock setup form
+  const [openingStockForm, setOpeningStockForm] = useState({
+    asOfDate: new Date(),
+    crates: "",
+    pieces: "",
+  });
 
   useEffect(() => {
     fetchReconciliations();
@@ -202,22 +224,30 @@ const BalancingTab = () => {
     return { crates: 0, pieces: 0 };
   };
 
+  const hasExistingReconciliations = reconciliations.length > 0;
+
   const createReconciliation = async () => {
     setCreating(true);
-    const now = new Date();
+    
     let startDate: Date;
     let endDate: Date;
 
-    if (periodType === "weekly") {
-      // Use previous week
-      const lastWeek = subWeeks(now, 1);
-      startDate = startOfWeek(lastWeek, { weekStartsOn: 1 }); // Monday
-      endDate = endOfWeek(lastWeek, { weekStartsOn: 1 }); // Sunday
+    if (periodForm.startDate && periodForm.endDate) {
+      // Use custom dates
+      startDate = periodForm.startDate;
+      endDate = periodForm.endDate;
     } else {
-      // Use previous month
-      const lastMonth = subMonths(now, 1);
-      startDate = startOfMonth(lastMonth);
-      endDate = endOfMonth(lastMonth);
+      // Use default previous period
+      const now = new Date();
+      if (periodType === "weekly") {
+        const lastWeek = subWeeks(now, 1);
+        startDate = startOfWeek(lastWeek, { weekStartsOn: 1 });
+        endDate = endOfWeek(lastWeek, { weekStartsOn: 1 });
+      } else {
+        const lastMonth = subMonths(now, 1);
+        startDate = startOfMonth(lastMonth);
+        endDate = endOfMonth(lastMonth);
+      }
     }
 
     // Check if reconciliation already exists for this period
@@ -240,8 +270,17 @@ const BalancingTab = () => {
       return;
     }
 
-    // Get data
-    const openingStock = await getLastClosingStock();
+    // Get opening stock - either custom or from last period
+    let openingStock: { crates: number; pieces: number };
+    if (periodForm.useCustomOpening && (periodForm.openingCrates || periodForm.openingPieces)) {
+      openingStock = {
+        crates: parseInt(periodForm.openingCrates) || 0,
+        pieces: parseInt(periodForm.openingPieces) || 0,
+      };
+    } else {
+      openingStock = await getLastClosingStock();
+    }
+
     const periodData = await calculatePeriodData(startDate, endDate);
 
     // Calculate expected closing
@@ -249,8 +288,21 @@ const BalancingTab = () => {
     const expectedPieces = openingStock.pieces + periodData.production.pieces - periodData.sales.pieces;
 
     // Normalize pieces to crates (30 pieces = 1 crate)
-    const normalizedCrates = expectedCrates + Math.floor(expectedPieces / 30);
-    const normalizedPieces = expectedPieces % 30;
+    let normalizedCrates = expectedCrates;
+    let normalizedPieces = expectedPieces;
+    
+    // Handle negative pieces by borrowing from crates
+    if (normalizedPieces < 0) {
+      const cratesToBorrow = Math.ceil(Math.abs(normalizedPieces) / 30);
+      normalizedCrates -= cratesToBorrow;
+      normalizedPieces += cratesToBorrow * 30;
+    }
+    
+    // Handle excess pieces
+    if (normalizedPieces >= 30) {
+      normalizedCrates += Math.floor(normalizedPieces / 30);
+      normalizedPieces = normalizedPieces % 30;
+    }
 
     const { error } = await supabase.from("stock_reconciliations").insert({
       branch_id: currentBranchId,
@@ -276,12 +328,71 @@ const BalancingTab = () => {
       await logActivity("create", "reconciliation", undefined, {
         period_type: periodType,
         period: `${format(startDate, "MMM d")} - ${format(endDate, "MMM d, yyyy")}`,
+        custom_opening: periodForm.useCustomOpening,
       }, currentBranchId);
       toast.success("Reconciliation created successfully");
       fetchReconciliations();
+      // Reset form
+      setPeriodForm({
+        startDate: undefined,
+        endDate: undefined,
+        openingCrates: "",
+        openingPieces: "",
+        useCustomOpening: false,
+      });
     }
     setCreating(false);
     setShowCreateDialog(false);
+  };
+
+  const setInitialOpeningStock = async () => {
+    const crates = parseInt(openingStockForm.crates) || 0;
+    const pieces = parseInt(openingStockForm.pieces) || 0;
+
+    if (crates === 0 && pieces === 0) {
+      toast.error("Please enter at least crates or pieces");
+      return;
+    }
+
+    // Create an initial "opening" reconciliation that sets the baseline
+    const asOfDate = openingStockForm.asOfDate;
+    const startDate = asOfDate;
+    const endDate = asOfDate;
+
+    const { error } = await supabase.from("stock_reconciliations").insert({
+      branch_id: currentBranchId,
+      period_type: periodType,
+      period_start: format(startDate, "yyyy-MM-dd"),
+      period_end: format(endDate, "yyyy-MM-dd"),
+      opening_stock_crates: 0,
+      opening_stock_pieces: 0,
+      total_production_crates: 0,
+      total_production_pieces: 0,
+      total_sales_crates: 0,
+      total_sales_pieces: 0,
+      expected_closing_crates: crates,
+      expected_closing_pieces: pieces,
+      closing_stock_crates: crates,
+      closing_stock_pieces: pieces,
+      is_balanced: true,
+      status: "balanced",
+      notes: `Initial inventory setup as of ${format(asOfDate, "MMM d, yyyy")}`,
+    });
+
+    if (error) {
+      console.error("Error setting initial stock:", error);
+      toast.error("Failed to set initial stock");
+    } else {
+      await logActivity("create", "initial_stock", undefined, {
+        crates,
+        pieces,
+        as_of_date: format(asOfDate, "yyyy-MM-dd"),
+      }, currentBranchId);
+      toast.success("Initial opening stock set successfully");
+      fetchReconciliations();
+      setShowOpeningStockDialog(false);
+      setOpeningStockForm({ asOfDate: new Date(), crates: "", pieces: "" });
+    }
   };
 
   const addAdjustment = async () => {
@@ -418,6 +529,17 @@ const BalancingTab = () => {
     setShowDetailsDialog(true);
   };
 
+  // Chart data preparation
+  const chartData = [...reconciliations]
+    .reverse()
+    .filter(rec => rec.total_production_crates > 0 || rec.total_sales_crates > 0)
+    .map((rec) => ({
+      period: format(new Date(rec.period_start), "MMM d"),
+      production: rec.total_production_crates + (rec.total_production_pieces / 30),
+      sales: rec.total_sales_crates + (rec.total_sales_pieces / 30),
+      closing: rec.closing_stock_crates + (rec.closing_stock_pieces / 30),
+    }));
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -428,7 +550,7 @@ const BalancingTab = () => {
           </h2>
           <p className="text-muted-foreground">Reconcile production vs sales and track inventory</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Select value={periodType} onValueChange={(v) => setPeriodType(v as "weekly" | "monthly")}>
             <SelectTrigger className="w-32">
               <SelectValue />
@@ -438,6 +560,12 @@ const BalancingTab = () => {
               <SelectItem value="monthly">Monthly</SelectItem>
             </SelectContent>
           </Select>
+          {!hasExistingReconciliations && (
+            <Button variant="outline" onClick={() => setShowOpeningStockDialog(true)}>
+              <Package className="h-4 w-4 mr-2" />
+              Set Initial Stock
+            </Button>
+          )}
           <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Period
@@ -447,6 +575,115 @@ const BalancingTab = () => {
           </Button>
         </div>
       </div>
+
+      {/* View Toggle */}
+      {reconciliations.length > 0 && (
+        <Tabs value={activeView} onValueChange={(v) => setActiveView(v as "records" | "chart")}>
+          <TabsList>
+            <TabsTrigger value="records">Records</TabsTrigger>
+            <TabsTrigger value="chart">Chart</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="chart" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-success" />
+                  Production vs Sales Trends
+                </CardTitle>
+                <CardDescription>
+                  Visual comparison across reconciliation periods (values in crates)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {chartData.length > 1 ? (
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="period" className="text-xs" />
+                        <YAxis className="text-xs" />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                          formatter={(value: number) => [`${value.toFixed(1)} crates`, ""]}
+                        />
+                        <Legend />
+                        <Bar dataKey="production" fill="hsl(var(--success))" name="Production" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="sales" fill="hsl(var(--destructive))" name="Sales" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="closing" fill="hsl(var(--primary))" name="Closing Stock" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-80 flex items-center justify-center text-muted-foreground">
+                    <p>Need at least 2 periods with data to show chart</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="records" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Reconciliation History</CardTitle>
+                <CardDescription>Click on a row to view details and make adjustments</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Period</TableHead>
+                      <TableHead className="text-right">Opening</TableHead>
+                      <TableHead className="text-right">Production</TableHead>
+                      <TableHead className="text-right">Sales</TableHead>
+                      <TableHead className="text-right">Adjustments</TableHead>
+                      <TableHead className="text-right">Closing</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reconciliations.map((rec) => (
+                      <TableRow 
+                        key={rec.id} 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => openDetails(rec)}
+                      >
+                        <TableCell className="font-medium">
+                          {format(new Date(rec.period_start), "MMM d")} - {format(new Date(rec.period_end), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {rec.opening_stock_crates}c {rec.opening_stock_pieces}p
+                        </TableCell>
+                        <TableCell className="text-right text-success">
+                          +{rec.total_production_crates}c {rec.total_production_pieces}p
+                        </TableCell>
+                        <TableCell className="text-right text-destructive">
+                          -{rec.total_sales_crates}c {rec.total_sales_pieces}p
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {rec.adjustment_crates > 0 || rec.adjustment_pieces > 0 
+                            ? `-${rec.adjustment_crates}c ${rec.adjustment_pieces}p` 
+                            : "-"
+                          }
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {rec.closing_stock_crates}c {rec.closing_stock_pieces}p
+                        </TableCell>
+                        <TableCell>{getStatusBadge(rec.status)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
 
       {loading ? (
         <div className="animate-pulse space-y-4">
@@ -459,88 +696,214 @@ const BalancingTab = () => {
           <CardContent className="py-12 text-center">
             <Scale className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No reconciliation records</h3>
-            <p className="text-muted-foreground mb-4">Create your first {periodType} reconciliation period</p>
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create First Period
-            </Button>
+            <p className="text-muted-foreground mb-4">
+              Start by setting your initial stock count, then create your first reconciliation period
+            </p>
+            <div className="flex gap-2 justify-center">
+              <Button variant="outline" onClick={() => setShowOpeningStockDialog(true)}>
+                <Package className="h-4 w-4 mr-2" />
+                Set Initial Stock
+              </Button>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create First Period
+              </Button>
+            </div>
           </CardContent>
         </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Reconciliation History</CardTitle>
-            <CardDescription>Click on a row to view details and make adjustments</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Period</TableHead>
-                  <TableHead className="text-right">Opening</TableHead>
-                  <TableHead className="text-right">Production</TableHead>
-                  <TableHead className="text-right">Sales</TableHead>
-                  <TableHead className="text-right">Adjustments</TableHead>
-                  <TableHead className="text-right">Closing</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reconciliations.map((rec) => (
-                  <TableRow 
-                    key={rec.id} 
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => openDetails(rec)}
-                  >
-                    <TableCell className="font-medium">
-                      {format(new Date(rec.period_start), "MMM d")} - {format(new Date(rec.period_end), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {rec.opening_stock_crates}c {rec.opening_stock_pieces}p
-                    </TableCell>
-                    <TableCell className="text-right text-success">
-                      +{rec.total_production_crates}c {rec.total_production_pieces}p
-                    </TableCell>
-                    <TableCell className="text-right text-destructive">
-                      -{rec.total_sales_crates}c {rec.total_sales_pieces}p
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {rec.adjustment_crates > 0 || rec.adjustment_pieces > 0 
-                        ? `-${rec.adjustment_crates}c ${rec.adjustment_pieces}p` 
-                        : "-"
-                      }
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {rec.closing_stock_crates}c {rec.closing_stock_pieces}p
-                    </TableCell>
-                    <TableCell>{getStatusBadge(rec.status)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      ) : null}
 
-      {/* Create Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+      {/* Initial Opening Stock Dialog */}
+      <Dialog open={showOpeningStockDialog} onOpenChange={setShowOpeningStockDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Reconciliation Period</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Set Initial Opening Stock
+            </DialogTitle>
             <DialogDescription>
-              This will create a reconciliation for the previous {periodType === "weekly" ? "week" : "month"}
+              Record how many crates/pieces are currently in the farm as of a specific date. 
+              This will be used as the starting point for all future reconciliations.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground mb-2">Period to reconcile:</p>
-              <p className="font-semibold">
-                {periodType === "weekly" 
-                  ? `${format(startOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 }), "MMM d")} - ${format(endOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 }), "MMM d, yyyy")}`
-                  : `${format(startOfMonth(subMonths(new Date(), 1)), "MMMM yyyy")}`
-                }
-              </p>
+            <div>
+              <Label>As of Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !openingStockForm.asOfDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {openingStockForm.asOfDate ? format(openingStockForm.asOfDate, "PPP") : "Select date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={openingStockForm.asOfDate}
+                    onSelect={(date) => date && setOpeningStockForm({ ...openingStockForm, asOfDate: date })}
+                    disabled={(date) => date > new Date()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Crates in Stock</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={openingStockForm.crates}
+                  onChange={(e) => setOpeningStockForm({ ...openingStockForm, crates: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label>Pieces (extra)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="29"
+                  value={openingStockForm.pieces}
+                  onChange={(e) => setOpeningStockForm({ ...openingStockForm, pieces: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              This records your current inventory before you start tracking production and sales.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowOpeningStockDialog(false)}>Cancel</Button>
+              <Button onClick={setInitialOpeningStock}>Save Initial Stock</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Dialog - Enhanced with custom dates */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create New Reconciliation Period</DialogTitle>
+            <DialogDescription>
+              Set the date range to analyze production and sales. The system will calculate expected vs actual stock.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !periodForm.startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {periodForm.startDate ? format(periodForm.startDate, "MMM d, yyyy") : "Select start"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={periodForm.startDate}
+                      onSelect={(date) => setPeriodForm({ ...periodForm, startDate: date })}
+                      disabled={(date) => date > new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label>End Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !periodForm.endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {periodForm.endDate ? format(periodForm.endDate, "MMM d, yyyy") : "Select end"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={periodForm.endDate}
+                      onSelect={(date) => setPeriodForm({ ...periodForm, endDate: date })}
+                      disabled={(date) => date > new Date() || (periodForm.startDate && date < periodForm.startDate)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {!periodForm.startDate && !periodForm.endDate && (
+              <div className="p-3 bg-muted rounded-lg text-sm">
+                <p className="text-muted-foreground">Or leave dates empty to use previous {periodType === "weekly" ? "week" : "month"}:</p>
+                <p className="font-medium mt-1">
+                  {periodType === "weekly" 
+                    ? `${format(startOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 }), "MMM d")} - ${format(endOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 }), "MMM d, yyyy")}`
+                    : `${format(startOfMonth(subMonths(new Date(), 1)), "MMMM yyyy")}`
+                  }
+                </p>
+              </div>
+            )}
+
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <input
+                  type="checkbox"
+                  id="customOpening"
+                  checked={periodForm.useCustomOpening}
+                  onChange={(e) => setPeriodForm({ ...periodForm, useCustomOpening: e.target.checked })}
+                  className="rounded"
+                />
+                <Label htmlFor="customOpening" className="font-normal cursor-pointer">
+                  Set custom opening stock (instead of using previous closing)
+                </Label>
+              </div>
+              
+              {periodForm.useCustomOpening && (
+                <div className="grid grid-cols-2 gap-4 animate-in fade-in">
+                  <div>
+                    <Label>Opening Crates</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={periodForm.openingCrates}
+                      onChange={(e) => setPeriodForm({ ...periodForm, openingCrates: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <Label>Opening Pieces</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={periodForm.openingPieces}
+                      onChange={(e) => setPeriodForm({ ...periodForm, openingPieces: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
               <Button onClick={createReconciliation} disabled={creating}>
