@@ -460,6 +460,64 @@ export type Database = {
           },
         ]
       }
+      imbalance_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          branch_id: string | null
+          created_at: string
+          discrepancy_crates: number
+          discrepancy_pieces: number
+          id: string
+          reconciliation_id: string
+          threshold_exceeded: boolean
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          branch_id?: string | null
+          created_at?: string
+          discrepancy_crates?: number
+          discrepancy_pieces?: number
+          id?: string
+          reconciliation_id: string
+          threshold_exceeded?: boolean
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          branch_id?: string | null
+          created_at?: string
+          discrepancy_crates?: number
+          discrepancy_pieces?: number
+          id?: string
+          reconciliation_id?: string
+          threshold_exceeded?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imbalance_alerts_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imbalance_alerts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imbalance_alerts_reconciliation_id_fkey"
+            columns: ["reconciliation_id"]
+            isOneToOne: false
+            referencedRelation: "stock_reconciliations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       livestock_categories: {
         Row: {
           branch_id: string | null
@@ -696,28 +754,40 @@ export type Database = {
           branch_id: string | null
           created_at: string | null
           id: string
+          is_suspended: boolean
           name: string
           phone: string | null
           profile_photo: string | null
           role: Database["public"]["Enums"]["app_role"]
+          suspended_at: string | null
+          suspended_by: string | null
+          suspended_reason: string | null
         }
         Insert: {
           branch_id?: string | null
           created_at?: string | null
           id: string
+          is_suspended?: boolean
           name: string
           phone?: string | null
           profile_photo?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspended_reason?: string | null
         }
         Update: {
           branch_id?: string | null
           created_at?: string | null
           id?: string
+          is_suspended?: boolean
           name?: string
           phone?: string | null
           profile_photo?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspended_reason?: string | null
         }
         Relationships: [
           {
@@ -725,6 +795,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_suspended_by_fkey"
+            columns: ["suspended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -860,6 +937,8 @@ export type Database = {
           expected_closing_crates: number
           expected_closing_pieces: number
           id: string
+          imbalance_detected: boolean
+          imbalance_notification_sent: string | null
           is_balanced: boolean
           notes: string | null
           opening_stock_crates: number
@@ -886,6 +965,8 @@ export type Database = {
           expected_closing_crates?: number
           expected_closing_pieces?: number
           id?: string
+          imbalance_detected?: boolean
+          imbalance_notification_sent?: string | null
           is_balanced?: boolean
           notes?: string | null
           opening_stock_crates?: number
@@ -912,6 +993,8 @@ export type Database = {
           expected_closing_crates?: number
           expected_closing_pieces?: number
           id?: string
+          imbalance_detected?: boolean
+          imbalance_notification_sent?: string | null
           is_balanced?: boolean
           notes?: string | null
           opening_stock_crates?: number

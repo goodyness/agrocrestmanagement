@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Users, Shield, UserCog } from "lucide-react";
+import { Users, Shield, UserCog, Ban, UserCheck } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import SuspendUserDialog from "./dialogs/SuspendUserDialog";
+import { logActivity } from "@/lib/activityLogger";
 
 interface Profile {
   id: string;
@@ -16,11 +19,17 @@ interface Profile {
   profile_photo: string | null;
   role: string;
   created_at: string;
+  is_suspended?: boolean;
+  suspended_at?: string | null;
+  suspended_reason?: string | null;
 }
 
 const UsersTab = () => {
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -64,6 +73,73 @@ const UsersTab = () => {
     }
   };
 
+  const handleSuspendClick = (user: Profile) => {
+    setSelectedUser(user);
+    setSuspendDialogOpen(true);
+  };
+
+  const handleSuspendConfirm = async (reason: string) => {
+    if (!selectedUser) return;
+    setActionLoading(true);
+
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) {
+      toast.error("You must be logged in");
+      setActionLoading(false);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        is_suspended: true,
+        suspended_at: new Date().toISOString(),
+        suspended_reason: reason,
+        suspended_by: currentUser.id,
+      })
+      .eq("id", selectedUser.id);
+
+    if (error) {
+      toast.error("Failed to suspend user");
+    } else {
+      await logActivity("update", "user", selectedUser.id, {
+        action: "suspended",
+        reason,
+        user_name: selectedUser.name,
+      });
+      toast.success(`${selectedUser.name} has been suspended`);
+      fetchUsers();
+      setSuspendDialogOpen(false);
+    }
+    setActionLoading(false);
+  };
+
+  const handleRestoreUser = async (user: Profile) => {
+    setActionLoading(true);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        is_suspended: false,
+        suspended_at: null,
+        suspended_reason: null,
+        suspended_by: null,
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      toast.error("Failed to restore user");
+    } else {
+      await logActivity("update", "user", user.id, {
+        action: "restored",
+        user_name: user.name,
+      });
+      toast.success(`${user.name} has been restored`);
+      fetchUsers();
+    }
+    setActionLoading(false);
+  };
+
   if (loading) {
     return (
       <Card>
@@ -92,13 +168,14 @@ const UsersTab = () => {
                   <TableHead>User</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
-                  <TableRow key={user.id}>
+                  <TableRow key={user.id} className={user.is_suspended ? "bg-destructive/5" : ""}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
@@ -119,22 +196,71 @@ const UsersTab = () => {
                         {user.role}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      {user.is_suspended ? (
+                        <div>
+                          <Badge variant="destructive" className="mb-1">
+                            <Ban className="h-3 w-3 mr-1" />
+                            Suspended
+                          </Badge>
+                          {user.suspended_at && (
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(user.suspended_at), { addSuffix: true })}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge variant="outline" className="text-success border-success">
+                          <UserCheck className="h-3 w-3 mr-1" />
+                          Active
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(user.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Select
-                        value={user.role}
-                        onValueChange={(value) => handleRoleChange(user.id, value)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="worker">Worker</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center justify-end gap-2">
+                        {user.role !== "admin" && (
+                          <>
+                            {user.is_suspended ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRestoreUser(user)}
+                                disabled={actionLoading}
+                                className="text-success border-success hover:bg-success/10"
+                              >
+                                <UserCheck className="h-4 w-4 mr-1" />
+                                Restore
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSuspendClick(user)}
+                                disabled={actionLoading}
+                                className="text-destructive border-destructive hover:bg-destructive/10"
+                              >
+                                <Ban className="h-4 w-4 mr-1" />
+                                Suspend
+                              </Button>
+                            )}
+                          </>
+                        )}
+                        <Select
+                          value={user.role}
+                          onValueChange={(value) => handleRoleChange(user.id, value)}
+                        >
+                          <SelectTrigger className="w-28">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="worker">Worker</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -160,11 +286,23 @@ const UsersTab = () => {
             <Users className="h-4 w-4 text-muted-foreground mt-0.5" />
             <span><strong>Worker:</strong> Can record daily production, sales, feed consumption, and mortality. Cannot manage system settings or users</span>
           </p>
+          <p className="flex items-start gap-2">
+            <Ban className="h-4 w-4 text-destructive mt-0.5" />
+            <span><strong>Suspended:</strong> Cannot access the dashboard or perform any actions until restored by admin</span>
+          </p>
           <p className="text-xs text-muted-foreground mt-4">
             Note: Only one admin account is allowed per system for security purposes
           </p>
         </CardContent>
       </Card>
+
+      <SuspendUserDialog
+        open={suspendDialogOpen}
+        onOpenChange={setSuspendDialogOpen}
+        userName={selectedUser?.name || ""}
+        onConfirm={handleSuspendConfirm}
+        loading={actionLoading}
+      />
     </div>
   );
 };
