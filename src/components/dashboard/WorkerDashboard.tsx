@@ -16,6 +16,7 @@ import BulkMortalityDialog from "./worker/BulkMortalityDialog";
 import BulkProductionDialog from "./worker/BulkProductionDialog";
 import CleaningReminderPopup from "./worker/CleaningReminderPopup";
 import CleaningStatusCard from "./worker/CleaningStatusCard";
+import SuspensionOverlay from "./SuspensionOverlay";
 import { useCleaningSchedule } from "@/hooks/useCleaningSchedule";
 import { BranchSelectionPrompt } from "./worker/BranchSelectionPrompt";
 
@@ -33,14 +34,14 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
   const [recentProduction, setRecentProduction] = useState<any[]>([]);
   const [recentSales, setRecentSales] = useState<any[]>([]);
 
-  // Fetch user's branch assignment
+  // Fetch user's profile including suspension status
   const { data: userProfile } = useQuery({
-    queryKey: ["user-profile", user?.id],
+    queryKey: ["user-profile-full", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from("profiles")
-        .select("branch_id")
+        .select("branch_id, name, is_suspended, suspended_at, suspended_reason")
         .eq("id", user.id)
         .single();
       if (error) throw error;
@@ -168,8 +169,21 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
     fetchDashboardData(userBranchId);
   };
 
+  // Check if user is suspended
+  const isSuspended = userProfile?.is_suspended;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      {/* Suspension Overlay */}
+      {isSuspended && userProfile && (
+        <SuspensionOverlay
+          userName={userProfile.name || "User"}
+          userEmail={user?.email || ""}
+          reason={userProfile.suspended_reason || "No reason provided"}
+          suspendedAt={userProfile.suspended_at || new Date().toISOString()}
+        />
+      )}
+
       <header className="border-b border-border/40 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto px-4 lg:px-6 py-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -201,18 +215,20 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
       </header>
       
       {/* Branch Selection Prompt for workers without branch */}
-      {user && userProfile !== undefined && (
+      {user && userProfile !== undefined && !isSuspended && (
         <BranchSelectionPrompt userId={user.id} userBranchId={userProfile?.branch_id || null} />
       )}
       
-      <CleaningReminderPopup
-        isCleaningDay={cleaningSchedule.isCleaningDay}
-        isReminderDay={cleaningSchedule.isReminderDay}
-        isCleaningCompleted={cleaningSchedule.isCleaningCompleted}
-        tasks={cleaningSchedule.tasks}
-        nextCleaningDate={cleaningSchedule.nextCleaningDate}
-        onMarkComplete={cleaningSchedule.markCleaningComplete}
-      />
+      {!isSuspended && (
+        <CleaningReminderPopup
+          isCleaningDay={cleaningSchedule.isCleaningDay}
+          isReminderDay={cleaningSchedule.isReminderDay}
+          isCleaningCompleted={cleaningSchedule.isCleaningCompleted}
+          tasks={cleaningSchedule.tasks}
+          nextCleaningDate={cleaningSchedule.nextCleaningDate}
+          onMarkComplete={cleaningSchedule.markCleaningComplete}
+        />
+      )}
 
       <main className="container mx-auto px-4 lg:px-6 py-6 space-y-6">
         {/* Quick Actions */}
@@ -413,7 +429,9 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
                       </span>
                       <div className="text-right">
                         <div className="text-lg font-bold text-foreground">{item.updated_count}</div>
-                        <div className="text-xs text-muted-foreground">Initial: {item.total_count}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Initial: {item.total_count}
+                        </div>
                       </div>
                     </div>
                   ))
@@ -422,16 +440,16 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
             </CardContent>
           </Card>
 
-          {/* Feed Availability */}
+          {/* Feed Inventory */}
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle className="text-lg">Feed Inventory</CardTitle>
-              <CardDescription>Current stock levels</CardDescription>
+              <CardDescription>Current feed stock levels</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 {feedData.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No feed data available</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">No feed inventory data</p>
                 ) : (
                   feedData.map((item) => (
                     <div key={item.id} className="flex justify-between items-center p-3 bg-gradient-to-r from-muted/30 to-muted/10 rounded-lg border border-border/50 hover:border-primary/30 transition-colors">
@@ -439,10 +457,9 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
                         {item.feed_types?.feed_name}
                       </span>
                       <div className="text-right">
-                        <div className={`text-lg font-bold ${item.quantity_in_stock < 50 ? 'text-destructive' : 'text-foreground'}`}>
-                          {item.quantity_in_stock}
+                        <div className="text-lg font-bold text-foreground">
+                          {item.quantity_in_stock} {item.unit}
                         </div>
-                        <div className="text-xs text-muted-foreground">{item.unit}</div>
                       </div>
                     </div>
                   ))

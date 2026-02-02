@@ -13,12 +13,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths } from "date-fns";
-import { Scale, CheckCircle, AlertTriangle, Clock, Plus, RefreshCw, FileText, Calculator, CalendarIcon, Package, TrendingUp, TrendingDown } from "lucide-react";
+import { Scale, CheckCircle, AlertTriangle, Clock, Plus, RefreshCw, FileText, Calculator, CalendarIcon, Package, TrendingUp, TrendingDown, Download, Edit, Trash2, XCircle } from "lucide-react";
 import { logActivity } from "@/lib/activityLogger";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
+import { exportReconciliationToPDF, exportReconciliationToExcel } from "@/lib/exportUtils";
+import EditAdjustmentDialog from "./dialogs/EditAdjustmentDialog";
 
 interface Reconciliation {
   id: string;
@@ -65,6 +68,9 @@ const ADJUSTMENT_TYPES = [
   { value: "other", label: "Other" },
 ];
 
+// Imbalance threshold (in crates equivalent)
+const IMBALANCE_THRESHOLD = 2;
+
 const BalancingTab = () => {
   const { currentBranchId } = useBranch();
   const [reconciliations, setReconciliations] = useState<Reconciliation[]>([]);
@@ -76,8 +82,12 @@ const BalancingTab = () => {
   const [showAdjustmentDialog, setShowAdjustmentDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showOpeningStockDialog, setShowOpeningStockDialog] = useState(false);
+  const [showEditAdjustmentDialog, setShowEditAdjustmentDialog] = useState(false);
+  const [showDeleteAdjustmentDialog, setShowDeleteAdjustmentDialog] = useState(false);
+  const [selectedAdjustment, setSelectedAdjustment] = useState<Adjustment | null>(null);
   const [creating, setCreating] = useState(false);
   const [activeView, setActiveView] = useState<"records" | "chart">("records");
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Form states
   const [adjustmentForm, setAdjustmentForm] = useState({
@@ -105,9 +115,26 @@ const BalancingTab = () => {
     pieces: "",
   });
 
+  // Branch name for exports
+  const [branchName, setBranchName] = useState<string | undefined>();
+
   useEffect(() => {
     fetchReconciliations();
+    fetchBranchName();
   }, [currentBranchId, periodType]);
+
+  const fetchBranchName = async () => {
+    if (currentBranchId) {
+      const { data } = await supabase
+        .from("branches")
+        .select("name")
+        .eq("id", currentBranchId)
+        .single();
+      setBranchName(data?.name);
+    } else {
+      setBranchName(undefined);
+    }
+  };
 
   const fetchReconciliations = async () => {
     setLoading(true);
@@ -162,7 +189,7 @@ const BalancingTab = () => {
 
     const { data: productionData } = await productionQuery;
 
-    // Get sales data for the period (eggs only)
+    // Get sales data for the period (eggs only) - FIXED: fetch from sales_records
     let salesQuery = supabase
       .from("sales_records")
       .select("quantity, unit")
@@ -283,25 +310,22 @@ const BalancingTab = () => {
 
     const periodData = await calculatePeriodData(startDate, endDate);
 
-    // Calculate expected closing
-    const expectedCrates = openingStock.crates + periodData.production.crates - periodData.sales.crates;
-    const expectedPieces = openingStock.pieces + periodData.production.pieces - periodData.sales.pieces;
+    // FIXED: Calculate closing stock = opening + production - sales
+    let closingCrates = openingStock.crates + periodData.production.crates - periodData.sales.crates;
+    let closingPieces = openingStock.pieces + periodData.production.pieces - periodData.sales.pieces;
 
     // Normalize pieces to crates (30 pieces = 1 crate)
-    let normalizedCrates = expectedCrates;
-    let normalizedPieces = expectedPieces;
-    
     // Handle negative pieces by borrowing from crates
-    if (normalizedPieces < 0) {
-      const cratesToBorrow = Math.ceil(Math.abs(normalizedPieces) / 30);
-      normalizedCrates -= cratesToBorrow;
-      normalizedPieces += cratesToBorrow * 30;
+    if (closingPieces < 0) {
+      const cratesToBorrow = Math.ceil(Math.abs(closingPieces) / 30);
+      closingCrates -= cratesToBorrow;
+      closingPieces += cratesToBorrow * 30;
     }
     
     // Handle excess pieces
-    if (normalizedPieces >= 30) {
-      normalizedCrates += Math.floor(normalizedPieces / 30);
-      normalizedPieces = normalizedPieces % 30;
+    if (closingPieces >= 30) {
+      closingCrates += Math.floor(closingPieces / 30);
+      closingPieces = closingPieces % 30;
     }
 
     const { error } = await supabase.from("stock_reconciliations").insert({
@@ -315,10 +339,10 @@ const BalancingTab = () => {
       total_production_pieces: periodData.production.pieces,
       total_sales_crates: periodData.sales.crates,
       total_sales_pieces: periodData.sales.pieces,
-      expected_closing_crates: normalizedCrates >= 0 ? normalizedCrates : 0,
-      expected_closing_pieces: normalizedPieces >= 0 ? normalizedPieces : 0,
-      closing_stock_crates: normalizedCrates >= 0 ? normalizedCrates : 0,
-      closing_stock_pieces: normalizedPieces >= 0 ? normalizedPieces : 0,
+      expected_closing_crates: closingCrates >= 0 ? closingCrates : 0,
+      expected_closing_pieces: closingPieces >= 0 ? closingPieces : 0,
+      closing_stock_crates: closingCrates >= 0 ? closingCrates : 0,
+      closing_stock_pieces: closingPieces >= 0 ? closingPieces : 0,
     });
 
     if (error) {
@@ -459,6 +483,99 @@ const BalancingTab = () => {
     }
   };
 
+  const handleEditAdjustment = (adjustment: Adjustment) => {
+    setSelectedAdjustment(adjustment);
+    setShowEditAdjustmentDialog(true);
+  };
+
+  const handleDeleteAdjustmentClick = (adjustment: Adjustment) => {
+    setSelectedAdjustment(adjustment);
+    setShowDeleteAdjustmentDialog(true);
+  };
+
+  const saveEditedAdjustment = async (data: { adjustment_type: string; crates: number; pieces: number; description: string | null }) => {
+    if (!selectedAdjustment || !selectedReconciliation) return;
+    setActionLoading(true);
+
+    const oldCrates = selectedAdjustment.crates;
+    const oldPieces = selectedAdjustment.pieces;
+    const cratesDiff = data.crates - oldCrates;
+    const piecesDiff = data.pieces - oldPieces;
+
+    const { error } = await supabase
+      .from("stock_adjustments")
+      .update({
+        adjustment_type: data.adjustment_type,
+        crates: data.crates,
+        pieces: data.pieces,
+        description: data.description,
+      })
+      .eq("id", selectedAdjustment.id);
+
+    if (error) {
+      toast.error("Failed to update adjustment");
+    } else {
+      // Update reconciliation totals
+      const newAdjustmentCrates = selectedReconciliation.adjustment_crates + cratesDiff;
+      const newAdjustmentPieces = selectedReconciliation.adjustment_pieces + piecesDiff;
+      const newClosingCrates = selectedReconciliation.expected_closing_crates - newAdjustmentCrates;
+      const newClosingPieces = selectedReconciliation.expected_closing_pieces - newAdjustmentPieces;
+
+      await supabase
+        .from("stock_reconciliations")
+        .update({
+          adjustment_crates: newAdjustmentCrates,
+          adjustment_pieces: newAdjustmentPieces,
+          closing_stock_crates: newClosingCrates >= 0 ? newClosingCrates : 0,
+          closing_stock_pieces: newClosingPieces >= 0 ? newClosingPieces : 0,
+        })
+        .eq("id", selectedReconciliation.id);
+
+      toast.success("Adjustment updated");
+      fetchAdjustments(selectedReconciliation.id);
+      fetchReconciliations();
+      setShowEditAdjustmentDialog(false);
+    }
+    setActionLoading(false);
+  };
+
+  const deleteAdjustment = async () => {
+    if (!selectedAdjustment || !selectedReconciliation) return;
+    setActionLoading(true);
+
+    const { error } = await supabase
+      .from("stock_adjustments")
+      .delete()
+      .eq("id", selectedAdjustment.id);
+
+    if (error) {
+      toast.error("Failed to delete adjustment");
+    } else {
+      // Update reconciliation totals
+      const newAdjustmentCrates = selectedReconciliation.adjustment_crates - selectedAdjustment.crates;
+      const newAdjustmentPieces = selectedReconciliation.adjustment_pieces - selectedAdjustment.pieces;
+      const newClosingCrates = selectedReconciliation.expected_closing_crates - newAdjustmentCrates;
+      const newClosingPieces = selectedReconciliation.expected_closing_pieces - newAdjustmentPieces;
+
+      await supabase
+        .from("stock_reconciliations")
+        .update({
+          adjustment_crates: newAdjustmentCrates >= 0 ? newAdjustmentCrates : 0,
+          adjustment_pieces: newAdjustmentPieces >= 0 ? newAdjustmentPieces : 0,
+          closing_stock_crates: newClosingCrates >= 0 ? newClosingCrates : 0,
+          closing_stock_pieces: newClosingPieces >= 0 ? newClosingPieces : 0,
+          status: newAdjustmentCrates === 0 && newAdjustmentPieces === 0 ? "pending" : "adjusted",
+        })
+        .eq("id", selectedReconciliation.id);
+
+      toast.success("Adjustment deleted");
+      fetchAdjustments(selectedReconciliation.id);
+      fetchReconciliations();
+      setShowDeleteAdjustmentDialog(false);
+    }
+    setActionLoading(false);
+  };
+
   const markAsBalanced = async () => {
     if (!selectedReconciliation) return;
 
@@ -493,6 +610,39 @@ const BalancingTab = () => {
     }
   };
 
+  const markAsImbalanced = async () => {
+    if (!selectedReconciliation) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("You must be logged in");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("stock_reconciliations")
+      .update({
+        is_balanced: false,
+        status: "unresolved",
+        notes: notesForm || null,
+        imbalance_detected: true,
+      })
+      .eq("id", selectedReconciliation.id);
+
+    if (error) {
+      console.error("Error marking as imbalanced:", error);
+      toast.error("Failed to mark as imbalanced");
+    } else {
+      await logActivity("update", "reconciliation", selectedReconciliation.id, {
+        action: "marked_imbalanced",
+        period: `${selectedReconciliation.period_start} - ${selectedReconciliation.period_end}`,
+      }, currentBranchId);
+      toast.success("Marked as imbalanced");
+      fetchReconciliations();
+      setShowDetailsDialog(false);
+    }
+  };
+
   const saveNotes = async () => {
     if (!selectedReconciliation) return;
 
@@ -507,6 +657,18 @@ const BalancingTab = () => {
       toast.success("Notes saved");
       fetchReconciliations();
     }
+  };
+
+  const handleExportPDF = () => {
+    if (!selectedReconciliation) return;
+    exportReconciliationToPDF(selectedReconciliation, adjustments, branchName);
+    toast.success("PDF downloaded");
+  };
+
+  const handleExportExcel = () => {
+    if (!selectedReconciliation) return;
+    exportReconciliationToExcel(selectedReconciliation, adjustments, branchName);
+    toast.success("Excel file downloaded");
   };
 
   const getStatusBadge = (status: string) => {
@@ -916,7 +1078,7 @@ const BalancingTab = () => {
 
       {/* Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               Reconciliation Details
@@ -929,6 +1091,18 @@ const BalancingTab = () => {
 
           {selectedReconciliation && (
             <div className="space-y-6">
+              {/* Export buttons */}
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={handleExportPDF}>
+                  <Download className="h-4 w-4 mr-2" />
+                  PDF
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportExcel}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Excel
+                </Button>
+              </div>
+
               {/* Summary Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-3 bg-muted rounded-lg">
@@ -970,7 +1144,7 @@ const BalancingTab = () => {
                 </CardContent>
               </Card>
 
-              {/* Adjustments List */}
+              {/* Adjustments List with Edit/Delete */}
               {adjustments.length > 0 && (
                 <Card>
                   <CardHeader className="py-3">
@@ -980,13 +1154,25 @@ const BalancingTab = () => {
                     <div className="space-y-2">
                       {adjustments.map((adj) => (
                         <div key={adj.id} className="flex justify-between items-center text-sm p-2 bg-muted/50 rounded">
-                          <div>
+                          <div className="flex-1">
                             <Badge variant="outline" className="mr-2">
                               {ADJUSTMENT_TYPES.find(t => t.value === adj.adjustment_type)?.label}
                             </Badge>
                             {adj.description && <span className="text-muted-foreground">{adj.description}</span>}
                           </div>
-                          <span className="font-medium">-{adj.crates}c {adj.pieces}p</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">-{adj.crates}c {adj.pieces}p</span>
+                            {selectedReconciliation.status !== "balanced" && (
+                              <>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditAdjustment(adj)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteAdjustmentClick(adj)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1016,6 +1202,10 @@ const BalancingTab = () => {
                     <Button variant="outline" onClick={() => setShowAdjustmentDialog(true)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Adjustment
+                    </Button>
+                    <Button variant="destructive" onClick={markAsImbalanced}>
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Mark Imbalanced
                     </Button>
                     <Button onClick={markAsBalanced} className="bg-success hover:bg-success/90">
                       <CheckCircle className="h-4 w-4 mr-2" />
@@ -1090,6 +1280,33 @@ const BalancingTab = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Adjustment Dialog */}
+      <EditAdjustmentDialog
+        open={showEditAdjustmentDialog}
+        onOpenChange={setShowEditAdjustmentDialog}
+        adjustment={selectedAdjustment}
+        onSave={saveEditedAdjustment}
+        loading={actionLoading}
+      />
+
+      {/* Delete Adjustment Confirmation */}
+      <AlertDialog open={showDeleteAdjustmentDialog} onOpenChange={setShowDeleteAdjustmentDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Adjustment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this adjustment? This will recalculate the closing stock.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteAdjustment} disabled={actionLoading} className="bg-destructive hover:bg-destructive/90">
+              {actionLoading ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
