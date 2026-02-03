@@ -15,6 +15,7 @@ import { logActivity } from "@/lib/activityLogger";
 interface Profile {
   id: string;
   name: string;
+  email: string | null;
   phone: string | null;
   profile_photo: string | null;
   role: string;
@@ -166,7 +167,8 @@ const UsersTab = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
-                  <TableHead>Contact</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Joined</TableHead>
@@ -186,6 +188,9 @@ const UsersTab = () => {
                         </Avatar>
                         <span className="font-medium">{user.name}</span>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">{user.email || "N/A"}</span>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground">{user.phone || "N/A"}</span>

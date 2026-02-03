@@ -89,6 +89,10 @@ const BalancingTab = () => {
   const [activeView, setActiveView] = useState<"records" | "chart">("records");
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Product types filter for sales
+  const [availableProductTypes, setAvailableProductTypes] = useState<string[]>([]);
+  const [selectedProductTypes, setSelectedProductTypes] = useState<string[]>(["eggs", "Eggs"]);
+
   // Form states
   const [adjustmentForm, setAdjustmentForm] = useState({
     adjustment_type: "breakage",
@@ -117,6 +121,25 @@ const BalancingTab = () => {
 
   // Branch name for exports
   const [branchName, setBranchName] = useState<string | undefined>();
+
+  // Fetch distinct product types from sales_records
+  useEffect(() => {
+    const fetchProductTypes = async () => {
+      const { data } = await supabase
+        .from("sales_records")
+        .select("product_type")
+        .limit(100);
+      if (data) {
+        const unique = [...new Set(data.map((d) => d.product_type))];
+        setAvailableProductTypes(unique);
+        // Default to all product types if none selected
+        if (selectedProductTypes.length === 0 && unique.length > 0) {
+          setSelectedProductTypes(unique);
+        }
+      }
+    };
+    fetchProductTypes();
+  }, []);
 
   useEffect(() => {
     fetchReconciliations();
@@ -189,13 +212,17 @@ const BalancingTab = () => {
 
     const { data: productionData } = await productionQuery;
 
-    // Get sales data for the period (eggs only) - FIXED: fetch from sales_records
+    // Get sales data for the period - filter by selected product types
     let salesQuery = supabase
       .from("sales_records")
-      .select("quantity, unit")
-      .eq("product_type", "eggs")
+      .select("quantity, unit, product_type")
       .gte("date", start)
       .lte("date", end);
+
+    // Filter by selected product types (case-insensitive match)
+    if (selectedProductTypes.length > 0) {
+      salesQuery = salesQuery.in("product_type", selectedProductTypes);
+    }
 
     if (currentBranchId) {
       salesQuery = salesQuery.eq("branch_id", currentBranchId);
@@ -737,6 +764,35 @@ const BalancingTab = () => {
           </Button>
         </div>
       </div>
+
+      {/* Product Type Filter */}
+      {availableProductTypes.length > 0 && (
+        <Card className="p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium mr-2">Include sales from:</span>
+            {availableProductTypes.map((pt) => (
+              <label key={pt} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedProductTypes.includes(pt)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedProductTypes([...selectedProductTypes, pt]);
+                    } else {
+                      setSelectedProductTypes(selectedProductTypes.filter((t) => t !== pt));
+                    }
+                  }}
+                  className="rounded"
+                />
+                {pt}
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Only sales of selected product types (with unit "crate(s)" or "piece(s)") will be counted in reconciliation.
+          </p>
+        </Card>
+      )}
 
       {/* View Toggle */}
       {reconciliations.length > 0 && (
