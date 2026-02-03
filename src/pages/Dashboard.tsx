@@ -4,12 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import AdminDashboard from "@/components/dashboard/AdminDashboard";
 import WorkerDashboard from "@/components/dashboard/WorkerDashboard";
+import SuspensionOverlay from "@/components/dashboard/SuspensionOverlay";
+
+interface UserProfile {
+  role: string;
+  name: string;
+  is_suspended: boolean;
+  suspended_at: string | null;
+  suspended_reason: string | null;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,21 +45,21 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
-      // Fetch user profile to get role
-      const fetchUserRole = async () => {
+      // Fetch user profile to get role and suspension status
+      const fetchUserProfile = async () => {
         const { data, error } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, name, is_suspended, suspended_at, suspended_reason")
           .eq("id", user.id)
           .single();
 
         if (!error && data) {
-          setUserRole(data.role);
+          setUserProfile(data);
         }
         setLoading(false);
       };
 
-      fetchUserRole();
+      fetchUserProfile();
     }
   }, [user]);
 
@@ -65,7 +74,19 @@ const Dashboard = () => {
     );
   }
 
-  if (userRole === "admin") {
+  // Show suspension overlay for suspended users (works for workers)
+  if (userProfile?.is_suspended) {
+    return (
+      <SuspensionOverlay
+        userName={userProfile.name || "User"}
+        userEmail={user?.email || ""}
+        reason={userProfile.suspended_reason || "No reason provided"}
+        suspendedAt={userProfile.suspended_at || new Date().toISOString()}
+      />
+    );
+  }
+
+  if (userProfile?.role === "admin") {
     return <AdminDashboard user={user} />;
   }
 
