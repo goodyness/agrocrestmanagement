@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Package, TrendingDown } from "lucide-react";
+import { AlertTriangle, Package, TrendingDown, ShoppingCart, Warehouse } from "lucide-react";
 import AddFeedTypeDialog from "./dialogs/AddFeedTypeDialog";
 import AddFeedPurchaseDialog from "./dialogs/AddFeedPurchaseDialog";
 import EditFeedTypeDialog from "./dialogs/EditFeedTypeDialog";
@@ -15,6 +15,7 @@ const FeedTab = () => {
   const [inventory, setInventory] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
+  const [totalPurchased, setTotalPurchased] = useState<Record<string, { quantity: number; unit: string }>>({});
 
   useEffect(() => {
     fetchData();
@@ -28,6 +29,28 @@ const FeedTab = () => {
     let inventoryQuery = supabase.from("feed_inventory").select("*, feed_types(feed_name, unit_type, price_per_unit)").order("updated_at", { ascending: false });
     if (currentBranchId) inventoryQuery = inventoryQuery.eq("branch_id", currentBranchId);
     const { data: inventoryData } = await inventoryQuery;
+
+    // Fetch ALL purchases (not limited) to calculate total purchased
+    let allPurchasesQuery = supabase.from("feed_purchases").select("feed_type_id, quantity, unit");
+    if (currentBranchId) allPurchasesQuery = allPurchasesQuery.eq("branch_id", currentBranchId);
+    const { data: allPurchasesData } = await allPurchasesQuery;
+
+    // Calculate total purchased per feed type
+    const purchaseTotals: Record<string, { quantity: number; unit: string }> = {};
+    allPurchasesData?.forEach((p) => {
+      if (!purchaseTotals[p.feed_type_id]) {
+        purchaseTotals[p.feed_type_id] = { quantity: 0, unit: p.unit };
+      }
+      // Convert to same unit if needed (assuming bag is the base unit)
+      let qty = p.quantity;
+      if (purchaseTotals[p.feed_type_id].unit === "bag" && p.unit === "kg") {
+        qty = p.quantity / 25;
+      } else if (purchaseTotals[p.feed_type_id].unit === "kg" && p.unit === "bag") {
+        qty = p.quantity * 25;
+      }
+      purchaseTotals[p.feed_type_id].quantity += qty;
+    });
+    setTotalPurchased(purchaseTotals);
 
     let purchasesQuery = supabase.from("feed_purchases").select("*, feed_types(feed_name), profiles(name)").order("created_at", { ascending: false }).limit(10);
     if (currentBranchId) purchasesQuery = purchasesQuery.eq("branch_id", currentBranchId);
@@ -134,6 +157,7 @@ const FeedTab = () => {
                 inventory.map((item) => {
                   const alert = alerts.find(a => a.feed_type_id === item.feed_type_id);
                   const isLowStock = alert && item.quantity_in_stock <= alert.threshold_quantity;
+                  const purchased = totalPurchased[item.feed_type_id];
                   
                   return (
                     <div key={item.id} className={`p-3 rounded-lg ${isLowStock ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted/50'}`}>
@@ -141,8 +165,14 @@ const FeedTab = () => {
                         <div className="flex items-center gap-2">
                           <div>
                             <p className="font-medium text-foreground">{item.feed_types?.feed_name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              Last updated: {new Date(item.updated_at).toLocaleDateString()}
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <ShoppingCart className="h-3 w-3" />
+                                Total Bought: {purchased ? `${purchased.quantity.toFixed(1)} ${purchased.unit}` : '0'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Updated: {new Date(item.updated_at).toLocaleDateString()}
                             </p>
                           </div>
                           {isLowStock && (
@@ -152,9 +182,15 @@ const FeedTab = () => {
                             </Badge>
                           )}
                         </div>
-                        <p className={`text-lg font-bold ${isLowStock ? 'text-destructive' : 'text-primary'}`}>
-                          {item.quantity_in_stock} {item.unit}
-                        </p>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
+                            <Warehouse className="h-3 w-3" />
+                            Available
+                          </p>
+                          <p className={`text-lg font-bold ${isLowStock ? 'text-destructive' : 'text-primary'}`}>
+                            {Number(item.quantity_in_stock).toFixed(1)} {item.unit}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   );

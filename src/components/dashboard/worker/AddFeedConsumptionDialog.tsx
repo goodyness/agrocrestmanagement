@@ -70,10 +70,12 @@ const AddFeedConsumptionDialog = ({ user, onSuccess, branchId }: AddFeedConsumpt
       finalBranchId = profile?.branch_id || null;
     }
 
+    const quantityUsed = parseFloat(formData.quantity_used);
+
     const { error } = await supabase.from("feed_consumption").insert([
       {
         ...formData,
-        quantity_used: parseFloat(formData.quantity_used),
+        quantity_used: quantityUsed,
         recorded_by: user.id,
         branch_id: finalBranchId,
       },
@@ -83,6 +85,37 @@ const AddFeedConsumptionDialog = ({ user, onSuccess, branchId }: AddFeedConsumpt
       toast.error("Failed to record feed consumption");
       console.error(error);
     } else {
+      // Reduce feed inventory
+      const { data: existingInventory } = await supabase
+        .from("feed_inventory")
+        .select("*")
+        .eq("feed_type_id", formData.feed_type_id)
+        .eq("branch_id", finalBranchId)
+        .single();
+
+      if (existingInventory) {
+        // Convert quantity to same unit if needed
+        let quantityToDeduct = quantityUsed;
+        
+        // If inventory is in bags and consumption is in kg, or vice versa
+        // Assuming 1 bag = 25kg for conversion
+        if (existingInventory.unit === "bag" && formData.unit === "kg") {
+          quantityToDeduct = quantityUsed / 25;
+        } else if (existingInventory.unit === "kg" && formData.unit === "bag") {
+          quantityToDeduct = quantityUsed * 25;
+        }
+
+        const newQuantity = Math.max(0, existingInventory.quantity_in_stock - quantityToDeduct);
+        
+        await supabase
+          .from("feed_inventory")
+          .update({ 
+            quantity_in_stock: newQuantity,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", existingInventory.id);
+      }
+
       const feedName = feedTypes.find(f => f.id === formData.feed_type_id)?.feed_name || 'Unknown';
       const livestockName = livestockCategories.find(l => l.id === formData.livestock_category_id)?.name || 'Unknown';
       
