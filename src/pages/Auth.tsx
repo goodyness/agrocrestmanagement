@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,12 +125,12 @@ const Auth = () => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="signin-password">Password</Label>
-                    <a 
-                      href="/forgot-password" 
+                    <Link 
+                      to="/forgot-password" 
                       className="text-xs text-muted-foreground hover:text-foreground"
                     >
                       Forgot password?
-                    </a>
+                    </Link>
                   </div>
                   <Input
                     id="signin-password"

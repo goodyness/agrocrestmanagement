@@ -838,11 +838,13 @@ export type Database = {
       }
       sales_records: {
         Row: {
+          amount_paid: number
           branch_id: string | null
           buyer_name: string | null
           created_at: string | null
           date: string
           id: string
+          payment_status: string
           price_per_unit: number
           product_name: string
           product_type: string
@@ -852,11 +854,13 @@ export type Database = {
           unit: string
         }
         Insert: {
+          amount_paid?: number
           branch_id?: string | null
           buyer_name?: string | null
           created_at?: string | null
           date?: string
           id?: string
+          payment_status?: string
           price_per_unit: number
           product_name: string
           product_type: string
@@ -866,11 +870,13 @@ export type Database = {
           unit: string
         }
         Update: {
+          amount_paid?: number
           branch_id?: string | null
           buyer_name?: string | null
           created_at?: string | null
           date?: string
           id?: string
+          payment_status?: string
           price_per_unit?: number
           product_name?: string
           product_type?: string

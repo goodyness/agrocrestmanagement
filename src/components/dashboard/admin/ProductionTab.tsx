@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { useBranch } from "@/contexts/BranchContext";
+import { BarChart3 } from "lucide-react";
 
 const ProductionTab = () => {
+  const navigate = useNavigate();
   const { currentBranchId } = useBranch();
   const [production, setProduction] = useState<any[]>([]);
   const [totalStats, setTotalStats] = useState({ totalCrates: 0, totalPieces: 0 });
@@ -42,9 +46,15 @@ const ProductionTab = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Production Records</h2>
-        <p className="text-muted-foreground">Daily egg production tracking</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Production Records</h2>
+          <p className="text-muted-foreground">Daily egg production tracking</p>
+        </div>
+        <Button onClick={() => navigate("/analytics")} variant="outline">
+          <BarChart3 className="h-4 w-4 mr-2" />
+          View Analytics
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
