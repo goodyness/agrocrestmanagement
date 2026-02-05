@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Package, TrendingDown, ShoppingCart, Warehouse } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertTriangle, Package, TrendingDown, ShoppingCart, Warehouse, History } from "lucide-react";
 import AddFeedTypeDialog from "./dialogs/AddFeedTypeDialog";
 import AddFeedPurchaseDialog from "./dialogs/AddFeedPurchaseDialog";
 import EditFeedTypeDialog from "./dialogs/EditFeedTypeDialog";
 import LowStockAlertDialog from "./dialogs/LowStockAlertDialog";
+import FeedConsumptionHistory from "./FeedConsumptionHistory";
 import { useBranch } from "@/contexts/BranchContext";
 
 const FeedTab = () => {
@@ -86,7 +88,19 @@ const FeedTab = () => {
         <LowStockAlertDialog feedTypes={feedTypes} onSuccess={fetchData} branchId={currentBranchId} />
       </div>
 
-      {/* Low Stock Warning Banner */}
+      <Tabs defaultValue="inventory" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="inventory" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Inventory
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Consumption History
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="inventory" className="space-y-6">
       {lowStockItems.length > 0 && (
         <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
@@ -240,6 +254,12 @@ const FeedTab = () => {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <FeedConsumptionHistory />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

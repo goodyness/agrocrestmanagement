@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
@@ -19,6 +20,7 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
   const [quantity, setQuantity] = useState("");
   const [pricePerUnit, setPricePerUnit] = useState("");
   const [total, setTotal] = useState(0);
+  const [isPaid, setIsPaid] = useState(false);
   const { currentBranchId } = useBranch();
 
   const calculateTotal = (qty: string, price: string) => {
@@ -58,17 +60,20 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
       branchId = profile?.branch_id || null;
     }
 
+    const totalAmount = quantity * price_per_unit;
     const { error } = await supabase.from("sales_records").insert({
       product_name,
       product_type,
       quantity,
       unit,
       price_per_unit,
-      total_amount: quantity * price_per_unit,
+      total_amount: totalAmount,
       buyer_name: buyer_name || null,
       recorded_by: user.id,
       date: new Date().toISOString().split('T')[0],
       branch_id: branchId,
+      payment_status: isPaid ? 'paid' : 'pending',
+      amount_paid: isPaid ? totalAmount : 0,
     });
 
     if (error) {
@@ -192,6 +197,16 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
               type="text"
               placeholder="Customer name"
             />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="is_paid" 
+              checked={isPaid}
+              onCheckedChange={(checked) => setIsPaid(checked === true)}
+            />
+            <Label htmlFor="is_paid" className="text-sm font-normal cursor-pointer">
+              Mark as paid
+            </Label>
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Recording..." : "Record Sale"}
