@@ -21,6 +21,7 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
   const [pricePerUnit, setPricePerUnit] = useState("");
   const [total, setTotal] = useState(0);
   const [isPaid, setIsPaid] = useState(false);
+  const [isPreorder, setIsPreorder] = useState(false);
   const { currentBranchId } = useBranch();
 
   const calculateTotal = (qty: string, price: string) => {
@@ -74,6 +75,7 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
       branch_id: branchId,
       payment_status: isPaid ? 'paid' : 'pending',
       amount_paid: isPaid ? totalAmount : 0,
+      delivery_status: isPreorder ? 'preorder' : 'delivered',
     });
 
     if (error) {
@@ -198,15 +200,27 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
               placeholder="Customer name"
             />
           </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="is_paid" 
-              checked={isPaid}
-              onCheckedChange={(checked) => setIsPaid(checked === true)}
-            />
-            <Label htmlFor="is_paid" className="text-sm font-normal cursor-pointer">
-              Mark as paid
-            </Label>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="is_paid" 
+                checked={isPaid}
+                onCheckedChange={(checked) => setIsPaid(checked === true)}
+              />
+              <Label htmlFor="is_paid" className="text-sm font-normal cursor-pointer">
+                Mark as paid
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="is_preorder" 
+                checked={isPreorder}
+                onCheckedChange={(checked) => setIsPreorder(checked === true)}
+              />
+              <Label htmlFor="is_preorder" className="text-sm font-normal cursor-pointer">
+                Preorder (customer paid but hasn't picked up yet)
+              </Label>
+            </div>
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Recording..." : "Record Sale"}

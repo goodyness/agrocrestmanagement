@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useBranch } from "@/contexts/BranchContext";
-import { BarChart3, CreditCard } from "lucide-react";
+import { BarChart3, CreditCard, Truck, Package } from "lucide-react";
 import UpdatePaymentDialog from "./dialogs/UpdatePaymentDialog";
+import { toast } from "sonner";
 
 const SalesTab = () => {
   const navigate = useNavigate();
@@ -17,8 +18,10 @@ const SalesTab = () => {
   const [totalSales, setTotalSales] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
   const [totalPending, setTotalPending] = useState(0);
+  const [preorderCount, setPreorderCount] = useState(0);
   const [selectedSale, setSelectedSale] = useState<any>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [deliveryFilter, setDeliveryFilter] = useState<'all' | 'preorder' | 'delivered'>('all');
 
   useEffect(() => {
     fetchData();
@@ -41,9 +44,11 @@ const SalesTab = () => {
       setSales(data);
       const total = data.reduce((acc, curr) => acc + Number(curr.total_amount), 0);
       const paid = data.reduce((acc, curr) => acc + Number(curr.amount_paid || 0), 0);
+      const preorders = data.filter((s) => s.delivery_status === 'preorder').length;
       setTotalSales(total);
       setTotalPaid(paid);
       setTotalPending(total - paid);
+      setPreorderCount(preorders);
     }
   };
 
@@ -66,6 +71,32 @@ const SalesTab = () => {
     setSelectedSale(sale);
     setPaymentDialogOpen(true);
   };
+
+  const handleMarkDelivered = async (saleId: string) => {
+    const { error } = await supabase
+      .from("sales_records")
+      .update({ delivery_status: 'delivered' })
+      .eq("id", saleId);
+
+    if (error) {
+      toast.error("Failed to update delivery status");
+    } else {
+      toast.success("Marked as delivered");
+      fetchData();
+    }
+  };
+
+  const getDeliveryBadge = (status: string) => {
+    if (status === 'preorder') {
+      return <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20"><Package className="h-3 w-3 mr-1" />Preorder</Badge>;
+    }
+    return <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20"><Truck className="h-3 w-3 mr-1" />Delivered</Badge>;
+  };
+
+  const filteredSales = sales.filter((s) => {
+    if (deliveryFilter === 'all') return true;
+    return s.delivery_status === deliveryFilter;
+  });
 
   return (
     <div className="space-y-6">
@@ -113,21 +144,46 @@ const SalesTab = () => {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Average Transaction</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Pickup</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              ₦{sales.length > 0 ? Math.round(totalSales / sales.length).toLocaleString() : 0}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">per sale</p>
+            <div className="text-2xl font-bold text-orange-600">{preorderCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">preorders awaiting delivery</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Recent Sales</CardTitle>
-          <CardDescription>Last 30 days of sales data</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Recent Sales</CardTitle>
+            <CardDescription>Last 30 days of sales data</CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant={deliveryFilter === 'all' ? 'default' : 'outline'}
+              onClick={() => setDeliveryFilter('all')}
+            >
+              All
+            </Button>
+            <Button
+              size="sm"
+              variant={deliveryFilter === 'preorder' ? 'default' : 'outline'}
+              onClick={() => setDeliveryFilter('preorder')}
+            >
+              <Package className="h-3 w-3 mr-1" />
+              Preorders
+            </Button>
+            <Button
+              size="sm"
+              variant={deliveryFilter === 'delivered' ? 'default' : 'outline'}
+              onClick={() => setDeliveryFilter('delivered')}
+            >
+              <Truck className="h-3 w-3 mr-1" />
+              Delivered
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -139,20 +195,21 @@ const SalesTab = () => {
                 <TableHead>Unit Price</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Payment Status</TableHead>
+                <TableHead>Delivery Status</TableHead>
                 <TableHead>Buyer</TableHead>
                 <TableHead>Recorded By</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sales.length === 0 ? (
+              {filteredSales.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground">
-                    No sales records yet
+                  <TableCell colSpan={10} className="text-center text-muted-foreground">
+                    No sales records found
                   </TableCell>
                 </TableRow>
               ) : (
-                sales.map((record) => (
+                filteredSales.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell>{format(new Date(record.date), "MMM dd, yyyy")}</TableCell>
                     <TableCell>
@@ -169,16 +226,32 @@ const SalesTab = () => {
                     <TableCell>
                       {getPaymentBadge(record.payment_status, record.amount_paid, record.total_amount)}
                     </TableCell>
+                    <TableCell>
+                      {getDeliveryBadge(record.delivery_status)}
+                    </TableCell>
                     <TableCell>{record.buyer_name || "-"}</TableCell>
                     <TableCell>{record.profiles?.name || "Unknown"}</TableCell>
                     <TableCell>
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        onClick={() => handleUpdatePayment(record)}
-                      >
-                        <CreditCard className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => handleUpdatePayment(record)}
+                          title="Update payment"
+                        >
+                          <CreditCard className="h-4 w-4" />
+                        </Button>
+                        {record.delivery_status === 'preorder' && (
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => handleMarkDelivered(record.id)}
+                            title="Mark as delivered"
+                          >
+                            <Truck className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

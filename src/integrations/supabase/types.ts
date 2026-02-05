@@ -843,6 +843,7 @@ export type Database = {
           buyer_name: string | null
           created_at: string | null
           date: string
+          delivery_status: string
           id: string
           payment_status: string
           price_per_unit: number
@@ -859,6 +860,7 @@ export type Database = {
           buyer_name?: string | null
           created_at?: string | null
           date?: string
+          delivery_status?: string
           id?: string
           payment_status?: string
           price_per_unit: number
@@ -875,6 +877,7 @@ export type Database = {
           buyer_name?: string | null
           created_at?: string | null
           date?: string
+          delivery_status?: string
           id?: string
           payment_status?: string
           price_per_unit?: number
