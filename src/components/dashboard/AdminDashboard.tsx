@@ -2,7 +2,7 @@ import { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale } from "lucide-react";
+import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,6 +25,8 @@ import { BranchSelector } from "./BranchSelector";
 import { useBranch } from "@/contexts/BranchContext";
 import { WorkerBranchAssignment } from "./admin/WorkerBranchAssignment";
 import BranchManagementTab from "./admin/BranchManagementTab";
+import SuppliersTab from "./admin/SuppliersTab";
+import CustomersTab from "./admin/CustomersTab";
 
 interface AdminDashboardProps {
   user: User | null;
@@ -143,6 +145,14 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
                 <Building2 className="h-4 w-4" />
                 <span className="hidden sm:inline">Branches</span>
               </TabsTrigger>
+              <TabsTrigger value="suppliers" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Truck className="h-4 w-4" />
+                <span className="hidden sm:inline">Suppliers</span>
+              </TabsTrigger>
+              <TabsTrigger value="customers" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Users className="h-4 w-4" />
+                <span className="hidden sm:inline">Customers</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -209,6 +219,14 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="branches" className="space-y-4">
             <BranchManagementTab />
+          </TabsContent>
+
+          <TabsContent value="suppliers" className="space-y-4">
+            <SuppliersTab />
+          </TabsContent>
+
+          <TabsContent value="customers" className="space-y-4">
+            <CustomersTab />
           </TabsContent>
         </Tabs>
       </main>

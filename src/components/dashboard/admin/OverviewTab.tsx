@@ -4,11 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Sprout, TrendingUp, AlertCircle, DollarSign, Package } from "lucide-react";
 import FeedAnalyticsWidget from "./FeedAnalyticsWidget";
 import AllBranchesSummary from "./AllBranchesSummary";
+import WeatherWidget from "./WeatherWidget";
 import { useBranch } from "@/contexts/BranchContext";
 import { Separator } from "@/components/ui/separator";
 
 const OverviewTab = () => {
   const { currentBranchId } = useBranch();
+  const [branchLocation, setBranchLocation] = useState<string | null>(null);
   const [stats, setStats] = useState({
     totalLivestock: 0,
     todayProduction: 0,
@@ -23,7 +25,21 @@ const OverviewTab = () => {
 
   useEffect(() => {
     fetchStats();
+    fetchBranchLocation();
   }, [currentBranchId]);
+
+  const fetchBranchLocation = async () => {
+    if (!currentBranchId) {
+      setBranchLocation(null);
+      return;
+    }
+    const { data } = await supabase
+      .from("branches")
+      .select("location, name")
+      .eq("id", currentBranchId)
+      .maybeSingle();
+    setBranchLocation(data?.location || data?.name || null);
+  };
 
   const fetchStats = async () => {
     const today = new Date().toISOString().split('T')[0];
@@ -210,6 +226,11 @@ const OverviewTab = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Weather Widget */}
+      <div className="mt-6">
+        <WeatherWidget branchLocation={branchLocation} />
       </div>
 
       <div className="mt-6">
