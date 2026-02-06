@@ -1,14 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DollarSign } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DollarSign, ChevronsUpDown, Check, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
 import { useBranch } from "@/contexts/BranchContext";
+import { cn } from "@/lib/utils";
+
+interface Customer {
+  id: string;
+  name: string;
+  phone: string | null;
+}
 
 interface AddSalesDialogProps {
   onSuccess: () => void;
@@ -23,6 +32,39 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
   const [isPaid, setIsPaid] = useState(false);
   const [isPreorder, setIsPreorder] = useState(false);
   const { currentBranchId } = useBranch();
+  
+  // Customer selection
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
+  const [buyerName, setBuyerName] = useState("");
+  const [isNewCustomer, setIsNewCustomer] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      fetchCustomers();
+    }
+  }, [open, currentBranchId]);
+
+  const fetchCustomers = async () => {
+    let query = supabase.from("customers").select("id, name, phone").eq("is_active", true).order("name");
+    if (currentBranchId) query = query.eq("branch_id", currentBranchId);
+    const { data } = await query;
+    setCustomers(data || []);
+  };
+
+  const handleSelectCustomer = (customerId: string, customerName: string) => {
+    setSelectedCustomerId(customerId);
+    setBuyerName(customerName);
+    setIsNewCustomer(false);
+    setCustomerSearchOpen(false);
+  };
+
+  const handleNewCustomer = () => {
+    setSelectedCustomerId(null);
+    setIsNewCustomer(true);
+    setCustomerSearchOpen(false);
+  };
 
   const calculateTotal = (qty: string, price: string) => {
     const q = parseFloat(qty) || 0;
@@ -62,6 +104,26 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
     }
 
     const totalAmount = quantity * price_per_unit;
+    
+    // If new customer, create them first
+    let customerId = selectedCustomerId;
+    if (isNewCustomer && buyer_name) {
+      const { data: newCustomer, error: customerError } = await supabase
+        .from("customers")
+        .insert({
+          name: buyer_name,
+          branch_id: branchId,
+        })
+        .select("id")
+        .single();
+      
+      if (customerError) {
+        console.error("Failed to create customer:", customerError);
+      } else if (newCustomer) {
+        customerId = newCustomer.id;
+      }
+    }
+
     const { error } = await supabase.from("sales_records").insert({
       product_name,
       product_type,
@@ -76,6 +138,7 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
       payment_status: isPaid ? 'paid' : 'pending',
       amount_paid: isPaid ? totalAmount : 0,
       delivery_status: isPreorder ? 'preorder' : 'delivered',
+      customer_id: customerId,
     });
 
     if (error) {
@@ -192,14 +255,95 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
             <p className="text-2xl font-bold text-primary">₦{total.toLocaleString()}</p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="buyer_name">Buyer Name (Optional)</Label>
-            <Input
-              id="buyer_name"
-              name="buyer_name"
-              type="text"
-              placeholder="Customer name"
-            />
+            <Label>Customer</Label>
+            <Popover open={customerSearchOpen} onOpenChange={setCustomerSearchOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={customerSearchOpen}
+                  className="w-full justify-between"
+                >
+                  {buyerName || "Select or add customer..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0" align="start">
+                <Command>
+                  <CommandInput 
+                    placeholder="Search customers..." 
+                    onValueChange={(value) => {
+                      if (!selectedCustomerId) {
+                        setBuyerName(value);
+                      }
+                    }}
+                  />
+                  <CommandList>
+                    <CommandEmpty>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={handleNewCustomer}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add new customer
+                      </Button>
+                    </CommandEmpty>
+                    <CommandGroup heading="Existing Customers">
+                      {customers.map((customer) => (
+                        <CommandItem
+                          key={customer.id}
+                          value={customer.name}
+                          onSelect={() => handleSelectCustomer(customer.id, customer.name)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedCustomerId === customer.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div>
+                            <p>{customer.name}</p>
+                            {customer.phone && (
+                              <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                            )}
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                    <CommandGroup>
+                      <CommandItem onSelect={handleNewCustomer}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add new customer
+                      </CommandItem>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
+          
+          {isNewCustomer && (
+            <div className="space-y-2">
+              <Label htmlFor="buyer_name">New Customer Name</Label>
+              <Input
+                id="buyer_name"
+                name="buyer_name"
+                type="text"
+                placeholder="Enter customer name"
+                value={buyerName}
+                onChange={(e) => setBuyerName(e.target.value)}
+              />
+            </div>
+          )}
+          
+          {!isNewCustomer && !selectedCustomerId && (
+            <input type="hidden" name="buyer_name" value={buyerName} />
+          )}
+          
+          {selectedCustomerId && (
+            <input type="hidden" name="buyer_name" value={buyerName} />
+          )}
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <Checkbox 

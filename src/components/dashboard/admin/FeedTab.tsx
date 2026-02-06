@@ -184,20 +184,27 @@ const FeedTab = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {inventory.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No inventory records yet</p>
+              {feedTypes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No feed types added yet. Add a feed type first.</p>
               ) : (
-                inventory.map((item) => {
-                  const alert = alerts.find(a => a.feed_type_id === item.feed_type_id);
-                  const isLowStock = alert && item.quantity_in_stock <= alert.threshold_quantity;
-                  const purchased = totalPurchased[item.feed_type_id];
-                  const consumed = totalConsumed[item.feed_type_id];
+                feedTypes.map((feedType) => {
+                  const alert = alerts.find(a => a.feed_type_id === feedType.id);
+                  const purchased = totalPurchased[feedType.id];
+                  const consumed = totalConsumed[feedType.id];
+                  
+                  // Calculate Available = Bought - Used (all in bags)
+                  const boughtBags = purchased?.quantity || 0;
+                  const usedBags = consumed?.quantity || 0;
+                  const availableBags = Math.max(0, boughtBags - usedBags);
+                  
+                  // Check low stock based on available bags
+                  const isLowStock = alert && availableBags <= (alert.threshold_unit === 'kg' ? alert.threshold_quantity / 25 : alert.threshold_quantity);
                   
                   return (
-                    <div key={item.id} className={`p-4 rounded-lg ${isLowStock ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted/50'}`}>
+                    <div key={feedType.id} className={`p-4 rounded-lg ${isLowStock ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted/50'}`}>
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold text-foreground text-lg">{item.feed_types?.feed_name}</p>
+                          <p className="font-semibold text-foreground text-lg">{feedType.feed_name}</p>
                           {isLowStock && (
                             <Badge variant="destructive" className="flex items-center gap-1">
                               <TrendingDown className="h-3 w-3" />
@@ -215,7 +222,7 @@ const FeedTab = () => {
                             Bought
                           </div>
                           <p className="text-sm font-bold text-primary">
-                            {purchased ? `${purchased.quantity.toFixed(1)}` : '0'} bags
+                            {boughtBags.toFixed(1)} bags
                           </p>
                         </div>
                         
@@ -226,24 +233,24 @@ const FeedTab = () => {
                             Used
                           </div>
                           <p className="text-sm font-bold text-muted-foreground">
-                            {consumed ? `${consumed.quantity.toFixed(1)}` : '0'} bags
+                            {usedBags.toFixed(1)} bags
                           </p>
                         </div>
                         
-                        {/* Available */}
+                        {/* Available = Bought - Used */}
                         <div className="text-center p-2 bg-background rounded-md">
                           <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-1">
                             <Warehouse className="h-3 w-3" />
                             Available
                           </div>
                           <p className={`text-sm font-bold ${isLowStock ? 'text-destructive' : 'text-primary'}`}>
-                            {Number(item.quantity_in_stock).toFixed(1)} {item.unit}
+                            {availableBags.toFixed(1)} bags
                           </p>
                         </div>
                       </div>
                       
                       <p className="text-xs text-muted-foreground mt-2 text-right">
-                        Last updated: {new Date(item.updated_at).toLocaleDateString()}
+                        {availableBags > 0 ? `≈ ${(availableBags * 25).toFixed(0)} kg remaining` : 'Out of stock'}
                       </p>
                     </div>
                   );
