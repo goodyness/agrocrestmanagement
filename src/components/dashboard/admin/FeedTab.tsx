@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, Package, TrendingDown, ShoppingCart, Warehouse, History } from "lucide-react";
+import { AlertTriangle, Package, TrendingDown, ShoppingCart, Warehouse, History, PackageOpen } from "lucide-react";
 import AddFeedTypeDialog from "./dialogs/AddFeedTypeDialog";
 import AddFeedPurchaseDialog from "./dialogs/AddFeedPurchaseDialog";
 import EditFeedTypeDialog from "./dialogs/EditFeedTypeDialog";
@@ -18,6 +18,7 @@ const FeedTab = () => {
   const [purchases, setPurchases] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [totalPurchased, setTotalPurchased] = useState<Record<string, { quantity: number; unit: string }>>({});
+  const [totalConsumed, setTotalConsumed] = useState<Record<string, { quantity: number; unit: string }>>({});
 
   useEffect(() => {
     fetchData();
@@ -37,22 +38,40 @@ const FeedTab = () => {
     if (currentBranchId) allPurchasesQuery = allPurchasesQuery.eq("branch_id", currentBranchId);
     const { data: allPurchasesData } = await allPurchasesQuery;
 
-    // Calculate total purchased per feed type
+    // Fetch ALL consumption to calculate total used
+    let allConsumptionQuery = supabase.from("feed_consumption").select("feed_type_id, quantity_used, unit");
+    if (currentBranchId) allConsumptionQuery = allConsumptionQuery.eq("branch_id", currentBranchId);
+    const { data: allConsumptionData } = await allConsumptionQuery;
+
+    // Calculate total purchased per feed type (convert all to bags)
     const purchaseTotals: Record<string, { quantity: number; unit: string }> = {};
     allPurchasesData?.forEach((p) => {
       if (!purchaseTotals[p.feed_type_id]) {
-        purchaseTotals[p.feed_type_id] = { quantity: 0, unit: p.unit };
+        purchaseTotals[p.feed_type_id] = { quantity: 0, unit: "bag" };
       }
-      // Convert to same unit if needed (assuming bag is the base unit)
+      // Convert to bags (1 bag = 25kg)
       let qty = p.quantity;
-      if (purchaseTotals[p.feed_type_id].unit === "bag" && p.unit === "kg") {
+      if (p.unit === "kg") {
         qty = p.quantity / 25;
-      } else if (purchaseTotals[p.feed_type_id].unit === "kg" && p.unit === "bag") {
-        qty = p.quantity * 25;
       }
       purchaseTotals[p.feed_type_id].quantity += qty;
     });
     setTotalPurchased(purchaseTotals);
+
+    // Calculate total consumed per feed type (convert all to bags)
+    const consumptionTotals: Record<string, { quantity: number; unit: string }> = {};
+    allConsumptionData?.forEach((c) => {
+      if (!consumptionTotals[c.feed_type_id]) {
+        consumptionTotals[c.feed_type_id] = { quantity: 0, unit: "bag" };
+      }
+      // Convert to bags (1 bag = 25kg)
+      let qty = c.quantity_used;
+      if (c.unit === "kg") {
+        qty = c.quantity_used / 25;
+      }
+      consumptionTotals[c.feed_type_id].quantity += qty;
+    });
+    setTotalConsumed(consumptionTotals);
 
     let purchasesQuery = supabase.from("feed_purchases").select("*, feed_types(feed_name), profiles(name)").order("created_at", { ascending: false }).limit(10);
     if (currentBranchId) purchasesQuery = purchasesQuery.eq("branch_id", currentBranchId);
@@ -172,23 +191,13 @@ const FeedTab = () => {
                   const alert = alerts.find(a => a.feed_type_id === item.feed_type_id);
                   const isLowStock = alert && item.quantity_in_stock <= alert.threshold_quantity;
                   const purchased = totalPurchased[item.feed_type_id];
+                  const consumed = totalConsumed[item.feed_type_id];
                   
                   return (
-                    <div key={item.id} className={`p-3 rounded-lg ${isLowStock ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted/50'}`}>
-                      <div className="flex justify-between items-start">
+                    <div key={item.id} className={`p-4 rounded-lg ${isLowStock ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted/50'}`}>
+                      <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-2">
-                          <div>
-                            <p className="font-medium text-foreground">{item.feed_types?.feed_name}</p>
-                            <div className="flex items-center gap-3 mt-1">
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <ShoppingCart className="h-3 w-3" />
-                                Total Bought: {purchased ? `${purchased.quantity.toFixed(1)} ${purchased.unit}` : '0'}
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Updated: {new Date(item.updated_at).toLocaleDateString()}
-                            </p>
-                          </div>
+                          <p className="font-semibold text-foreground text-lg">{item.feed_types?.feed_name}</p>
                           {isLowStock && (
                             <Badge variant="destructive" className="flex items-center gap-1">
                               <TrendingDown className="h-3 w-3" />
@@ -196,16 +205,46 @@ const FeedTab = () => {
                             </Badge>
                           )}
                         </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-3">
+                        {/* Total Bought */}
+                        <div className="text-center p-2 bg-background rounded-md">
+                          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-1">
+                            <ShoppingCart className="h-3 w-3" />
+                            Bought
+                          </div>
+                          <p className="text-sm font-bold text-primary">
+                            {purchased ? `${purchased.quantity.toFixed(1)}` : '0'} bags
+                          </p>
+                        </div>
+                        
+                        {/* Total Used */}
+                        <div className="text-center p-2 bg-background rounded-md">
+                          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-1">
+                            <PackageOpen className="h-3 w-3" />
+                            Used
+                          </div>
+                          <p className="text-sm font-bold text-muted-foreground">
+                            {consumed ? `${consumed.quantity.toFixed(1)}` : '0'} bags
+                          </p>
+                        </div>
+                        
+                        {/* Available */}
+                        <div className="text-center p-2 bg-background rounded-md">
+                          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-1">
                             <Warehouse className="h-3 w-3" />
                             Available
-                          </p>
-                          <p className={`text-lg font-bold ${isLowStock ? 'text-destructive' : 'text-primary'}`}>
+                          </div>
+                          <p className={`text-sm font-bold ${isLowStock ? 'text-destructive' : 'text-primary'}`}>
                             {Number(item.quantity_in_stock).toFixed(1)} {item.unit}
                           </p>
                         </div>
                       </div>
+                      
+                      <p className="text-xs text-muted-foreground mt-2 text-right">
+                        Last updated: {new Date(item.updated_at).toLocaleDateString()}
+                      </p>
                     </div>
                   );
                 })

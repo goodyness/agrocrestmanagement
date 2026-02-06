@@ -64,6 +64,50 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
       return;
     }
 
+    // Update feed inventory - add purchased quantity
+    const { data: existingInventory } = await supabase
+      .from("feed_inventory")
+      .select("*")
+      .eq("feed_type_id", selectedFeedType)
+      .eq("branch_id", branchId)
+      .single();
+
+    const purchasedQty = parseFloat(quantity);
+    
+    if (existingInventory) {
+      // Convert quantity to same unit if needed
+      let quantityToAdd = purchasedQty;
+      
+      // If inventory is in bag and purchase is in kg, or vice versa (1 bag = 25kg)
+      if (existingInventory.unit === "bag" && unit === "kg") {
+        quantityToAdd = purchasedQty / 25;
+      } else if (existingInventory.unit === "kg" && unit === "bags") {
+        quantityToAdd = purchasedQty * 25;
+      } else if (existingInventory.unit === "bags" && unit === "kg") {
+        quantityToAdd = purchasedQty / 25;
+      } else if (existingInventory.unit === "kg" && unit === "bag") {
+        quantityToAdd = purchasedQty * 25;
+      }
+
+      const newQuantity = existingInventory.quantity_in_stock + quantityToAdd;
+      
+      await supabase
+        .from("feed_inventory")
+        .update({ 
+          quantity_in_stock: newQuantity,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", existingInventory.id);
+    } else {
+      // Create new inventory record
+      await supabase.from("feed_inventory").insert({
+        feed_type_id: selectedFeedType,
+        quantity_in_stock: purchasedQty,
+        unit: unit === "bags" ? "bag" : unit,
+        branch_id: branchId,
+      });
+    }
+
     // Record as expense
     const { error: expenseError } = await supabase.from("miscellaneous_expenses").insert({
       expense_type: "Feed Purchase",
