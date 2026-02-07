@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit2, Phone, Mail, MapPin, Users, ShoppingBag, TrendingUp } from "lucide-react";
+import { Plus, Edit2, Phone, Mail, MapPin, Users, ShoppingBag, TrendingUp, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBranch } from "@/contexts/BranchContext";
 
@@ -44,6 +44,9 @@ const CustomersTab = () => {
   const [customerSales, setCustomerSales] = useState<SalesRecord[]>([]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [unmatchedBuyers, setUnmatchedBuyers] = useState<{ name: string; count: number; total: number }[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -57,7 +60,111 @@ const CustomersTab = () => {
 
   useEffect(() => {
     fetchCustomers();
+    fetchUnmatchedBuyers();
   }, [currentBranchId]);
+
+  const fetchUnmatchedBuyers = async () => {
+    // Get sales with buyer_name but no customer_id
+    let query = supabase
+      .from("sales_records")
+      .select("buyer_name, total_amount")
+      .not("buyer_name", "is", null)
+      .is("customer_id", null);
+    
+    if (currentBranchId) query = query.eq("branch_id", currentBranchId);
+    
+    const { data } = await query;
+    
+    if (data && data.length > 0) {
+      // Group by buyer_name and calculate stats
+      const grouped = data.reduce((acc, sale) => {
+        const name = sale.buyer_name?.trim();
+        if (!name) return acc;
+        if (!acc[name]) {
+          acc[name] = { count: 0, total: 0 };
+        }
+        acc[name].count += 1;
+        acc[name].total += Number(sale.total_amount);
+        return acc;
+      }, {} as Record<string, { count: number; total: number }>);
+      
+      const buyerList = Object.entries(grouped).map(([name, stats]) => ({
+        name,
+        count: stats.count,
+        total: stats.total,
+      })).sort((a, b) => b.count - a.count);
+      
+      setUnmatchedBuyers(buyerList);
+    } else {
+      setUnmatchedBuyers([]);
+    }
+  };
+
+  const handleImportBuyer = async (buyerName: string) => {
+    setImportLoading(true);
+    
+    // Check if customer already exists with this name
+    const { data: existingCustomer } = await supabase
+      .from("customers")
+      .select("id")
+      .ilike("name", buyerName)
+      .eq("branch_id", currentBranchId)
+      .single();
+    
+    let customerId: string;
+    
+    if (existingCustomer) {
+      customerId = existingCustomer.id;
+    } else {
+      // Create new customer
+      const { data: newCustomer, error } = await supabase
+        .from("customers")
+        .insert({
+          name: buyerName,
+          customer_type: "regular",
+          branch_id: currentBranchId,
+        })
+        .select()
+        .single();
+      
+      if (error || !newCustomer) {
+        toast.error("Failed to create customer");
+        setImportLoading(false);
+        return;
+      }
+      customerId = newCustomer.id;
+    }
+    
+    // Link all sales with this buyer_name to the customer
+    const { error: updateError } = await supabase
+      .from("sales_records")
+      .update({ customer_id: customerId })
+      .eq("buyer_name", buyerName)
+      .is("customer_id", null);
+    
+    if (updateError) {
+      toast.error("Failed to link sales");
+      console.error(updateError);
+    } else {
+      toast.success(`Imported "${buyerName}" as customer`);
+      fetchCustomers();
+      fetchUnmatchedBuyers();
+    }
+    
+    setImportLoading(false);
+  };
+
+  const handleImportAll = async () => {
+    setImportLoading(true);
+    
+    for (const buyer of unmatchedBuyers) {
+      await handleImportBuyer(buyer.name);
+    }
+    
+    toast.success("All buyers imported successfully");
+    setImportDialogOpen(false);
+    setImportLoading(false);
+  };
 
   const fetchCustomers = async () => {
     let query = supabase.from("customers").select("*").order("name");
@@ -172,18 +279,75 @@ const CustomersTab = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-start flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Customer Management</h2>
           <p className="text-muted-foreground">Track customers and their purchase history</p>
         </div>
-        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Customer
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          {unmatchedBuyers.length > 0 && (
+            <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import from Sales ({unmatchedBuyers.length})
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Import Buyers from Sales History</DialogTitle>
+                  <DialogDescription>
+                    These buyers were found in sales records but aren't linked to customer accounts yet.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2">
+                  {unmatchedBuyers.map((buyer) => (
+                    <div
+                      key={buyer.name}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
+                      <div>
+                        <p className="font-medium">{buyer.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {buyer.count} purchase(s) • ₦{buyer.total.toLocaleString()} total
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleImportBuyer(buyer.name)}
+                        disabled={importLoading}
+                      >
+                        Import
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                {unmatchedBuyers.length > 1 && (
+                  <Button
+                    className="w-full mt-4"
+                    onClick={handleImportAll}
+                    disabled={importLoading}
+                  >
+                    {importLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>Import All ({unmatchedBuyers.length} buyers)</>
+                    )}
+                  </Button>
+                )}
+              </DialogContent>
+            </Dialog>
+          )}
+          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Customer
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Add New Customer</DialogTitle>
@@ -264,6 +428,7 @@ const CustomersTab = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Summary Cards */}
