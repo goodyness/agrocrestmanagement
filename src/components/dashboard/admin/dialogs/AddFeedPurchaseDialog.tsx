@@ -1,17 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Truck } from "lucide-react";
 import { toast } from "sonner";
 
 interface AddFeedPurchaseDialogProps {
   feedTypes: any[];
   onSuccess: () => void;
   branchId: string | null;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
+  supplier_type: string;
 }
 
 const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurchaseDialogProps) => {
@@ -22,8 +29,64 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
   const [pricePerUnit, setPricePerUnit] = useState<string>("");
   const [unit, setUnit] = useState<string>("bags");
   const [notes, setNotes] = useState<string>("");
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [selectedSupplier, setSelectedSupplier] = useState<string>("");
+  const [addSupplierMode, setAddSupplierMode] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState("");
+  const [newSupplierPhone, setNewSupplierPhone] = useState("");
 
   const totalCost = parseFloat(quantity || "0") * parseFloat(pricePerUnit || "0");
+
+  useEffect(() => {
+    if (open) {
+      fetchSuppliers();
+    }
+  }, [open, branchId]);
+
+  const fetchSuppliers = async () => {
+    let query = supabase
+      .from("suppliers")
+      .select("id, name, supplier_type")
+      .eq("is_active", true)
+      .order("name");
+    
+    if (branchId) {
+      query = query.eq("branch_id", branchId);
+    }
+
+    const { data } = await query;
+    setSuppliers(data || []);
+  };
+
+  const handleAddNewSupplier = async () => {
+    if (!newSupplierName.trim()) {
+      toast.error("Please enter supplier name");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("suppliers")
+      .insert({
+        name: newSupplierName.trim(),
+        phone: newSupplierPhone || null,
+        supplier_type: "feed",
+        branch_id: branchId,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("Failed to add supplier");
+      console.error(error);
+    } else {
+      toast.success("Supplier added");
+      setSelectedSupplier(data.id);
+      setNewSupplierName("");
+      setNewSupplierPhone("");
+      setAddSupplierMode(false);
+      fetchSuppliers();
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -45,7 +108,7 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
       return;
     }
 
-    // Insert feed purchase
+    // Insert feed purchase with supplier_id
     const { error: purchaseError } = await supabase.from("feed_purchases").insert({
       feed_type_id: selectedFeedType,
       quantity: parseFloat(quantity),
@@ -55,6 +118,7 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
       purchased_by: user.id,
       notes: notes || null,
       branch_id: branchId,
+      supplier_id: selectedSupplier || null,
     });
 
     if (purchaseError) {
@@ -108,11 +172,24 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
       });
     }
 
+    // Record supplier pricing history if supplier selected
+    if (selectedSupplier) {
+      await supabase.from("supplier_pricing_history").insert({
+        supplier_id: selectedSupplier,
+        feed_type_id: selectedFeedType,
+        product_name: feedType.feed_name,
+        price_per_unit: parseFloat(pricePerUnit),
+        unit: unit === "bags" ? "bag" : unit,
+        notes: `Purchase: ${quantity} ${unit}`,
+      });
+    }
+
     // Record as expense
+    const supplierName = suppliers.find(s => s.id === selectedSupplier)?.name;
     const { error: expenseError } = await supabase.from("miscellaneous_expenses").insert({
       expense_type: "Feed Purchase",
       amount: totalCost,
-      description: `Purchased ${quantity} ${unit} of ${feedType.feed_name} @ ₦${parseFloat(pricePerUnit).toLocaleString()}/${unit}`,
+      description: `Purchased ${quantity} ${unit} of ${feedType.feed_name} @ ₦${parseFloat(pricePerUnit).toLocaleString()}/${unit}${supplierName ? ` from ${supplierName}` : ''}`,
       created_by: user.id,
       date: new Date().toISOString().split('T')[0],
       branch_id: branchId,
@@ -135,6 +212,10 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
     setPricePerUnit("");
     setUnit("bags");
     setNotes("");
+    setSelectedSupplier("");
+    setAddSupplierMode(false);
+    setNewSupplierName("");
+    setNewSupplierPhone("");
   };
 
   return (
@@ -145,7 +226,7 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
           Add Purchase
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Feed Purchase</DialogTitle>
           <DialogDescription>Record a new feed purchase with pricing</DialogDescription>
@@ -167,6 +248,74 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Supplier Selection */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Truck className="h-4 w-4" />
+              Supplier (Optional)
+            </Label>
+            {!addSupplierMode ? (
+              <div className="space-y-2">
+                <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setAddSupplierMode(true)}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add new supplier
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2 p-3 border rounded-lg bg-muted/50">
+                <Input
+                  placeholder="Supplier name"
+                  value={newSupplierName}
+                  onChange={(e) => setNewSupplierName(e.target.value)}
+                />
+                <Input
+                  placeholder="Phone (optional)"
+                  value={newSupplierPhone}
+                  onChange={(e) => setNewSupplierPhone(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddNewSupplier}
+                  >
+                    Save Supplier
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setAddSupplierMode(false);
+                      setNewSupplierName("");
+                      setNewSupplierPhone("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

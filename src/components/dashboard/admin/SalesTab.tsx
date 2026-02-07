@@ -7,9 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useBranch } from "@/contexts/BranchContext";
-import { BarChart3, CreditCard, Truck, Package } from "lucide-react";
+import { BarChart3, CreditCard, Truck, Package, Eye } from "lucide-react";
 import UpdatePaymentDialog from "./dialogs/UpdatePaymentDialog";
+import PendingPaymentsDialog from "./dialogs/PendingPaymentsDialog";
+import PaginationControls from "@/components/PaginationControls";
+import { usePagination } from "@/hooks/usePagination";
 import { toast } from "sonner";
+
+const ITEMS_PER_PAGE = 15;
 
 const SalesTab = () => {
   const navigate = useNavigate();
@@ -21,6 +26,7 @@ const SalesTab = () => {
   const [preorderCount, setPreorderCount] = useState(0);
   const [selectedSale, setSelectedSale] = useState<any>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [pendingDialogOpen, setPendingDialogOpen] = useState(false);
   const [deliveryFilter, setDeliveryFilter] = useState<'all' | 'preorder' | 'delivered'>('all');
 
   useEffect(() => {
@@ -30,9 +36,8 @@ const SalesTab = () => {
   const fetchData = async () => {
     let query = supabase
       .from("sales_records")
-      .select("*, profiles(name)")
-      .order("date", { ascending: false })
-      .limit(30);
+      .select("*, profiles(name), customers(name)")
+      .order("date", { ascending: false });
 
     if (currentBranchId) {
       query = query.eq("branch_id", currentBranchId);
@@ -52,13 +57,25 @@ const SalesTab = () => {
     }
   };
 
+  const filteredSales = sales.filter((s) => {
+    if (deliveryFilter === 'all') return true;
+    return s.delivery_status === deliveryFilter;
+  });
+
+  const { currentPage, totalPages, paginatedRange, goToPage, getPageNumbers } = usePagination({
+    totalItems: filteredSales.length,
+    itemsPerPage: ITEMS_PER_PAGE,
+  });
+
+  const paginatedSales = filteredSales.slice(paginatedRange.startIndex, paginatedRange.endIndex);
+
   const getPaymentBadge = (status: string, amountPaid: number, totalAmount: number) => {
     switch (status) {
       case 'paid':
-        return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">Paid</Badge>;
+        return <Badge className="bg-primary/10 text-primary hover:bg-primary/20">Paid</Badge>;
       case 'partial':
         return (
-          <Badge className="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20">
+          <Badge className="bg-accent text-accent-foreground hover:bg-accent/80">
             Partial (₦{Number(totalAmount - amountPaid).toLocaleString()} left)
           </Badge>
         );
@@ -88,22 +105,17 @@ const SalesTab = () => {
 
   const getDeliveryBadge = (status: string) => {
     if (status === 'preorder') {
-      return <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20"><Package className="h-3 w-3 mr-1" />Preorder</Badge>;
+      return <Badge className="bg-accent text-accent-foreground hover:bg-accent/80"><Package className="h-3 w-3 mr-1" />Preorder</Badge>;
     }
-    return <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20"><Truck className="h-3 w-3 mr-1" />Delivered</Badge>;
+    return <Badge className="bg-primary/10 text-primary hover:bg-primary/20"><Truck className="h-3 w-3 mr-1" />Delivered</Badge>;
   };
-
-  const filteredSales = sales.filter((s) => {
-    if (deliveryFilter === 'all') return true;
-    return s.delivery_status === deliveryFilter;
-  });
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Sales Records</h2>
-          <p className="text-muted-foreground">Track all sales transactions</p>
+          <p className="text-muted-foreground">Track all sales transactions ({sales.length} total)</p>
         </div>
         <Button onClick={() => navigate("/analytics")} variant="outline">
           <BarChart3 className="h-4 w-4 mr-2" />
@@ -114,7 +126,7 @@ const SalesTab = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total Sales (Last 30 Days)</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">₦{totalSales.toLocaleString()}</div>
@@ -127,18 +139,21 @@ const SalesTab = () => {
             <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">₦{totalPaid.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-primary">₦{totalPaid.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground mt-1">received payments</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setPendingDialogOpen(true)}>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center justify-between">
+              Pending Payments
+              <Eye className="h-4 w-4 text-muted-foreground" />
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">₦{totalPending.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">outstanding balance</p>
+            <p className="text-xs text-muted-foreground mt-1">Click to view details</p>
           </CardContent>
         </Card>
 
@@ -147,7 +162,7 @@ const SalesTab = () => {
             <CardTitle className="text-sm font-medium">Pending Pickup</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{preorderCount}</div>
+            <div className="text-2xl font-bold text-accent-foreground">{preorderCount}</div>
             <p className="text-xs text-muted-foreground mt-1">preorders awaiting delivery</p>
           </CardContent>
         </Card>
@@ -156,8 +171,8 @@ const SalesTab = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Recent Sales</CardTitle>
-            <CardDescription>Last 30 days of sales data</CardDescription>
+            <CardTitle>Sales History</CardTitle>
+            <CardDescription>Showing {paginatedSales.length} of {filteredSales.length} records</CardDescription>
           </div>
           <div className="flex gap-2">
             <Button
@@ -202,14 +217,14 @@ const SalesTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredSales.length === 0 ? (
+              {paginatedSales.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center text-muted-foreground">
                     No sales records found
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredSales.map((record) => (
+                paginatedSales.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell>{format(new Date(record.date), "MMM dd, yyyy")}</TableCell>
                     <TableCell>
@@ -229,7 +244,7 @@ const SalesTab = () => {
                     <TableCell>
                       {getDeliveryBadge(record.delivery_status)}
                     </TableCell>
-                    <TableCell>{record.buyer_name || "-"}</TableCell>
+                    <TableCell>{record.customers?.name || record.buyer_name || "-"}</TableCell>
                     <TableCell>{record.profiles?.name || "Unknown"}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -258,6 +273,13 @@ const SalesTab = () => {
               )}
             </TableBody>
           </Table>
+          
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            getPageNumbers={getPageNumbers}
+          />
         </CardContent>
       </Card>
 
@@ -266,6 +288,13 @@ const SalesTab = () => {
         onOpenChange={setPaymentDialogOpen}
         sale={selectedSale}
         onSuccess={fetchData}
+      />
+
+      <PendingPaymentsDialog
+        open={pendingDialogOpen}
+        onOpenChange={setPendingDialogOpen}
+        branchId={currentBranchId}
+        onUpdate={fetchData}
       />
     </div>
   );

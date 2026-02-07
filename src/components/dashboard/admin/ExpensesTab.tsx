@@ -5,6 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import AddExpenseDialog from "./dialogs/AddExpenseDialog";
 import { useBranch } from "@/contexts/BranchContext";
+import PaginationControls from "@/components/PaginationControls";
+import { usePagination } from "@/hooks/usePagination";
+
+const ITEMS_PER_PAGE = 15;
 
 const ExpensesTab = () => {
   const { currentBranchId } = useBranch();
@@ -20,8 +24,7 @@ const ExpensesTab = () => {
     let query = supabase
       .from("miscellaneous_expenses")
       .select("*, profiles(name)")
-      .order("date", { ascending: false })
-      .limit(30);
+      .order("date", { ascending: false });
 
     if (currentBranchId) {
       query = query.eq("branch_id", currentBranchId);
@@ -42,12 +45,19 @@ const ExpensesTab = () => {
     }
   };
 
+  const { currentPage, totalPages, paginatedRange, goToPage, getPageNumbers } = usePagination({
+    totalItems: expenses.length,
+    itemsPerPage: ITEMS_PER_PAGE,
+  });
+
+  const paginatedExpenses = expenses.slice(paginatedRange.startIndex, paginatedRange.endIndex);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Expenses Management</h2>
-          <p className="text-muted-foreground">Track all farm expenses</p>
+          <p className="text-muted-foreground">Track all farm expenses ({expenses.length} total)</p>
         </div>
         <AddExpenseDialog onSuccess={fetchData} branchId={currentBranchId} />
       </div>
@@ -55,7 +65,7 @@ const ExpensesTab = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total Expenses (Last 30 Days)</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">₦{totalExpenses.toLocaleString()}</div>
@@ -96,8 +106,8 @@ const ExpensesTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Expenses</CardTitle>
-          <CardDescription>Last 30 days of expense records</CardDescription>
+          <CardTitle>Expenses History</CardTitle>
+          <CardDescription>Showing {paginatedExpenses.length} of {expenses.length} records</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -111,14 +121,14 @@ const ExpensesTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {expenses.length === 0 ? (
+              {paginatedExpenses.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground">
                     No expense records yet
                   </TableCell>
                 </TableRow>
               ) : (
-                expenses.map((record) => (
+                paginatedExpenses.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell>{format(new Date(record.date), "MMM dd, yyyy")}</TableCell>
                     <TableCell className="font-medium">{record.expense_type}</TableCell>
@@ -130,6 +140,13 @@ const ExpensesTab = () => {
               )}
             </TableBody>
           </Table>
+
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            getPageNumbers={getPageNumbers}
+          />
         </CardContent>
       </Card>
     </div>
