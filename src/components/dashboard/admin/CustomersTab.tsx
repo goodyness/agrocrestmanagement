@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit2, Phone, Mail, MapPin, Users, ShoppingBag, TrendingUp, Upload, Loader2 } from "lucide-react";
+import { Plus, Edit2, Phone, Mail, MapPin, Users, ShoppingBag, TrendingUp, Upload, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBranch } from "@/contexts/BranchContext";
 
@@ -70,11 +70,11 @@ const CustomersTab = () => {
       .select("buyer_name, total_amount")
       .not("buyer_name", "is", null)
       .is("customer_id", null);
-    
+
     if (currentBranchId) query = query.eq("branch_id", currentBranchId);
-    
+
     const { data } = await query;
-    
+
     if (data && data.length > 0) {
       // Group by buyer_name and calculate stats
       const grouped = data.reduce((acc, sale) => {
@@ -87,13 +87,13 @@ const CustomersTab = () => {
         acc[name].total += Number(sale.total_amount);
         return acc;
       }, {} as Record<string, { count: number; total: number }>);
-      
+
       const buyerList = Object.entries(grouped).map(([name, stats]) => ({
         name,
         count: stats.count,
         total: stats.total,
       })).sort((a, b) => b.count - a.count);
-      
+
       setUnmatchedBuyers(buyerList);
     } else {
       setUnmatchedBuyers([]);
@@ -102,7 +102,7 @@ const CustomersTab = () => {
 
   const handleImportBuyer = async (buyerName: string) => {
     setImportLoading(true);
-    
+
     // Check if customer already exists with this name
     const { data: existingCustomer } = await supabase
       .from("customers")
@@ -110,9 +110,9 @@ const CustomersTab = () => {
       .ilike("name", buyerName)
       .eq("branch_id", currentBranchId)
       .single();
-    
+
     let customerId: string;
-    
+
     if (existingCustomer) {
       customerId = existingCustomer.id;
     } else {
@@ -126,7 +126,7 @@ const CustomersTab = () => {
         })
         .select()
         .single();
-      
+
       if (error || !newCustomer) {
         toast.error("Failed to create customer");
         setImportLoading(false);
@@ -134,14 +134,14 @@ const CustomersTab = () => {
       }
       customerId = newCustomer.id;
     }
-    
+
     // Link all sales with this buyer_name to the customer
     const { error: updateError } = await supabase
       .from("sales_records")
       .update({ customer_id: customerId })
       .eq("buyer_name", buyerName)
       .is("customer_id", null);
-    
+
     if (updateError) {
       toast.error("Failed to link sales");
       console.error(updateError);
@@ -150,17 +150,17 @@ const CustomersTab = () => {
       fetchCustomers();
       fetchUnmatchedBuyers();
     }
-    
+
     setImportLoading(false);
   };
 
   const handleImportAll = async () => {
     setImportLoading(true);
-    
+
     for (const buyer of unmatchedBuyers) {
       await handleImportBuyer(buyer.name);
     }
-    
+
     toast.success("All buyers imported successfully");
     setImportDialogOpen(false);
     setImportLoading(false);
@@ -244,6 +244,36 @@ const CustomersTab = () => {
       toast.success("Customer updated successfully");
       setEditDialogOpen(false);
       resetForm();
+      fetchCustomers();
+    }
+    setLoading(false);
+  };
+
+  const handleDeleteCustomer = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete ${name}?`)) {
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase
+      .from("customers")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error(error);
+      // Check for foreign key constraint violation (usually code 23503 in Postgres)
+      if (error.code === '23503' || error.message?.includes('violates foreign key constraint') || error.message?.includes('linked')) {
+        toast.error(`Cannot delete ${name} because they have existing sales records. You must delete their sales first.`);
+      } else {
+        toast.error(`Failed to delete ${name}.`);
+      }
+    } else {
+      toast.success(`${name} deleted successfully`);
+      if (selectedCustomer?.id === id) {
+        setSelectedCustomer(null);
+        setCustomerSales([]);
+      }
       fetchCustomers();
     }
     setLoading(false);
@@ -348,86 +378,86 @@ const CustomersTab = () => {
                 Add Customer
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add New Customer</DialogTitle>
-              <DialogDescription>Add a new customer to your database</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAddCustomer} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Customer Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Mrs. Adebayo"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add New Customer</DialogTitle>
+                <DialogDescription>Add a new customer to your database</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleAddCustomer} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
+                  <Label htmlFor="name">Customer Name *</Label>
                   <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="08012345678"
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g., Mrs. Adebayo"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="08012345678"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Type</Label>
+                    <Select
+                      value={formData.customer_type}
+                      onValueChange={(v) => setFormData({ ...formData, customer_type: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="regular">Regular</SelectItem>
+                        <SelectItem value="wholesale">Wholesale</SelectItem>
+                        <SelectItem value="retailer">Retailer</SelectItem>
+                        <SelectItem value="restaurant">Restaurant</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="customer@email.com"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="type">Type</Label>
-                  <Select
-                    value={formData.customer_type}
-                    onValueChange={(v) => setFormData({ ...formData, customer_type: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="regular">Regular</SelectItem>
-                      <SelectItem value="wholesale">Wholesale</SelectItem>
-                      <SelectItem value="retailer">Retailer</SelectItem>
-                      <SelectItem value="restaurant">Restaurant</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="address">Address</Label>
+                  <Textarea
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Full address..."
+                    rows={2}
+                  />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="customer@email.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Textarea
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Full address..."
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Any additional notes..."
-                  rows={2}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Adding..." : "Add Customer"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Any additional notes..."
+                    rows={2}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Adding..." : "Add Customer"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -490,11 +520,10 @@ const CustomersTab = () => {
                   return (
                     <div
                       key={customer.id}
-                      className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                        selectedCustomer?.id === customer.id
+                      className={`p-4 rounded-lg border cursor-pointer transition-colors ${selectedCustomer?.id === customer.id
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-primary/50"
-                      }`}
+                        }`}
                       onClick={() => viewCustomerSales(customer)}
                     >
                       <div className="flex justify-between items-start">
@@ -522,16 +551,29 @@ const CustomersTab = () => {
                             )}
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditDialog(customer);
-                          }}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditDialog(customer);
+                            }}
+                          >
+                            <Edit2 className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hover:bg-destructive/10 hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCustomer(customer.id, customer.name);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -593,8 +635,8 @@ const CustomersTab = () => {
                             sale.payment_status === "paid"
                               ? "default"
                               : sale.payment_status === "partial"
-                              ? "secondary"
-                              : "destructive"
+                                ? "secondary"
+                                : "destructive"
                           }
                         >
                           {sale.payment_status}

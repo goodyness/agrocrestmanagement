@@ -4,6 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { DateRange } from "react-day-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { Calendar as CalendarIcon, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useBranch } from "@/contexts/BranchContext";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
@@ -23,7 +29,10 @@ const FeedConsumptionHistory = () => {
   const [chartData, setChartData] = useState<any[]>([]);
   const [feedTypes, setFeedTypes] = useState<any[]>([]);
   const [selectedFeedType, setSelectedFeedType] = useState<string>("all");
-  const [daysRange, setDaysRange] = useState<string>("30");
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 30),
+    to: new Date(),
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,7 +41,7 @@ const FeedConsumptionHistory = () => {
 
   useEffect(() => {
     fetchConsumptionData();
-  }, [currentBranchId, selectedFeedType, daysRange]);
+  }, [currentBranchId, selectedFeedType, date]);
 
   const fetchFeedTypes = async () => {
     let query = supabase.from("feed_types").select("id, feed_name");
@@ -45,14 +54,20 @@ const FeedConsumptionHistory = () => {
 
   const fetchConsumptionData = async () => {
     setLoading(true);
-    const days = parseInt(daysRange);
-    const startDate = format(subDays(new Date(), days), "yyyy-MM-dd");
 
     let query = supabase
       .from("feed_consumption")
       .select("*, feed_types(feed_name), livestock_categories(name), profiles(name)")
-      .gte("date", startDate)
       .order("date", { ascending: false });
+
+    // Apply date constraints down to the exact day boundaries
+    if (date?.from) {
+      const fromD = startOfDay(date.from);
+      query = query.gte("date", fromD.toISOString());
+
+      const toD = date.to ? endOfDay(date.to) : endOfDay(date.from);
+      query = query.lte("date", toD.toISOString());
+    }
 
     if (currentBranchId) {
       query = query.eq("branch_id", currentBranchId);
@@ -66,24 +81,24 @@ const FeedConsumptionHistory = () => {
 
     if (data) {
       setRecords(data as ConsumptionRecord[]);
-      
+
       // Aggregate data by date for chart
-      const aggregated: { [key: string]: { date: string; total: number; [key: string]: any } } = {};
-      
+      const aggregated: { [key: string]: { date: string; total: number;[key: string]: any } } = {};
+
       data.forEach((record: any) => {
         const dateKey = record.date;
         if (!aggregated[dateKey]) {
           aggregated[dateKey] = { date: dateKey, total: 0 };
         }
-        
+
         // Convert to kg for consistency (assuming 1 bag = 25kg)
         let quantityInKg = record.quantity_used;
         if (record.unit === 'bags') {
           quantityInKg = record.quantity_used * 25;
         }
-        
+
         aggregated[dateKey].total += quantityInKg;
-        
+
         // Also track by feed type
         const feedName = record.feed_types?.feed_name || 'Unknown';
         if (!aggregated[dateKey][feedName]) {
@@ -94,7 +109,7 @@ const FeedConsumptionHistory = () => {
 
       const chartArray = Object.values(aggregated)
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      
+
       setChartData(chartArray);
     }
 
@@ -107,8 +122,8 @@ const FeedConsumptionHistory = () => {
     return acc + qty;
   }, 0);
 
-  const avgDailyConsumption = chartData.length > 0 
-    ? (totalConsumption / chartData.length).toFixed(1) 
+  const avgDailyConsumption = chartData.length > 0
+    ? (totalConsumption / chartData.length).toFixed(1)
     : 0;
 
   return (
@@ -118,20 +133,9 @@ const FeedConsumptionHistory = () => {
           <h3 className="text-lg font-semibold">Feed Consumption History</h3>
           <p className="text-sm text-muted-foreground">Track daily feed usage patterns</p>
         </div>
-        <div className="flex gap-2">
-          <Select value={daysRange} onValueChange={setDaysRange}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="14">Last 14 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="60">Last 60 days</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={selectedFeedType} onValueChange={setSelectedFeedType}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="All feed types" />
             </SelectTrigger>
             <SelectContent>
@@ -141,6 +145,56 @@ const FeedConsumptionHistory = () => {
               ))}
             </SelectContent>
           </Select>
+
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-[260px] justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date?.from ? (
+                    date.to ? (
+                      <>
+                        {format(date.from, "LLL dd, y")} -{" "}
+                        {format(date.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(date.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Filter by date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={date?.from}
+                  selected={date}
+                  onSelect={setDate}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+
+            {date?.from && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setDate(undefined)}
+                title="Clear date filter"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -151,7 +205,7 @@ const FeedConsumptionHistory = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalConsumption.toFixed(1)} kg</div>
-            <p className="text-xs text-muted-foreground">in last {daysRange} days</p>
+            <p className="text-xs text-muted-foreground">in filtered period</p>
           </CardContent>
         </Card>
 
@@ -187,21 +241,21 @@ const FeedConsumptionHistory = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="date" 
+                  <XAxis
+                    dataKey="date"
                     tickFormatter={(value) => format(new Date(value), "MMM dd")}
                     className="text-xs"
                   />
                   <YAxis className="text-xs" />
-                  <Tooltip 
+                  <Tooltip
                     labelFormatter={(value) => format(new Date(value), "MMM dd, yyyy")}
                     formatter={(value: number) => [`${value.toFixed(1)} kg`, 'Consumption']}
                   />
                   <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="total" 
-                    stroke="hsl(var(--primary))" 
+                  <Line
+                    type="monotone"
+                    dataKey="total"
+                    stroke="hsl(var(--primary))"
                     strokeWidth={2}
                     dot={{ fill: 'hsl(var(--primary))' }}
                     name="Total (kg)"

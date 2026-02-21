@@ -2,19 +2,31 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
+import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import AddExpenseDialog from "./dialogs/AddExpenseDialog";
 import { useBranch } from "@/contexts/BranchContext";
 import PaginationControls from "@/components/PaginationControls";
 import { usePagination } from "@/hooks/usePagination";
+import { DateRange } from "react-day-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Calendar as CalendarIcon, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 15;
 
 const ExpensesTab = () => {
   const { currentBranchId } = useBranch();
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [filteredExpenses, setFilteredExpenses] = useState<any[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [categoryBreakdown, setCategoryBreakdown] = useState<Record<string, number>>({});
+
+  const [date, setDate] = useState<DateRange | undefined>();
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -34,32 +46,126 @@ const ExpensesTab = () => {
 
     if (data) {
       setExpenses(data);
-      const total = data.reduce((acc, curr) => acc + Number(curr.amount), 0);
-      setTotalExpenses(total);
-
-      const breakdown = data.reduce((acc, curr) => {
-        acc[curr.expense_type] = (acc[curr.expense_type] || 0) + Number(curr.amount);
-        return acc;
-      }, {} as Record<string, number>);
-      setCategoryBreakdown(breakdown);
+      const uniqueCategories = Array.from(new Set(data.map(e => e.expense_type))).filter(Boolean) as string[];
+      setAvailableCategories(uniqueCategories);
     }
   };
 
+  useEffect(() => {
+    let result = expenses;
+
+    // Date range filter
+    if (date?.from) {
+      const fromD = startOfDay(date.from);
+      const toD = date.to ? endOfDay(date.to) : endOfDay(date.from);
+
+      result = result.filter((record) => {
+        const recordDate = new Date(record.date);
+        return isWithinInterval(recordDate, { start: fromD, end: toD });
+      });
+    }
+
+    // Category filter
+    if (selectedCategory !== "all") {
+      result = result.filter((e) => e.expense_type === selectedCategory);
+    }
+
+    setFilteredExpenses(result);
+
+    // Calculate totals for currently filtered data
+    const total = result.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+    setTotalExpenses(total);
+
+    const breakdown = result.reduce((acc, curr) => {
+      acc[curr.expense_type] = (acc[curr.expense_type] || 0) + Number(curr.amount || 0);
+      return acc;
+    }, {} as Record<string, number>);
+    setCategoryBreakdown(breakdown);
+
+  }, [expenses, date, selectedCategory]);
+
   const { currentPage, totalPages, paginatedRange, goToPage, getPageNumbers } = usePagination({
-    totalItems: expenses.length,
+    totalItems: filteredExpenses.length,
     itemsPerPage: ITEMS_PER_PAGE,
   });
 
-  const paginatedExpenses = expenses.slice(paginatedRange.startIndex, paginatedRange.endIndex);
+  const paginatedExpenses = filteredExpenses.slice(paginatedRange.startIndex, paginatedRange.endIndex);
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Expenses Management</h2>
-          <p className="text-muted-foreground">Track all farm expenses ({expenses.length} total)</p>
+          <p className="text-muted-foreground">Track all farm expenses ({filteredExpenses.length} filtered)</p>
         </div>
-        <AddExpenseDialog onSuccess={fetchData} branchId={currentBranchId} />
+
+        <div className="flex flex-wrap items-center gap-2">
+          {availableCategories.length > 0 && (
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {availableCategories.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-[260px] justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date?.from ? (
+                    date.to ? (
+                      <>
+                        {format(date.from, "LLL dd, y")} -{" "}
+                        {format(date.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(date.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Filter by date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={date?.from}
+                  selected={date}
+                  onSelect={setDate}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+
+            {date?.from && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setDate(undefined)}
+                title="Clear date filter"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          <AddExpenseDialog onSuccess={fetchData} branchId={currentBranchId} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -69,7 +175,7 @@ const ExpensesTab = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">₦{totalExpenses.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">from {expenses.length} expenses</p>
+            <p className="text-xs text-muted-foreground mt-1">from {filteredExpenses.length} expenses</p>
           </CardContent>
         </Card>
 
@@ -79,7 +185,7 @@ const ExpensesTab = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              ₦{expenses.length > 0 ? Math.round(totalExpenses / expenses.length).toLocaleString() : 0}
+              ₦{filteredExpenses.length > 0 ? Math.round(totalExpenses / filteredExpenses.length).toLocaleString() : 0}
             </div>
             <p className="text-xs text-muted-foreground mt-1">per expense</p>
           </CardContent>
@@ -107,7 +213,7 @@ const ExpensesTab = () => {
       <Card>
         <CardHeader>
           <CardTitle>Expenses History</CardTitle>
-          <CardDescription>Showing {paginatedExpenses.length} of {expenses.length} records</CardDescription>
+          <CardDescription>Showing {paginatedExpenses.length} of {filteredExpenses.length} records</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>

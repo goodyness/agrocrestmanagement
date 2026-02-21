@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit2, Phone, Mail, MapPin, History, Truck, Package } from "lucide-react";
+import { Plus, Edit2, Phone, Mail, MapPin, History, Truck, Package, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBranch } from "@/contexts/BranchContext";
 
@@ -118,6 +118,37 @@ const SuppliersTab = () => {
       toast.success("Supplier updated successfully");
       setEditDialogOpen(false);
       resetForm();
+      fetchSuppliers();
+    }
+    setLoading(false);
+  };
+
+  const handleDeleteSupplier = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete ${name}?`)) {
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase
+      .from("suppliers")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error(error);
+      // Check for foreign key constraint violation
+      // Usually means they have existing purchases or pricing history
+      if (error.code === '23503' || error.message?.includes('violates foreign key constraint') || error.message?.includes('linked')) {
+        toast.error(`Cannot delete ${name} because they have existing history records or purchases. You must delete those first.`);
+      } else {
+        toast.error(`Failed to delete ${name}.`);
+      }
+    } else {
+      toast.success(`${name} deleted successfully`);
+      if (selectedSupplier?.id === id) {
+        setSelectedSupplier(null);
+        setPricingHistory([]);
+      }
       fetchSuppliers();
     }
     setLoading(false);
@@ -287,11 +318,10 @@ const SuppliersTab = () => {
                 {suppliers.map((supplier) => (
                   <div
                     key={supplier.id}
-                    className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                      selectedSupplier?.id === supplier.id
+                    className={`p-4 rounded-lg border cursor-pointer transition-colors ${selectedSupplier?.id === supplier.id
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/50"
-                    }`}
+                      }`}
                     onClick={() => viewPricingHistory(supplier)}
                   >
                     <div className="flex justify-between items-start">
@@ -321,16 +351,29 @@ const SuppliersTab = () => {
                           </p>
                         )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditDialog(supplier);
-                        }}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(supplier);
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-destructive/10 hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSupplier(supplier.id, supplier.name);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
