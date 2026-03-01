@@ -16,6 +16,7 @@ import BulkMortalityDialog from "./worker/BulkMortalityDialog";
 import BulkProductionDialog from "./worker/BulkProductionDialog";
 import CleaningReminderPopup from "./worker/CleaningReminderPopup";
 import CleaningStatusCard from "./worker/CleaningStatusCard";
+import WorkerReviewNotification from "./worker/WorkerReviewNotification";
 import SuspensionOverlay from "./SuspensionOverlay";
 import { useCleaningSchedule } from "@/hooks/useCleaningSchedule";
 import { BranchSelectionPrompt } from "./worker/BranchSelectionPrompt";
@@ -231,6 +232,8 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
       )}
 
       <main className="container mx-auto px-4 lg:px-6 py-6 space-y-6">
+        {/* Worker Review Notification */}
+        {user && <WorkerReviewNotification userId={user.id} />}
         {/* Quick Actions */}
         <Card className="border-primary/20 shadow-lg">
           <CardHeader>
