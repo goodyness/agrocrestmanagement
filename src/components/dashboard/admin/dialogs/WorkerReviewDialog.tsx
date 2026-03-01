@@ -23,6 +23,8 @@ interface Worker {
 interface WorkerReviewDialogProps {
   onSuccess: () => void;
   branchId: string | null;
+  editReview?: any;
+  triggerButton?: React.ReactNode;
 }
 
 const MONTHS = [
@@ -30,7 +32,7 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ];
 
-const WorkerReviewDialog = ({ onSuccess, branchId }: WorkerReviewDialogProps) => {
+const WorkerReviewDialog = ({ onSuccess, branchId, editReview, triggerButton }: WorkerReviewDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -46,8 +48,25 @@ const WorkerReviewDialog = ({ onSuccess, branchId }: WorkerReviewDialogProps) =>
   const [equipmentDebtAmount, setEquipmentDebtAmount] = useState("");
   const [equipmentDebtDescription, setEquipmentDebtDescription] = useState("");
 
+  const isEditing = !!editReview;
+
   useEffect(() => {
-    if (open) fetchWorkers();
+    if (open) {
+      fetchWorkers();
+      if (editReview) {
+        setSelectedWorker(editReview.worker_id);
+        setReviewMonth(editReview.review_month);
+        setReviewYear(editReview.review_year);
+        setScore(editReview.score);
+        setReviewText(editReview.review_text);
+        setSalaryAmount(String(editReview.salary_amount));
+        setHasBalanceDebt(editReview.has_balance_debt);
+        setBalanceDebtAmount(String(editReview.balance_debt_amount || ""));
+        setHasEquipmentDebt(editReview.has_equipment_debt);
+        setEquipmentDebtAmount(String(editReview.equipment_debt_amount || ""));
+        setEquipmentDebtDescription(editReview.equipment_debt_description || "");
+      }
+    }
   }, [open]);
 
   const fetchWorkers = async () => {
@@ -88,66 +107,113 @@ const WorkerReviewDialog = ({ onSuccess, branchId }: WorkerReviewDialogProps) =>
     const eqDebt = hasEquipmentDebt ? parseFloat(equipmentDebtAmount || "0") : 0;
     const totalDebt = balDebt + eqDebt;
 
-    // 1. Create salary expense automatically
-    const { data: expenseData, error: expenseError } = await supabase
-      .from("miscellaneous_expenses")
-      .insert({
-        expense_type: "Salary",
-        amount: salary,
-        description: `Salary for ${workers.find(w => w.id === selectedWorker)?.name} - ${MONTHS[reviewMonth - 1]} ${reviewYear}`,
-        created_by: user.id,
-        date: new Date().toISOString().split('T')[0],
-        branch_id: branchId,
-      })
-      .select("id")
-      .single();
+    if (isEditing) {
+      // Update existing review
+      const { error } = await supabase
+        .from("worker_reviews")
+        .update({
+          worker_id: selectedWorker,
+          review_month: reviewMonth,
+          review_year: reviewYear,
+          score,
+          review_text: reviewText,
+          salary_amount: salary,
+          has_balance_debt: hasBalanceDebt,
+          balance_debt_amount: balDebt,
+          has_equipment_debt: hasEquipmentDebt,
+          equipment_debt_amount: eqDebt,
+          equipment_debt_description: equipmentDebtDescription || null,
+          total_debt: totalDebt,
+        })
+        .eq("id", editReview.id);
 
-    if (expenseError) {
-      toast.error("Failed to record salary expense");
-      setLoading(false);
-      return;
-    }
+      if (error) {
+        toast.error("Failed to update review");
+        setLoading(false);
+        return;
+      }
 
-    // 2. Create worker review
-    const { error: reviewError } = await supabase
-      .from("worker_reviews")
-      .insert({
-        worker_id: selectedWorker,
-        reviewer_id: user.id,
-        review_month: reviewMonth,
-        review_year: reviewYear,
+      // Update linked salary expense if exists
+      if (editReview.salary_expense_id) {
+        await supabase
+          .from("miscellaneous_expenses")
+          .update({
+            amount: salary,
+            description: `Salary for ${workers.find(w => w.id === selectedWorker)?.name} - ${MONTHS[reviewMonth - 1]} ${reviewYear}`,
+          })
+          .eq("id", editReview.salary_expense_id);
+      }
+
+      await logActivity("update", "worker_review", editReview.id, {
+        worker_name: workers.find(w => w.id === selectedWorker)?.name,
+        month: MONTHS[reviewMonth - 1],
+        year: reviewYear,
         score,
-        review_text: reviewText,
-        salary_amount: salary,
-        salary_expense_id: expenseData.id,
-        has_balance_debt: hasBalanceDebt,
-        balance_debt_amount: balDebt,
-        has_equipment_debt: hasEquipmentDebt,
-        equipment_debt_amount: eqDebt,
-        equipment_debt_description: equipmentDebtDescription || null,
+      });
+
+      toast.success("Review updated successfully");
+    } else {
+      // Create salary expense
+      const { data: expenseData, error: expenseError } = await supabase
+        .from("miscellaneous_expenses")
+        .insert({
+          expense_type: "Salary",
+          amount: salary,
+          description: `Salary for ${workers.find(w => w.id === selectedWorker)?.name} - ${MONTHS[reviewMonth - 1]} ${reviewYear}`,
+          created_by: user.id,
+          date: new Date().toISOString().split('T')[0],
+          branch_id: branchId,
+        })
+        .select("id")
+        .single();
+
+      if (expenseError) {
+        toast.error("Failed to record salary expense");
+        setLoading(false);
+        return;
+      }
+
+      const { error: reviewError } = await supabase
+        .from("worker_reviews")
+        .insert({
+          worker_id: selectedWorker,
+          reviewer_id: user.id,
+          review_month: reviewMonth,
+          review_year: reviewYear,
+          score,
+          review_text: reviewText,
+          salary_amount: salary,
+          salary_expense_id: expenseData.id,
+          has_balance_debt: hasBalanceDebt,
+          balance_debt_amount: balDebt,
+          has_equipment_debt: hasEquipmentDebt,
+          equipment_debt_amount: eqDebt,
+          equipment_debt_description: equipmentDebtDescription || null,
+          total_debt: totalDebt,
+        });
+
+      if (reviewError) {
+        if (reviewError.code === '23505') {
+          toast.error("A review already exists for this worker this month");
+        } else {
+          toast.error("Failed to create review");
+        }
+        setLoading(false);
+        return;
+      }
+
+      await logActivity("create", "worker_review", selectedWorker, {
+        worker_name: workers.find(w => w.id === selectedWorker)?.name,
+        month: MONTHS[reviewMonth - 1],
+        year: reviewYear,
+        score,
+        salary,
         total_debt: totalDebt,
       });
 
-    if (reviewError) {
-      if (reviewError.code === '23505') {
-        toast.error("A review already exists for this worker this month");
-      } else {
-        toast.error("Failed to create review");
-      }
-      setLoading(false);
-      return;
+      toast.success("Worker review submitted & salary recorded as expense");
     }
 
-    await logActivity("create", "worker_review", selectedWorker, {
-      worker_name: workers.find(w => w.id === selectedWorker)?.name,
-      month: MONTHS[reviewMonth - 1],
-      year: reviewYear,
-      score,
-      salary,
-      total_debt: totalDebt,
-    });
-
-    toast.success("Worker review submitted & salary recorded as expense");
     resetForm();
     setOpen(false);
     onSuccess();
@@ -159,15 +225,19 @@ const WorkerReviewDialog = ({ onSuccess, branchId }: WorkerReviewDialogProps) =>
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
       <DialogTrigger asChild>
-        <Button variant="default">
-          <ClipboardCheck className="h-4 w-4 mr-2" />
-          Write Review
-        </Button>
+        {triggerButton || (
+          <Button variant="default">
+            <ClipboardCheck className="h-4 w-4 mr-2" />
+            Write Review
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Monthly Worker Review</DialogTitle>
-          <DialogDescription>Score and review a worker's performance, record salary and debts</DialogDescription>
+          <DialogTitle>{isEditing ? "Edit Worker Review" : "Monthly Worker Review"}</DialogTitle>
+          <DialogDescription>
+            {isEditing ? "Update the review details" : "Score and review a worker's performance, record salary and debts"}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Worker Selection */}
@@ -276,7 +346,7 @@ const WorkerReviewDialog = ({ onSuccess, branchId }: WorkerReviewDialogProps) =>
           </Card>
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Submitting..." : "Submit Review & Record Salary"}
+            {loading ? "Submitting..." : isEditing ? "Update Review" : "Submit Review & Record Salary"}
           </Button>
         </form>
       </DialogContent>
