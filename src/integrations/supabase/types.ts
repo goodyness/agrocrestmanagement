@@ -1439,6 +1439,91 @@ export type Database = {
           },
         ]
       }
+      worker_reviews: {
+        Row: {
+          balance_debt_amount: number
+          created_at: string
+          equipment_debt_amount: number
+          equipment_debt_description: string | null
+          has_balance_debt: boolean
+          has_equipment_debt: boolean
+          id: string
+          review_month: number
+          review_text: string
+          review_year: number
+          reviewer_id: string
+          salary_amount: number
+          salary_expense_id: string | null
+          score: number
+          total_debt: number
+          updated_at: string
+          view_count: number
+          worker_id: string
+        }
+        Insert: {
+          balance_debt_amount?: number
+          created_at?: string
+          equipment_debt_amount?: number
+          equipment_debt_description?: string | null
+          has_balance_debt?: boolean
+          has_equipment_debt?: boolean
+          id?: string
+          review_month: number
+          review_text: string
+          review_year: number
+          reviewer_id: string
+          salary_amount?: number
+          salary_expense_id?: string | null
+          score: number
+          total_debt?: number
+          updated_at?: string
+          view_count?: number
+          worker_id: string
+        }
+        Update: {
+          balance_debt_amount?: number
+          created_at?: string
+          equipment_debt_amount?: number
+          equipment_debt_description?: string | null
+          has_balance_debt?: boolean
+          has_equipment_debt?: boolean
+          id?: string
+          review_month?: number
+          review_text?: string
+          review_year?: number
+          reviewer_id?: string
+          salary_amount?: number
+          salary_expense_id?: string | null
+          score?: number
+          total_debt?: number
+          updated_at?: string
+          view_count?: number
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_reviews_salary_expense_id_fkey"
+            columns: ["salary_expense_id"]
+            isOneToOne: false
+            referencedRelation: "miscellaneous_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_reviews_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
