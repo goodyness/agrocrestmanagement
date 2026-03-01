@@ -3,8 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Star, ClipboardCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Star, ClipboardCheck, Pencil, Trash2 } from "lucide-react";
 import { useBranch } from "@/contexts/BranchContext";
+import { toast } from "sonner";
 import WorkerReviewDialog from "./dialogs/WorkerReviewDialog";
 import PaginationControls from "@/components/PaginationControls";
 import { usePagination } from "@/hooks/usePagination";
@@ -17,6 +20,8 @@ const MONTHS = [
 const WorkerReviewsTab = () => {
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { currentBranch } = useBranch();
   const pagination = usePagination({ totalItems: reviews.length, itemsPerPage: 15 });
 
@@ -31,6 +36,25 @@ const WorkerReviewsTab = () => {
       .order("review_month", { ascending: false });
     setReviews(data || []);
     setLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    const review = reviews.find(r => r.id === deleteId);
+    // Delete linked salary expense
+    if (review?.salary_expense_id) {
+      await supabase.from("miscellaneous_expenses").delete().eq("id", review.salary_expense_id);
+    }
+    const { error } = await supabase.from("worker_reviews").delete().eq("id", deleteId);
+    if (error) {
+      toast.error("Failed to delete review");
+    } else {
+      toast.success("Review and linked salary expense deleted");
+      fetchReviews();
+    }
+    setDeleteId(null);
+    setDeleting(false);
   };
 
   const paginatedReviews = reviews.slice(
@@ -72,6 +96,7 @@ const WorkerReviewsTab = () => {
                       <TableHead>Review</TableHead>
                       <TableHead className="text-right">Salary</TableHead>
                       <TableHead className="text-right">Debt</TableHead>
+                      <TableHead className="text-center">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -102,6 +127,23 @@ const WorkerReviewsTab = () => {
                             <span className="text-muted-foreground text-sm">None</span>
                           )}
                         </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <WorkerReviewDialog
+                              onSuccess={fetchReviews}
+                              branchId={currentBranch?.id || null}
+                              editReview={review}
+                              triggerButton={
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              }
+                            />
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(review.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -117,6 +159,24 @@ const WorkerReviewsTab = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={(v) => !v && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Review?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this review and its linked salary expense. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
