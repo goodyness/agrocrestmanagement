@@ -1,1 +1,4 @@
 project_id = "exhdkdlgezoqfrvhbwww"
+
+[functions.livestock-care-suggestions]
+verify_jwt = false
