@@ -2,12 +2,13 @@ import { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck } from "lucide-react";
+import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck, PawPrint } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OverviewTab from "./admin/OverviewTab";
 import LivestockTab from "./admin/LivestockTab";
+import LivestockIntakeTab from "./admin/livestock/LivestockIntakeTab";
 import FeedTab from "./admin/FeedTab";
 import ProductionTab from "./admin/ProductionTab";
 import SalesTab from "./admin/SalesTab";
@@ -158,6 +159,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
                 <ClipboardCheck className="h-4 w-4" />
                 <span className="hidden sm:inline">Reviews</span>
               </TabsTrigger>
+              <TabsTrigger value="intake" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <PawPrint className="h-4 w-4" />
+                <span className="hidden sm:inline">Intake</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -236,6 +241,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="reviews" className="space-y-4">
             <WorkerReviewsTab />
+          </TabsContent>
+
+          <TabsContent value="intake" className="space-y-4">
+            <LivestockIntakeTab />
           </TabsContent>
         </Tabs>
       </main>

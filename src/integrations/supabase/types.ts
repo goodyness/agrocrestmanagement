@@ -623,6 +623,212 @@ export type Database = {
           },
         ]
       }
+      livestock_batches: {
+        Row: {
+          age_weeks: number | null
+          branch_id: string | null
+          cost_per_unit: number | null
+          created_at: string
+          current_quantity: number
+          date_acquired: string
+          has_started_laying: boolean
+          id: string
+          is_active: boolean
+          laying_start_date: string | null
+          livestock_category_id: string | null
+          notes: string | null
+          quantity: number
+          registered_by: string
+          source: string | null
+          species: string
+          species_type: string | null
+          stage: string | null
+          total_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          age_weeks?: number | null
+          branch_id?: string | null
+          cost_per_unit?: number | null
+          created_at?: string
+          current_quantity?: number
+          date_acquired?: string
+          has_started_laying?: boolean
+          id?: string
+          is_active?: boolean
+          laying_start_date?: string | null
+          livestock_category_id?: string | null
+          notes?: string | null
+          quantity?: number
+          registered_by: string
+          source?: string | null
+          species: string
+          species_type?: string | null
+          stage?: string | null
+          total_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          age_weeks?: number | null
+          branch_id?: string | null
+          cost_per_unit?: number | null
+          created_at?: string
+          current_quantity?: number
+          date_acquired?: string
+          has_started_laying?: boolean
+          id?: string
+          is_active?: boolean
+          laying_start_date?: string | null
+          livestock_category_id?: string | null
+          notes?: string | null
+          quantity?: number
+          registered_by?: string
+          source?: string | null
+          species?: string
+          species_type?: string | null
+          stage?: string | null
+          total_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "livestock_batches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "livestock_batches_livestock_category_id_fkey"
+            columns: ["livestock_category_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "livestock_batches_registered_by_fkey"
+            columns: ["registered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      livestock_care_logs: {
+        Row: {
+          administered_by: string
+          batch_id: string
+          branch_id: string | null
+          care_date: string
+          care_type: string
+          created_at: string
+          description: string
+          dosage: string | null
+          id: string
+          notes: string | null
+          product_name: string | null
+          quantity_affected: number | null
+        }
+        Insert: {
+          administered_by: string
+          batch_id: string
+          branch_id?: string | null
+          care_date?: string
+          care_type: string
+          created_at?: string
+          description: string
+          dosage?: string | null
+          id?: string
+          notes?: string | null
+          product_name?: string | null
+          quantity_affected?: number | null
+        }
+        Update: {
+          administered_by?: string
+          batch_id?: string
+          branch_id?: string | null
+          care_date?: string
+          care_type?: string
+          created_at?: string
+          description?: string
+          dosage?: string | null
+          id?: string
+          notes?: string | null
+          product_name?: string | null
+          quantity_affected?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "livestock_care_logs_administered_by_fkey"
+            columns: ["administered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "livestock_care_logs_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "livestock_care_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      livestock_care_templates: {
+        Row: {
+          care_type: string
+          created_at: string
+          description: string
+          dosage: string | null
+          id: string
+          is_critical: boolean
+          product_name: string | null
+          sort_order: number
+          species: string
+          species_type: string | null
+          stage: string | null
+          title: string
+          week_number: number
+        }
+        Insert: {
+          care_type: string
+          created_at?: string
+          description: string
+          dosage?: string | null
+          id?: string
+          is_critical?: boolean
+          product_name?: string | null
+          sort_order?: number
+          species: string
+          species_type?: string | null
+          stage?: string | null
+          title: string
+          week_number: number
+        }
+        Update: {
+          care_type?: string
+          created_at?: string
+          description?: string
+          dosage?: string | null
+          id?: string
+          is_critical?: boolean
+          product_name?: string | null
+          sort_order?: number
+          species?: string
+          species_type?: string | null
+          stage?: string | null
+          title?: string
+          week_number?: number
+        }
+        Relationships: []
+      }
       livestock_categories: {
         Row: {
           branch_id: string | null
