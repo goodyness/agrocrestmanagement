@@ -260,12 +260,22 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
 
           {/* Source */}
           <div className="space-y-2">
-            <Label>Source / Supplier</Label>
-            <Input
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              placeholder="Where acquired from"
-            />
+            <Label>Source *</Label>
+            {species !== "chicken" && species ? (
+              <Select value={source} onValueChange={setSource}>
+                <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bought">🏪 Bought from Outside</SelectItem>
+                  <SelectItem value="born_on_farm">🐣 Gave Birth To (On Farm)</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                placeholder="Where acquired from"
+              />
+            )}
           </div>
 
           {/* Cost */}

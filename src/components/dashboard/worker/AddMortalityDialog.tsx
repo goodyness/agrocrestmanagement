@@ -19,23 +19,30 @@ const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) =>
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
-  // Use passed branchId prop if available, otherwise fall back to context
+  const [batches, setBatches] = useState<any[]>([]);
+  const [selectedBatchId, setSelectedBatchId] = useState("");
   const { currentBranchId: contextBranchId } = useBranch();
   const effectiveBranchId = branchId !== undefined ? branchId : contextBranchId;
 
   useEffect(() => {
     if (open) {
       fetchCategories();
+      fetchBatches();
     }
   }, [open, effectiveBranchId]);
 
   const fetchCategories = async () => {
     let query = supabase.from("livestock_categories").select("*");
-    if (effectiveBranchId) {
-      query = query.eq("branch_id", effectiveBranchId);
-    }
+    if (effectiveBranchId) query = query.eq("branch_id", effectiveBranchId);
     const { data } = await query;
     setCategories(data || []);
+  };
+
+  const fetchBatches = async () => {
+    let query = supabase.from("livestock_batches").select("id, species, species_type, stage, current_quantity").eq("is_active", true);
+    if (effectiveBranchId) query = query.eq("branch_id", effectiveBranchId);
+    const { data } = await query;
+    setBatches(data || []);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -48,49 +55,44 @@ const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) =>
     const reason = formData.get("reason") as string;
 
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("You must be logged in"); setLoading(false); return; }
 
-    if (!user) {
-      toast.error("You must be logged in");
-      setLoading(false);
-      return;
-    }
-
-    // Get user's branch_id from profile if no effectiveBranchId
     let finalBranchId = effectiveBranchId;
     if (!finalBranchId) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("branch_id")
-        .eq("id", user.id)
-        .single();
+      const { data: profile } = await supabase.from("profiles").select("branch_id").eq("id", user.id).single();
       finalBranchId = profile?.branch_id || null;
     }
 
-    const { error } = await supabase.from("mortality_records").insert({
+    const insertData: any = {
       livestock_category_id,
       quantity_dead,
       reason: reason || null,
       recorded_by: user.id,
       date: new Date().toISOString().split('T')[0],
       branch_id: finalBranchId,
-    });
+    };
+
+    if (selectedBatchId) {
+      insertData.batch_id = selectedBatchId;
+    }
+
+    const { error } = await supabase.from("mortality_records").insert(insertData);
 
     if (error) {
       toast.error("Failed to add mortality record");
     } else {
       const categoryName = categories.find(c => c.id === livestock_category_id)?.name || 'Unknown';
-      
       await logActivity("create", "mortality", undefined, {
         category: categoryName,
         quantity_dead,
         reason: reason || null,
+        batch_id: selectedBatchId || null,
       }, finalBranchId);
-      
       toast.success("Mortality recorded successfully");
       setOpen(false);
+      setSelectedBatchId("");
       onSuccess();
     }
-
     setLoading(false);
   };
 
@@ -110,38 +112,34 @@ const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) =>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="category">Livestock Category</Label>
-            <select
-              id="category"
-              name="category"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              required
-            >
+            <select id="category" name="category" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" required>
               <option value="">Select category</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
+              {categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
             </select>
           </div>
+
+          {batches.length > 0 && (
+            <div className="space-y-2">
+              <Label>Link to Batch (Optional)</Label>
+              <select value={selectedBatchId} onChange={(e) => setSelectedBatchId(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <option value="">No batch (general mortality)</option>
+                {batches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.species_type || b.species} - {b.stage?.replace(/_/g, " ")} ({b.current_quantity} animals)
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">Linking to a batch will automatically reduce its count</p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="quantity">Quantity Dead</Label>
-            <Input
-              id="quantity"
-              name="quantity"
-              type="number"
-              min="1"
-              placeholder="0"
-              required
-            />
+            <Input id="quantity" name="quantity" type="number" min="1" placeholder="0" required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="reason">Reason (Optional)</Label>
-            <Textarea
-              id="reason"
-              name="reason"
-              placeholder="Cause of death or observations..."
-            />
+            <Textarea id="reason" name="reason" placeholder="Cause of death or observations..." />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Recording..." : "Record Mortality"}

@@ -80,6 +80,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           speciesType: batch.species_type,
           stage: batch.stage,
           ageWeeks: batch.age_weeks,
+          source: batch.source,
           currentCareHistory: recentCare || "No care recorded yet",
         },
       });

@@ -9,9 +9,17 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { species, speciesType, stage, ageWeeks, currentCareHistory } = await req.json();
+    const { species, speciesType, stage, ageWeeks, currentCareHistory, source } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const sourceContext = source === "born_on_farm" 
+      ? `\nIMPORTANT: This animal was BORN ON THE FARM (not purchased). Include specific recommendations for:
+- How to care for the newborn ${species}
+- How to care for the mother (post-birth recovery, nutrition, health checks)
+- Weaning timeline and best practices
+- Common post-birth complications to watch for`
+      : "";
 
     const prompt = `You are an expert livestock farming advisor specializing in Nigerian poultry and livestock management. 
 
@@ -20,7 +28,9 @@ Given the following livestock details:
 - Type: ${speciesType || 'General'}
 - Current Stage: ${stage}
 - Current Age: ${ageWeeks} weeks
+- Source: ${source || 'Purchased'}
 - Recent care history: ${currentCareHistory || 'None recorded yet'}
+${sourceContext}
 
 Provide 3-5 specific, actionable care recommendations for RIGHT NOW (this week). Include:
 1. Any vaccinations or medications due

@@ -103,6 +103,50 @@ export type Database = {
           },
         ]
       }
+      bank_accounts: {
+        Row: {
+          account_name: string
+          account_number: string
+          bank_name: string
+          branch_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          bank_name: string
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          bank_name?: string
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           created_at: string
@@ -1007,6 +1051,7 @@ export type Database = {
       }
       mortality_records: {
         Row: {
+          batch_id: string | null
           branch_id: string | null
           created_at: string | null
           date: string
@@ -1017,6 +1062,7 @@ export type Database = {
           recorded_by: string
         }
         Insert: {
+          batch_id?: string | null
           branch_id?: string | null
           created_at?: string | null
           date?: string
@@ -1027,6 +1073,7 @@ export type Database = {
           recorded_by: string
         }
         Update: {
+          batch_id?: string | null
           branch_id?: string | null
           created_at?: string | null
           date?: string
@@ -1037,6 +1084,13 @@ export type Database = {
           recorded_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "mortality_records_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "mortality_records_branch_id_fkey"
             columns: ["branch_id"]
@@ -1736,6 +1790,7 @@ export type Database = {
     }
     Functions: {
       admin_exists: { Args: never; Returns: boolean }
+      increment_batch_ages: { Args: never; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
