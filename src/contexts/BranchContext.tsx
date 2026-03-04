@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useTransition } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -20,7 +20,7 @@ interface BranchContextType {
 
 const BranchContext = createContext<BranchContextType | undefined>(undefined);
 
-export function BranchProvider({ children }: { children: ReactNode }) {
+export const BranchProvider = ({ children }: { children: ReactNode }) => {
   const [currentBranchId, setCurrentBranchId] = useState<string | null>(() => {
     return localStorage.getItem("currentBranchId");
   });
@@ -40,27 +40,16 @@ export function BranchProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  // Set default branch to Abeokuta if none selected
-  useEffect(() => {
-    if (!currentBranchId && branches.length > 0) {
-      const abeokuta = branches.find((b) => b.name === "Abeokuta");
-      if (abeokuta) {
-        setCurrentBranchId(abeokuta.id);
-        localStorage.setItem("currentBranchId", abeokuta.id);
-      }
-    }
-  }, [branches, currentBranchId]);
-
   const handleSetBranchId = async (id: string) => {
     if (id === currentBranchId) return;
-    
+
     setIsSwitching(true);
     setCurrentBranchId(id);
     localStorage.setItem("currentBranchId", id);
-    
+
     // Invalidate all queries to refresh data for new branch
     await queryClient.invalidateQueries();
-    
+
     // Small delay to show switching state
     setTimeout(() => {
       setIsSwitching(false);
@@ -83,12 +72,12 @@ export function BranchProvider({ children }: { children: ReactNode }) {
       {children}
     </BranchContext.Provider>
   );
-}
+};
 
-export function useBranch() {
+export const useBranch = () => {
   const context = useContext(BranchContext);
   if (context === undefined) {
     throw new Error("useBranch must be used within a BranchProvider");
   }
   return context;
-}
+};

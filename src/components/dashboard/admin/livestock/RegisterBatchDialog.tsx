@@ -13,9 +13,11 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   branchId: string | null;
+  batch?: any;
 }
 
 const SPECIES_CONFIG: Record<string, { types: string[]; stages: Record<string, string[]> }> = {
+  // ... existing config (unchanged)
   chicken: {
     types: ["layer", "broiler", "noiler", "cockerel", "other"],
     stages: {
@@ -67,16 +69,17 @@ const STAGE_LABELS: Record<string, string> = {
   young: "Young",
 };
 
-const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId }: Props) => {
+const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }: Props) => {
   const [loading, setLoading] = useState(false);
-  const [species, setSpecies] = useState("");
-  const [speciesType, setSpeciesType] = useState("");
-  const [stage, setStage] = useState("");
-  const [ageWeeks, setAgeWeeks] = useState(0);
-  const [quantity, setQuantity] = useState(0);
-  const [source, setSource] = useState("");
-  const [costPerUnit, setCostPerUnit] = useState(0);
-  const [notes, setNotes] = useState("");
+  const [species, setSpecies] = useState(batch?.species || "");
+  const [speciesType, setSpeciesType] = useState(batch?.species_type || "");
+  const [stage, setStage] = useState(batch?.stage || "");
+  const [ageWeeks, setAgeWeeks] = useState(batch?.age_weeks || 0);
+  const [quantity, setQuantity] = useState(batch?.quantity || 0);
+  const [currentQuantity, setCurrentQuantity] = useState(batch?.current_quantity || 0);
+  const [source, setSource] = useState(batch?.source || "");
+  const [costPerUnit, setCostPerUnit] = useState(batch?.cost_per_unit || 0);
+  const [notes, setNotes] = useState(batch?.notes || "");
 
   const config = SPECIES_CONFIG[species];
   const types = config?.types || [];
@@ -98,34 +101,46 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId }: Props)
 
     const defaultAge = stage === "pullet" || stage === "chick" || stage === "piglet" || stage === "kid" || stage === "calf" ? 0
       : stage === "point_of_cage" ? 16
-      : stage === "point_of_lay" ? 20
-      : stage === "weaner" ? 4
-      : ageWeeks;
+        : stage === "point_of_lay" ? 20
+          : stage === "weaner" ? 4
+            : ageWeeks;
 
-    const { error } = await supabase.from("livestock_batches").insert({
+    const batchData: any = {
       branch_id: branchId,
       species,
       species_type: speciesType || null,
       stage,
       age_weeks: needsAge ? ageWeeks : defaultAge,
       quantity,
-      current_quantity: quantity,
-      date_acquired: new Date().toISOString().split("T")[0],
+      current_quantity: batch ? (currentQuantity || quantity) : quantity,
+      date_acquired: batch?.date_acquired || new Date().toISOString().split("T")[0],
       source: source || null,
       cost_per_unit: costPerUnit,
       total_cost: costPerUnit * quantity,
       notes: notes || null,
       has_started_laying: stage === "laying",
-      laying_start_date: stage === "laying" ? new Date().toISOString().split("T")[0] : null,
-      registered_by: user.id,
-    });
+      laying_start_date: stage === "laying" ? (batch?.laying_start_date || new Date().toISOString().split("T")[0]) : null,
+      registered_by: batch?.registered_by || user.id,
+    };
+
+    let error;
+    if (batch?.id) {
+      const { error: updateError } = await supabase
+        .from("livestock_batches")
+        .update(batchData)
+        .eq("id", batch.id);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase.from("livestock_batches").insert(batchData);
+      error = insertError;
+    }
 
     if (error) {
-      toast.error("Failed to register batch: " + error.message);
+      toast.error(`Failed to ${batch ? 'update' : 'register'} batch: ` + error.message);
     } else {
-      toast.success("Livestock batch registered successfully!");
+      toast.success(`Livestock batch ${batch ? 'updated' : 'registered'} successfully!`);
       onOpenChange(false);
-      resetForm();
+      if (!batch) resetForm();
       onSuccess();
     }
     setLoading(false);
@@ -137,6 +152,7 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId }: Props)
     setStage("");
     setAgeWeeks(0);
     setQuantity(0);
+    setCurrentQuantity(0);
     setSource("");
     setCostPerUnit(0);
     setNotes("");
@@ -146,7 +162,7 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId }: Props)
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Register New Livestock Batch</DialogTitle>
+          <DialogTitle>{batch ? "Edit Livestock Batch" : "Register New Livestock Batch"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Species */}
@@ -212,17 +228,34 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId }: Props)
             </div>
           )}
 
-          {/* Quantity */}
-          <div className="space-y-2">
-            <Label>Quantity *</Label>
-            <Input
-              type="number"
-              min={1}
-              value={quantity || ""}
-              onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-              placeholder="Number of animals"
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            {/* Quantity */}
+            <div className="space-y-2">
+              <Label>Initial Quantity *</Label>
+              <Input
+                type="number"
+                min={1}
+                value={quantity || ""}
+                onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                placeholder="Number of animals"
+                required
+              />
+            </div>
+
+            {/* Current Quantity */}
+            {batch && (
+              <div className="space-y-2">
+                <Label>Current Quantity *</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={currentQuantity}
+                  onChange={(e) => setCurrentQuantity(parseInt(e.target.value) || 0)}
+                  placeholder="Current number"
+                  required
+                />
+              </div>
+            )}
           </div>
 
           {/* Source */}
@@ -263,7 +296,7 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId }: Props)
           </div>
 
           <Button type="submit" className="w-full" disabled={loading || !species || !stage || quantity <= 0}>
-            {loading ? "Registering..." : "Register Batch"}
+            {loading ? (batch ? "Updating..." : "Registering...") : (batch ? "Update Batch" : "Register Batch")}
           </Button>
         </form>
       </DialogContent>

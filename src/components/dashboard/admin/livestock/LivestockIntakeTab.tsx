@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Eye } from "lucide-react";
+import { Plus, Eye, Edit2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBranch } from "@/contexts/BranchContext";
 import RegisterBatchDialog from "./RegisterBatchDialog";
@@ -12,6 +12,7 @@ import PaginationControls from "@/components/PaginationControls";
 import { usePagination } from "@/hooks/usePagination";
 
 const SPECIES_ICONS: Record<string, string> = {
+  // ... existing icons (unchanged)
   chicken: "🐔",
   pig: "🐷",
   goat: "🐐",
@@ -24,6 +25,7 @@ const LivestockIntakeTab = () => {
   const [batches, setBatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBatch, setSelectedBatch] = useState<any | null>(null);
+  const [editingBatch, setEditingBatch] = useState<any | null>(null);
   const [showRegister, setShowRegister] = useState(false);
   const [filter, setFilter] = useState("all");
 
@@ -49,6 +51,24 @@ const LivestockIntakeTab = () => {
   useEffect(() => {
     fetchBatches();
   }, [currentBranchId, filter]);
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this batch? This action cannot be undone.")) return;
+
+    const { error } = await supabase.from("livestock_batches").delete().eq("id", id);
+    if (error) {
+      toast.error("Failed to delete batch: " + error.message);
+    } else {
+      toast.success("Batch deleted successfully");
+      fetchBatches();
+    }
+  };
+
+  const handleEdit = (e: React.MouseEvent, batch: any) => {
+    e.stopPropagation();
+    setEditingBatch(batch);
+  };
 
   const { currentPage, totalPages, paginatedRange, goToPage, getPageNumbers } = usePagination({
     totalItems: batches.length,
@@ -134,7 +154,7 @@ const LivestockIntakeTab = () => {
           {paginatedItems.map((batch: any) => (
             <Card
               key={batch.id}
-              className="cursor-pointer hover:shadow-md transition-shadow"
+              className="cursor-pointer hover:shadow-md transition-shadow group"
               onClick={() => setSelectedBatch(batch)}
             >
               <CardContent className="p-4">
@@ -164,6 +184,24 @@ const LivestockIntakeTab = () => {
                     {batch.has_started_laying && (
                       <Badge className="bg-green-500 text-xs">🥚 Laying</Badge>
                     )}
+                    <div className="flex items-center gap-1 transition-opacity">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-primary"
+                        onClick={(e) => handleEdit(e, batch)}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive"
+                        onClick={(e) => handleDelete(e, batch.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <Eye className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </div>
@@ -185,6 +223,16 @@ const LivestockIntakeTab = () => {
         onSuccess={fetchBatches}
         branchId={currentBranchId}
       />
+
+      {editingBatch && (
+        <RegisterBatchDialog
+          open={!!editingBatch}
+          onOpenChange={(open) => !open && setEditingBatch(null)}
+          onSuccess={fetchBatches}
+          branchId={currentBranchId}
+          batch={editingBatch}
+        />
+      )}
     </div>
   );
 };

@@ -2,8 +2,9 @@ import { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck, PawPrint } from "lucide-react";
+import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck, PawPrint, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OverviewTab from "./admin/OverviewTab";
@@ -37,7 +38,17 @@ interface AdminDashboardProps {
 const AdminDashboard = ({ user }: AdminDashboardProps) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
-  const { currentBranch } = useBranch();
+  const { currentBranchId, currentBranch, branches, setCurrentBranchId } = useBranch();
+
+  const switchToAbeokuta = () => {
+    const abeokuta = branches.find(b => b.name === "Abeokuta");
+    if (abeokuta) {
+      setCurrentBranchId(abeokuta.id);
+      toast.success("Switched to Abeokuta branch");
+    } else {
+      toast.error("Abeokuta branch not found");
+    }
+  };
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -79,7 +90,19 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 lg:px-6 py-6">
+      <main className="container mx-auto px-4 lg:px-6 py-6 space-y-6">
+        {!currentBranchId && (
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-primary" />
+                <p className="text-sm font-medium">Will you like to switch to Abeokuta branch?</p>
+              </div>
+              <Button size="sm" onClick={switchToAbeokuta}>Yes, Switch to Abeokuta</Button>
+            </CardContent>
+          </Card>
+        )}
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="flex flex-col gap-4">
             <TabsList className="w-full flex flex-wrap gap-2 h-auto p-1 bg-muted/50">
