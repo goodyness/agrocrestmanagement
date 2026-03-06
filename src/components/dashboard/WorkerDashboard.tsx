@@ -19,6 +19,7 @@ import CleaningStatusCard from "./worker/CleaningStatusCard";
 import WorkerReviewNotification from "./worker/WorkerReviewNotification";
 import SuspensionOverlay from "./SuspensionOverlay";
 import FarmAccountsSection from "./worker/FarmAccountsSection";
+import WorkerSalarySection from "./worker/WorkerSalarySection";
 import { useCleaningSchedule } from "@/hooks/useCleaningSchedule";
 import { BranchSelectionPrompt } from "./worker/BranchSelectionPrompt";
 
@@ -235,6 +236,8 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
       <main className="container mx-auto px-4 lg:px-6 py-6 space-y-6">
         {/* Worker Review Notification */}
         {user && <WorkerReviewNotification userId={user.id} />}
+        {/* Worker Salary Tracking */}
+        {user && <WorkerSalarySection userId={user.id} />}
         {/* Farm Bank Accounts */}
         <FarmAccountsSection />
         {/* Quick Actions */}

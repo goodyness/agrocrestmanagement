@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sprout, TrendingUp, AlertCircle, DollarSign, Package } from "lucide-react";
 import FeedAnalyticsWidget from "./FeedAnalyticsWidget";
+import BatchMilestoneAlerts from "./BatchMilestoneAlerts";
 import AllBranchesSummary from "./AllBranchesSummary";
 import WeatherWidget from "./WeatherWidget";
 import { useBranch } from "@/contexts/BranchContext";
@@ -226,6 +227,11 @@ const OverviewTab = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Batch Milestone Alerts */}
+      <div className="mt-6">
+        <BatchMilestoneAlerts />
       </div>
 
       {/* Weather Widget */}
