@@ -1201,6 +1201,57 @@ export type Database = {
           },
         ]
       }
+      salary_advances: {
+        Row: {
+          advance_date: string
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          month: number
+          recorded_by: string
+          worker_id: string
+          year: number
+        }
+        Insert: {
+          advance_date?: string
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          month: number
+          recorded_by: string
+          worker_id: string
+          year: number
+        }
+        Update: {
+          advance_date?: string
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          month?: number
+          recorded_by?: string
+          worker_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_advances_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_advances_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_records: {
         Row: {
           amount_paid: number
@@ -1779,6 +1830,44 @@ export type Database = {
             foreignKeyName: "worker_reviews_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_salary_settings: {
+        Row: {
+          created_at: string
+          effective_from: string
+          id: string
+          monthly_salary: number
+          notes: string | null
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          effective_from?: string
+          id?: string
+          monthly_salary?: number
+          notes?: string | null
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          id?: string
+          monthly_salary?: number
+          notes?: string | null
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_salary_settings_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
