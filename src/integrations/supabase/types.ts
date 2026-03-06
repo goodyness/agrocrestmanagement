@@ -1252,6 +1252,66 @@ export type Database = {
           },
         ]
       }
+      salary_payments: {
+        Row: {
+          created_at: string
+          gross_salary: number
+          id: string
+          month: number
+          net_paid: number
+          notes: string | null
+          paid_by: string
+          payment_date: string
+          payment_method: string | null
+          total_advances: number
+          worker_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          gross_salary?: number
+          id?: string
+          month: number
+          net_paid?: number
+          notes?: string | null
+          paid_by: string
+          payment_date?: string
+          payment_method?: string | null
+          total_advances?: number
+          worker_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          gross_salary?: number
+          id?: string
+          month?: number
+          net_paid?: number
+          notes?: string | null
+          paid_by?: string
+          payment_date?: string
+          payment_method?: string | null
+          total_advances?: number
+          worker_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_payments_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_records: {
         Row: {
           amount_paid: number
