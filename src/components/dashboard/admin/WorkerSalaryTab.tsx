@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { DollarSign, Plus, Settings, Wallet, TrendingDown, Banknote, CheckCircle, FileText, Printer, X } from "lucide-react";
+import { DollarSign, Plus, Settings, Wallet, TrendingDown, Banknote, CheckCircle, FileText, Printer, X, History } from "lucide-react";
 import { useBranch } from "@/contexts/BranchContext";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
