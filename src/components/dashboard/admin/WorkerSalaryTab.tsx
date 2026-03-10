@@ -111,6 +111,24 @@ const WorkerSalaryTab = () => {
     enabled: workers.length > 0,
   });
 
+  // Fetch all payment history
+  const { data: allPayments = [] } = useQuery({
+    queryKey: ["salary-payments-all", currentBranchId],
+    queryFn: async () => {
+      const workerIds = workers.map((w) => w.id);
+      if (workerIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("salary_payments")
+        .select("*, profiles:worker_id(name)")
+        .in("worker_id", workerIds)
+        .order("year", { ascending: false })
+        .order("month", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: workers.length > 0,
+  });
+
   const getSalary = (workerId: string) => {
     const setting = salarySettings.find((s: any) => s.worker_id === workerId);
     return setting ? Number(setting.monthly_salary) : 0;
