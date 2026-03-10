@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { DollarSign, Plus, Settings, Wallet, TrendingDown, Banknote, CheckCircle, FileText, Printer, X } from "lucide-react";
+import { DollarSign, Plus, Settings, Wallet, TrendingDown, Banknote, CheckCircle, FileText, Printer, X, History } from "lucide-react";
 import { useBranch } from "@/contexts/BranchContext";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -105,6 +105,24 @@ const WorkerSalaryTab = () => {
         .in("worker_id", workerIds)
         .eq("month", selectedMonth)
         .eq("year", selectedYear);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: workers.length > 0,
+  });
+
+  // Fetch all payment history
+  const { data: allPayments = [] } = useQuery({
+    queryKey: ["salary-payments-all", currentBranchId],
+    queryFn: async () => {
+      const workerIds = workers.map((w) => w.id);
+      if (workerIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("salary_payments")
+        .select("*, profiles:worker_id(name)")
+        .in("worker_id", workerIds)
+        .order("year", { ascending: false })
+        .order("month", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -561,6 +579,56 @@ const WorkerSalaryTab = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Payment History */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <History className="h-5 w-5" /> Payment History
+          </CardTitle>
+          <CardDescription>All salary payments across all months</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {allPayments.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">No payment records yet</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Worker</TableHead>
+                    <TableHead className="text-right">Gross</TableHead>
+                    <TableHead className="text-right">Advances</TableHead>
+                    <TableHead className="text-right">Net Paid</TableHead>
+                    <TableHead className="hidden sm:table-cell">Method</TableHead>
+                    <TableHead>Receipt</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allPayments.map((p: any) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium text-sm">{MONTHS[(p.month || 1) - 1]} {p.year}</TableCell>
+                      <TableCell className="text-sm">{p.profiles?.name || "Unknown"}</TableCell>
+                      <TableCell className="text-right text-sm">₦{Number(p.gross_salary).toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-sm text-amber-600">
+                        {Number(p.total_advances) > 0 ? `-₦${Number(p.total_advances).toLocaleString()}` : "₦0"}
+                      </TableCell>
+                      <TableCell className="text-right text-sm font-bold text-green-600">₦{Number(p.net_paid).toLocaleString()}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-sm capitalize">{(p.payment_method || "cash").replace("_", " ")}</TableCell>
+                      <TableCell>
+                        <Button size="sm" variant="ghost" onClick={() => openReceiptForPayment(p)}>
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Receipt Dialog */}
       <Dialog open={!!showReceipt} onOpenChange={(open) => !open && setShowReceipt(null)}>

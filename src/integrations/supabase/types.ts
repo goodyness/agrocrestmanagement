@@ -1004,6 +1004,7 @@ export type Database = {
       miscellaneous_expenses: {
         Row: {
           amount: number
+          batch_id: string | null
           branch_id: string | null
           created_at: string | null
           created_by: string
@@ -1014,6 +1015,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          batch_id?: string | null
           branch_id?: string | null
           created_at?: string | null
           created_by: string
@@ -1024,6 +1026,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          batch_id?: string | null
           branch_id?: string | null
           created_at?: string | null
           created_by?: string
@@ -1033,6 +1036,13 @@ export type Database = {
           id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "miscellaneous_expenses_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "miscellaneous_expenses_branch_id_fkey"
             columns: ["branch_id"]

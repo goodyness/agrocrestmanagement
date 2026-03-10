@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import AddExpenseDialog from "./dialogs/AddExpenseDialog";
 import { useBranch } from "@/contexts/BranchContext";
@@ -35,7 +36,7 @@ const ExpensesTab = () => {
   const fetchData = async () => {
     let query = supabase
       .from("miscellaneous_expenses")
-      .select("*, profiles(name)")
+      .select("*, profiles(name), livestock_batches:batch_id(species, species_type)")
       .order("date", { ascending: false });
 
     if (currentBranchId) {
@@ -54,25 +55,21 @@ const ExpensesTab = () => {
   useEffect(() => {
     let result = expenses;
 
-    // Date range filter
     if (date?.from) {
       const fromD = startOfDay(date.from);
       const toD = date.to ? endOfDay(date.to) : endOfDay(date.from);
-
       result = result.filter((record) => {
         const recordDate = new Date(record.date);
         return isWithinInterval(recordDate, { start: fromD, end: toD });
       });
     }
 
-    // Category filter
     if (selectedCategory !== "all") {
       result = result.filter((e) => e.expense_type === selectedCategory);
     }
 
     setFilteredExpenses(result);
 
-    // Calculate totals for currently filtered data
     const total = result.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
     setTotalExpenses(total);
 
@@ -222,6 +219,7 @@ const ExpensesTab = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead>Source</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Created By</TableHead>
               </TableRow>
@@ -229,16 +227,25 @@ const ExpensesTab = () => {
             <TableBody>
               {paginatedExpenses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     No expense records yet
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedExpenses.map((record) => (
+                paginatedExpenses.map((record: any) => (
                   <TableRow key={record.id}>
                     <TableCell>{format(new Date(record.date), "MMM dd, yyyy")}</TableCell>
                     <TableCell className="font-medium">{record.expense_type}</TableCell>
                     <TableCell className="max-w-xs truncate">{record.description || "-"}</TableCell>
+                    <TableCell>
+                      {record.batch_id ? (
+                        <Badge variant="outline" className="text-xs bg-primary/5 border-primary/20 text-primary">
+                          🐄 {record.livestock_batches?.species_type || record.livestock_batches?.species || "Batch"} Intake
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">General</span>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">₦{Number(record.amount).toLocaleString()}</TableCell>
                     <TableCell>{record.profiles?.name || "Unknown"}</TableCell>
                   </TableRow>
