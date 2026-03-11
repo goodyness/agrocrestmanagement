@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Sprout, TrendingUp, AlertCircle, DollarSign, Package } from "lucide-react";
 import FeedAnalyticsWidget from "./FeedAnalyticsWidget";
 import BatchMilestoneAlerts from "./BatchMilestoneAlerts";
+import LivestockInvestmentWidget from "./LivestockInvestmentWidget";
 import AllBranchesSummary from "./AllBranchesSummary";
 import WeatherWidget from "./WeatherWidget";
 import { useBranch } from "@/contexts/BranchContext";
