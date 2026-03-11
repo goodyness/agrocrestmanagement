@@ -230,6 +230,11 @@ const OverviewTab = () => {
         </Card>
       </div>
 
+      {/* Livestock Investment Widget */}
+      <div className="mt-6">
+        <LivestockInvestmentWidget />
+      </div>
+
       {/* Batch Milestone Alerts */}
       <div className="mt-6">
         <BatchMilestoneAlerts />
