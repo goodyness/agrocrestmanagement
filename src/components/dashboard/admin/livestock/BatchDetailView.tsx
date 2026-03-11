@@ -201,6 +201,10 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       toast.error("Please fill in quantity and reason (reason is required)");
       return;
     }
+    if (!batchData.livestock_category_id) {
+      toast.error("This batch has no livestock category assigned. Please assign one first.");
+      return;
+    }
     const qty = Number(mortalityQuantity);
     if (qty <= 0 || qty > batchData.current_quantity) {
       toast.error(`Quantity must be between 1 and ${batchData.current_quantity}`);
@@ -211,7 +215,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
     if (!user) { toast.error("Not logged in"); setAddingMortality(false); return; }
 
     const { error } = await supabase.from("mortality_records").insert({
-      livestock_category_id: batch.livestock_category_id || batch.id,
+      livestock_category_id: batchData.livestock_category_id,
       batch_id: batch.id,
       quantity_dead: qty,
       reason: mortalityReason,

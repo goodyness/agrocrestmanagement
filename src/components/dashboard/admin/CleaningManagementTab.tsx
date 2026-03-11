@@ -207,12 +207,12 @@ const CleaningManagementTab = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="branch">Branch</Label>
-                  <Select value={formBranchId} onValueChange={setFormBranchId}>
+                  <Select value={formBranchId || "all"} onValueChange={(v) => setFormBranchId(v === "all" ? "" : v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select branch (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Branches</SelectItem>
+                      <SelectItem value="all">All Branches</SelectItem>
                       {branches.map((branch) => (
                         <SelectItem key={branch.id} value={branch.id}>
                           {branch.name}
