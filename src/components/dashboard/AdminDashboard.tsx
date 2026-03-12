@@ -79,6 +79,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
                 <p className="text-sm font-medium text-foreground truncate">{user?.email}</p>
                 <p className="text-xs text-muted-foreground">Administrator</p>
               </div>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/farm-summary")}>
+                <BarChart3 className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Summary</span>
+              </Button>
               <Button variant="ghost" size="sm" onClick={() => navigate("/profile")}>
                 <UserCircle className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Profile</span>
