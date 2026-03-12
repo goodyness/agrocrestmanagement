@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useBranch } from "@/contexts/BranchContext";
-import BranchSelector from "@/components/dashboard/BranchSelector";
+import { BranchSelector } from "@/components/dashboard/BranchSelector";
 import {
   Egg, ArrowLeft, TrendingUp, TrendingDown, Package,
   DollarSign, Skull, Sprout, BarChart3, ShoppingCart, Warehouse
