@@ -22,6 +22,7 @@ import FarmAccountsSection from "./worker/FarmAccountsSection";
 import WorkerSalarySection from "./worker/WorkerSalarySection";
 import { useCleaningSchedule } from "@/hooks/useCleaningSchedule";
 import { BranchSelectionPrompt } from "./worker/BranchSelectionPrompt";
+import DailyTaskChecklist from "./worker/DailyTaskChecklist";
 
 interface WorkerDashboardProps {
   user: User | null;
