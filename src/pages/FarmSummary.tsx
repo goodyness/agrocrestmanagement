@@ -213,6 +213,9 @@ const FarmSummary = () => {
         </CardContent>
       </Card>
 
+      {/* Egg Stock Spoilage Alert */}
+      <EggStockAlertConfig expectedOnFarm={stats.expectedOnFarm} />
+
       {/* Key Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
