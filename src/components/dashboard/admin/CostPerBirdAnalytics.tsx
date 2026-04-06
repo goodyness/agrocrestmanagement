@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bird, DollarSign, TrendingUp, Calculator } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Badge } from "@/components/ui/badge";
+import { Bird, DollarSign, TrendingUp, Calculator, Activity, Egg, Wheat } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from "recharts";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface CategoryCost {
   categoryName: string;
@@ -20,16 +22,27 @@ interface WeeklyData {
   costPerBird: number;
 }
 
+interface FCRWeekly {
+  period: string;
+  totalFeedKg: number;
+  totalEggsDozens: number;
+  fcr: number;
+}
+
 const CostPerBirdAnalytics = () => {
+  const { currentBranchId } = useBranch();
   const [categoryCosts, setCategoryCosts] = useState<CategoryCost[]>([]);
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
   const [totalCostPerBird, setTotalCostPerBird] = useState(0);
   const [totalBirds, setTotalBirds] = useState(0);
   const [totalFeedCost, setTotalFeedCost] = useState(0);
+  const [fcrTrend, setFcrTrend] = useState<FCRWeekly[]>([]);
+  const [overallFCR, setOverallFCR] = useState(0);
 
   useEffect(() => {
     fetchAnalytics();
-  }, []);
+    fetchFCR();
+  }, [currentBranchId]);
 
   const fetchAnalytics = async () => {
     // Get livestock census
