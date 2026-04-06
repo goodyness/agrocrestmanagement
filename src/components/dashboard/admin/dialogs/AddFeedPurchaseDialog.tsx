@@ -34,6 +34,7 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
   const [addSupplierMode, setAddSupplierMode] = useState(false);
   const [newSupplierName, setNewSupplierName] = useState("");
   const [newSupplierPhone, setNewSupplierPhone] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
 
   const totalCost = parseFloat(quantity || "0") * parseFloat(pricePerUnit || "0");
 
