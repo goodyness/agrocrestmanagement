@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useBranch } from "@/contexts/BranchContext";
 import { BranchSelector } from "@/components/dashboard/BranchSelector";
+import EggStockAlertConfig from "@/components/dashboard/admin/dialogs/EggStockAlertConfig";
 import {
   Egg, ArrowLeft, TrendingUp, TrendingDown, Package,
   DollarSign, Skull, Sprout, BarChart3, ShoppingCart, Warehouse
@@ -211,6 +212,9 @@ const FarmSummary = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Egg Stock Spoilage Alert */}
+      <EggStockAlertConfig expectedOnFarm={stats.expectedOnFarm} />
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
