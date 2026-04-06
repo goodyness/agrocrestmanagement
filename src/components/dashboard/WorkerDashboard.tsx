@@ -241,6 +241,8 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
         {user && <WorkerSalarySection userId={user.id} />}
         {/* Farm Bank Accounts */}
         <FarmAccountsSection />
+        {/* Daily Task Checklist */}
+        {user && <DailyTaskChecklist userId={user.id} branchId={userBranchId} />}
         {/* Quick Actions */}
         <Card className="border-primary/20 shadow-lg">
           <CardHeader>
