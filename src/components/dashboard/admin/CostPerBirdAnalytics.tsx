@@ -371,6 +371,70 @@ const CostPerBirdAnalytics = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* FCR Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
+            Feed Conversion Ratio (FCR)
+          </CardTitle>
+          <CardDescription>Kg of feed per dozen eggs — lower is better</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="text-center p-4 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">Overall FCR (60d)</p>
+              <p className="text-3xl font-bold text-foreground">{overallFCR || "—"}</p>
+              <Badge className={`mt-1 ${fcrRating.color}`}>{fcrRating.label}</Badge>
+            </div>
+            <div className="text-center p-4 rounded-lg bg-muted/50">
+              <Wheat className="h-4 w-4 mx-auto mb-1 text-amber-500" />
+              <p className="text-xs text-muted-foreground">Total Feed (60d)</p>
+              <p className="text-2xl font-bold">{fcrTrend.reduce((s, w) => s + w.totalFeedKg, 0).toLocaleString()} kg</p>
+            </div>
+            <div className="text-center p-4 rounded-lg bg-muted/50">
+              <Egg className="h-4 w-4 mx-auto mb-1 text-primary" />
+              <p className="text-xs text-muted-foreground">Total Eggs (60d)</p>
+              <p className="text-2xl font-bold">{Math.round(fcrTrend.reduce((s, w) => s + w.totalEggsDozens, 0)).toLocaleString()} doz</p>
+            </div>
+          </div>
+
+          {fcrTrend.length > 0 && (
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={fcrTrend}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="period" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--background))",
+                      border: "1px solid hsl(var(--border))",
+                    }}
+                    formatter={(value: number, name: string) => {
+                      if (name === "fcr") return [`${value} kg/doz`, "FCR"];
+                      return [`${value} dozens`, "Eggs"];
+                    }}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="fcr" stroke="hsl(var(--primary))" strokeWidth={2} name="FCR" dot={{ fill: "hsl(var(--primary))" }} />
+                  <Line type="monotone" dataKey="totalEggsDozens" stroke="#22c55e" strokeWidth={1} strokeDasharray="5 5" name="Eggs (doz)" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="bg-muted/30">
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground">
+            <strong>💡 FCR Guide:</strong> For layer birds in Nigeria, a good FCR is 2.0–2.5 kg feed per dozen eggs.
+            Below 2.0 is excellent. Above 3.0 may indicate health issues, poor feed quality, or aging flock.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 };
