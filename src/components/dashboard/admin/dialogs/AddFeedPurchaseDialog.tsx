@@ -120,6 +120,7 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
       notes: notes || null,
       branch_id: branchId,
       supplier_id: selectedSupplier || null,
+      expiry_date: expiryDate || null,
     });
 
     if (purchaseError) {
