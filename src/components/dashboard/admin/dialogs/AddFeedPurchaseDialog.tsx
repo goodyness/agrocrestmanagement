@@ -218,6 +218,7 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
     setAddSupplierMode(false);
     setNewSupplierName("");
     setNewSupplierPhone("");
+    setExpiryDate("");
   };
 
   return (
