@@ -7,6 +7,12 @@ import BatchMilestoneAlerts from "./BatchMilestoneAlerts";
 import LivestockInvestmentWidget from "./LivestockInvestmentWidget";
 import AllBranchesSummary from "./AllBranchesSummary";
 import WeatherWidget from "./WeatherWidget";
+import HenDayProductionRate from "./HenDayProductionRate";
+import BreakEvenCalculator from "./BreakEvenCalculator";
+import SeasonalTrendAnalysis from "./SeasonalTrendAnalysis";
+import InventoryExpiryTracker from "./InventoryExpiryTracker";
+import InvoiceGenerator from "./InvoiceGenerator";
+import VetVisitLog from "./VetVisitLog";
 import { useBranch } from "@/contexts/BranchContext";
 import { Separator } from "@/components/ui/separator";
 
@@ -243,6 +249,28 @@ const OverviewTab = () => {
       {/* Weather Widget */}
       <div className="mt-6">
         <WeatherWidget branchLocation={branchLocation} />
+      </div>
+
+      {/* Hen-Day Production Rate & Break-Even */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <HenDayProductionRate />
+        <BreakEvenCalculator />
+      </div>
+
+      {/* Seasonal Trends */}
+      <div className="mt-6">
+        <SeasonalTrendAnalysis />
+      </div>
+
+      {/* Inventory Expiry & Vet Visits */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <InventoryExpiryTracker />
+        <VetVisitLog />
+      </div>
+
+      {/* Invoice Generator */}
+      <div className="mt-6">
+        <InvoiceGenerator />
       </div>
 
       <div className="mt-6">

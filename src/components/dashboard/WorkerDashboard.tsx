@@ -22,6 +22,7 @@ import FarmAccountsSection from "./worker/FarmAccountsSection";
 import WorkerSalarySection from "./worker/WorkerSalarySection";
 import { useCleaningSchedule } from "@/hooks/useCleaningSchedule";
 import { BranchSelectionPrompt } from "./worker/BranchSelectionPrompt";
+import DailyTaskChecklist from "./worker/DailyTaskChecklist";
 
 interface WorkerDashboardProps {
   user: User | null;
@@ -240,6 +241,8 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
         {user && <WorkerSalarySection userId={user.id} />}
         {/* Farm Bank Accounts */}
         <FarmAccountsSection />
+        {/* Daily Task Checklist */}
+        {user && <DailyTaskChecklist userId={user.id} branchId={userBranchId} />}
         {/* Quick Actions */}
         <Card className="border-primary/20 shadow-lg">
           <CardHeader>

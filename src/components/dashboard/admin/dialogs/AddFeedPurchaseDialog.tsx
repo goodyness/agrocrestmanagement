@@ -34,6 +34,7 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
   const [addSupplierMode, setAddSupplierMode] = useState(false);
   const [newSupplierName, setNewSupplierName] = useState("");
   const [newSupplierPhone, setNewSupplierPhone] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
 
   const totalCost = parseFloat(quantity || "0") * parseFloat(pricePerUnit || "0");
 
@@ -119,6 +120,7 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
       notes: notes || null,
       branch_id: branchId,
       supplier_id: selectedSupplier || null,
+      expiry_date: expiryDate || null,
     });
 
     if (purchaseError) {
@@ -216,6 +218,7 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
     setAddSupplierMode(false);
     setNewSupplierName("");
     setNewSupplierPhone("");
+    setExpiryDate("");
   };
 
   return (
@@ -358,6 +361,16 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
               value={pricePerUnit}
               onChange={(e) => setPricePerUnit(e.target.value)}
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="expiry_date">Expiry Date (Optional)</Label>
+            <Input
+              id="expiry_date"
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
             />
           </div>
 
