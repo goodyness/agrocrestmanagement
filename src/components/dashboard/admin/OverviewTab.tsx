@@ -7,6 +7,12 @@ import BatchMilestoneAlerts from "./BatchMilestoneAlerts";
 import LivestockInvestmentWidget from "./LivestockInvestmentWidget";
 import AllBranchesSummary from "./AllBranchesSummary";
 import WeatherWidget from "./WeatherWidget";
+import HenDayProductionRate from "./HenDayProductionRate";
+import BreakEvenCalculator from "./BreakEvenCalculator";
+import SeasonalTrendAnalysis from "./SeasonalTrendAnalysis";
+import InventoryExpiryTracker from "./InventoryExpiryTracker";
+import InvoiceGenerator from "./InvoiceGenerator";
+import VetVisitLog from "./VetVisitLog";
 import { useBranch } from "@/contexts/BranchContext";
 import { Separator } from "@/components/ui/separator";
 
