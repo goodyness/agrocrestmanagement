@@ -362,6 +362,16 @@ const AddFeedPurchaseDialog = ({ feedTypes, onSuccess, branchId }: AddFeedPurcha
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="expiry_date">Expiry Date (Optional)</Label>
+            <Input
+              id="expiry_date"
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="notes">Notes (Optional)</Label>
             <Textarea
               id="notes"
