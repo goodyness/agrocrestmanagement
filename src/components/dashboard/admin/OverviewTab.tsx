@@ -251,6 +251,28 @@ const OverviewTab = () => {
         <WeatherWidget branchLocation={branchLocation} />
       </div>
 
+      {/* Hen-Day Production Rate & Break-Even */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <HenDayProductionRate />
+        <BreakEvenCalculator />
+      </div>
+
+      {/* Seasonal Trends */}
+      <div className="mt-6">
+        <SeasonalTrendAnalysis />
+      </div>
+
+      {/* Inventory Expiry & Vet Visits */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <InventoryExpiryTracker />
+        <VetVisitLog />
+      </div>
+
+      {/* Invoice Generator */}
+      <div className="mt-6">
+        <InvoiceGenerator />
+      </div>
+
       <div className="mt-6">
         <h3 className="text-lg font-semibold mb-4">Feed Analytics</h3>
         <FeedAnalyticsWidget />
