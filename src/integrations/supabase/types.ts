@@ -393,6 +393,60 @@ export type Database = {
           },
         ]
       }
+      daily_task_checklists: {
+        Row: {
+          branch_id: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          is_completed: boolean
+          notes: string | null
+          task_date: string
+          task_name: string
+          task_period: string
+          worker_id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          notes?: string | null
+          task_date?: string
+          task_name: string
+          task_period?: string
+          worker_id: string
+        }
+        Update: {
+          branch_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          notes?: string | null
+          task_date?: string
+          task_name?: string
+          task_period?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_task_checklists_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_task_checklists_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_consumption: {
         Row: {
           branch_id: string | null
@@ -461,6 +515,7 @@ export type Database = {
       feed_inventory: {
         Row: {
           branch_id: string | null
+          expiry_date: string | null
           feed_type_id: string
           id: string
           quantity_in_stock: number
@@ -469,6 +524,7 @@ export type Database = {
         }
         Insert: {
           branch_id?: string | null
+          expiry_date?: string | null
           feed_type_id: string
           id?: string
           quantity_in_stock?: number
@@ -477,6 +533,7 @@ export type Database = {
         }
         Update: {
           branch_id?: string | null
+          expiry_date?: string | null
           feed_type_id?: string
           id?: string
           quantity_in_stock?: number
@@ -505,6 +562,7 @@ export type Database = {
           branch_id: string | null
           created_at: string
           date: string
+          expiry_date: string | null
           feed_type_id: string
           id: string
           notes: string | null
@@ -519,6 +577,7 @@ export type Database = {
           branch_id?: string | null
           created_at?: string
           date?: string
+          expiry_date?: string | null
           feed_type_id: string
           id?: string
           notes?: string | null
@@ -533,6 +592,7 @@ export type Database = {
           branch_id?: string | null
           created_at?: string
           date?: string
+          expiry_date?: string | null
           feed_type_id?: string
           id?: string
           notes?: string | null
@@ -1662,6 +1722,44 @@ export type Database = {
           },
         ]
       }
+      task_templates: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          task_name: string
+          task_period: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          task_name: string
+          task_period?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          task_name?: string
+          task_period?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_templates_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vaccination_records: {
         Row: {
           administered_by: string
@@ -1816,6 +1914,79 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vet_visit_logs: {
+        Row: {
+          batch_id: string | null
+          branch_id: string | null
+          cost: number | null
+          created_at: string
+          diagnosis: string
+          follow_up_date: string | null
+          id: string
+          notes: string | null
+          prescription: string | null
+          recorded_by: string
+          treatment: string | null
+          updated_at: string
+          vet_name: string
+          visit_date: string
+        }
+        Insert: {
+          batch_id?: string | null
+          branch_id?: string | null
+          cost?: number | null
+          created_at?: string
+          diagnosis: string
+          follow_up_date?: string | null
+          id?: string
+          notes?: string | null
+          prescription?: string | null
+          recorded_by: string
+          treatment?: string | null
+          updated_at?: string
+          vet_name: string
+          visit_date?: string
+        }
+        Update: {
+          batch_id?: string | null
+          branch_id?: string | null
+          cost?: number | null
+          created_at?: string
+          diagnosis?: string
+          follow_up_date?: string | null
+          id?: string
+          notes?: string | null
+          prescription?: string | null
+          recorded_by?: string
+          treatment?: string | null
+          updated_at?: string
+          vet_name?: string
+          visit_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vet_visit_logs_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vet_visit_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vet_visit_logs_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
