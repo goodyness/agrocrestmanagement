@@ -162,6 +162,64 @@ const CostPerBirdAnalytics = () => {
     setWeeklyData(weekly);
   };
 
+  const fetchFCR = async () => {
+    const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+    const dateStr = sixtyDaysAgo.toISOString().split("T")[0];
+
+    let feedQ = supabase.from("feed_consumption").select("quantity_used, unit, date").gte("date", dateStr);
+    if (currentBranchId) feedQ = feedQ.eq("branch_id", currentBranchId);
+
+    let prodQ = supabase.from("daily_production").select("crates, pieces, date").gte("date", dateStr);
+    if (currentBranchId) prodQ = prodQ.eq("branch_id", currentBranchId);
+
+    const [{ data: feedData }, { data: prodData }] = await Promise.all([feedQ, prodQ]);
+
+    const weeklyMap = new Map<string, { feedKg: number; eggsDoz: number }>();
+
+    feedData?.forEach((f) => {
+      const d = new Date(f.date);
+      const ws = new Date(d);
+      ws.setDate(d.getDate() - d.getDay());
+      const key = ws.toISOString().split("T")[0];
+      const e = weeklyMap.get(key) || { feedKg: 0, eggsDoz: 0 };
+      e.feedKg += f.unit === "bags" ? f.quantity_used * 25 : f.quantity_used;
+      weeklyMap.set(key, e);
+    });
+
+    prodData?.forEach((p) => {
+      const d = new Date(p.date);
+      const ws = new Date(d);
+      ws.setDate(d.getDate() - d.getDay());
+      const key = ws.toISOString().split("T")[0];
+      const e = weeklyMap.get(key) || { feedKg: 0, eggsDoz: 0 };
+      e.eggsDoz += (p.crates * 30 + p.pieces) / 12;
+      weeklyMap.set(key, e);
+    });
+
+    const sorted = [...weeklyMap.entries()].sort(([a], [b]) => a.localeCompare(b));
+    const trend: FCRWeekly[] = sorted.map(([k, v]) => ({
+      period: new Date(k).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      totalFeedKg: Math.round(v.feedKg),
+      totalEggsDozens: Math.round(v.eggsDoz * 10) / 10,
+      fcr: v.eggsDoz > 0 ? Math.round((v.feedKg / v.eggsDoz) * 100) / 100 : 0,
+    }));
+    setFcrTrend(trend);
+
+    const tf = trend.reduce((s, w) => s + w.totalFeedKg, 0);
+    const td = trend.reduce((s, w) => s + w.totalEggsDozens, 0);
+    setOverallFCR(td > 0 ? Math.round((tf / td) * 100) / 100 : 0);
+  };
+
+  const getFCRRating = (fcr: number) => {
+    if (fcr === 0) return { label: "No data", color: "bg-muted text-muted-foreground" };
+    if (fcr <= 2.0) return { label: "Excellent", color: "bg-success/20 text-success" };
+    if (fcr <= 2.5) return { label: "Good", color: "bg-primary/20 text-primary" };
+    if (fcr <= 3.0) return { label: "Average", color: "bg-warning/20 text-warning" };
+    return { label: "Poor", color: "bg-destructive/20 text-destructive" };
+  };
+
+  const fcrRating = getFCRRating(overallFCR);
+
   return (
     <div className="space-y-6">
       <div>
