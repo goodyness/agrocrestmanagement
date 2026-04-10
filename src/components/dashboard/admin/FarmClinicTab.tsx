@@ -285,8 +285,8 @@ export default function FarmClinicTab() {
 
   const getConfidenceBadge = (confidence: string) => {
     switch (confidence) {
-      case "high": return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">High</Badge>;
-      case "medium": return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Medium</Badge>;
+      case "high": return <Badge variant="default">High</Badge>;
+      case "medium": return <Badge variant="secondary">Medium</Badge>;
       default: return <Badge variant="outline">Low</Badge>;
     }
   };
