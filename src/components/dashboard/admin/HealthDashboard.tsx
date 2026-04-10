@@ -23,12 +23,12 @@ export function HealthDashboard() {
   const [mortalityToDate, setMortalityToDate] = useState(new Date().toISOString().split("T")[0]);
 
   const { data: mortalityData } = useQuery({
-    queryKey: ["mortality-trends", currentBranchId],
+    queryKey: ["mortality-trends", currentBranchId, mortalityFromDate, mortalityToDate],
     queryFn: async () => {
-      const sixtyDaysAgo = subDays(new Date(), 60).toISOString().split("T")[0];
       let query = supabase.from("mortality_records")
-        .select("*, livestock_categories (name)")
-        .gte("date", sixtyDaysAgo)
+        .select("*, livestock_categories (name), profiles:recorded_by (name)")
+        .gte("date", mortalityFromDate)
+        .lte("date", mortalityToDate)
         .order("date", { ascending: true });
       if (currentBranchId) query = query.eq("branch_id", currentBranchId);
       const { data, error } = await query;
