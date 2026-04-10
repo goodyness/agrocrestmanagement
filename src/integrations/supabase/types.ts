@@ -250,6 +250,184 @@ export type Database = {
           },
         ]
       }
+      clinic_admissions: {
+        Row: {
+          admission_date: string
+          admitted_by: string
+          age_weeks: number
+          animal_type: string
+          batch_id: string | null
+          branch_id: string | null
+          category: string
+          cause_of_death: string | null
+          condition: string | null
+          created_at: string
+          death_date: string | null
+          discharge_date: string | null
+          discharge_notes: string | null
+          id: string
+          notes: string | null
+          severity: string
+          status: string
+          symptoms: string | null
+          updated_at: string
+        }
+        Insert: {
+          admission_date?: string
+          admitted_by: string
+          age_weeks?: number
+          animal_type: string
+          batch_id?: string | null
+          branch_id?: string | null
+          category: string
+          cause_of_death?: string | null
+          condition?: string | null
+          created_at?: string
+          death_date?: string | null
+          discharge_date?: string | null
+          discharge_notes?: string | null
+          id?: string
+          notes?: string | null
+          severity?: string
+          status?: string
+          symptoms?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admission_date?: string
+          admitted_by?: string
+          age_weeks?: number
+          animal_type?: string
+          batch_id?: string | null
+          branch_id?: string | null
+          category?: string
+          cause_of_death?: string | null
+          condition?: string | null
+          created_at?: string
+          death_date?: string | null
+          discharge_date?: string | null
+          discharge_notes?: string | null
+          id?: string
+          notes?: string | null
+          severity?: string
+          status?: string
+          symptoms?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_admissions_admitted_by_fkey"
+            columns: ["admitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_admissions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_admissions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinic_observations: {
+        Row: {
+          admission_id: string
+          created_at: string
+          id: string
+          observation: string
+          observation_date: string
+          observed_by: string
+        }
+        Insert: {
+          admission_id: string
+          created_at?: string
+          id?: string
+          observation: string
+          observation_date?: string
+          observed_by: string
+        }
+        Update: {
+          admission_id?: string
+          created_at?: string
+          id?: string
+          observation?: string
+          observation_date?: string
+          observed_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_observations_admission_id_fkey"
+            columns: ["admission_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_admissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_observations_observed_by_fkey"
+            columns: ["observed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinic_treatments: {
+        Row: {
+          administered_by: string
+          admission_id: string
+          created_at: string
+          dosage: string | null
+          id: string
+          medication: string | null
+          treatment_date: string
+          treatment_description: string
+        }
+        Insert: {
+          administered_by: string
+          admission_id: string
+          created_at?: string
+          dosage?: string | null
+          id?: string
+          medication?: string | null
+          treatment_date?: string
+          treatment_description: string
+        }
+        Update: {
+          administered_by?: string
+          admission_id?: string
+          created_at?: string
+          dosage?: string | null
+          id?: string
+          medication?: string | null
+          treatment_date?: string
+          treatment_description?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_treatments_administered_by_fkey"
+            columns: ["administered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_treatments_admission_id_fkey"
+            columns: ["admission_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_admissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_purchases: {
         Row: {
           amount_paid: number
