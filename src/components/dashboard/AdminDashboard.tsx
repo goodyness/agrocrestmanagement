@@ -2,7 +2,7 @@ import { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck, PawPrint, AlertCircle, Landmark, Wallet } from "lucide-react";
+import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck, PawPrint, AlertCircle, Landmark, Wallet, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +32,7 @@ import CustomersTab from "./admin/CustomersTab";
 import WorkerReviewsTab from "./admin/WorkerReviewsTab";
 import FinanceTab from "./admin/FinanceTab";
 import WorkerSalaryTab from "./admin/WorkerSalaryTab";
+import FarmClinicTab from "./admin/FarmClinicTab";
 
 interface AdminDashboardProps {
   user: User | null;
@@ -200,6 +201,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
                 <Wallet className="h-4 w-4" />
                 <span className="hidden sm:inline">Salary</span>
               </TabsTrigger>
+              <TabsTrigger value="clinic" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Stethoscope className="h-4 w-4" />
+                <span className="hidden sm:inline">Clinic</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -290,6 +295,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="salary" className="space-y-4">
             <WorkerSalaryTab />
+          </TabsContent>
+
+          <TabsContent value="clinic" className="space-y-4">
+            <FarmClinicTab />
           </TabsContent>
         </Tabs>
       </main>
