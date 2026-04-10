@@ -1,20 +1,26 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useBranch } from "@/contexts/BranchContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, subDays, differenceInDays } from "date-fns";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
 } from "recharts";
-import { Activity, AlertTriangle, Calendar, TrendingDown, Syringe, Utensils, FileDown, ShieldAlert, ThermometerSun, HeartPulse } from "lucide-react";
+import { Activity, AlertTriangle, Calendar, TrendingDown, Syringe, Utensils, FileDown, ShieldAlert, ThermometerSun, HeartPulse, Filter } from "lucide-react";
 import { generateHealthReportPdf } from "@/lib/healthReportPdf";
 import { toast } from "sonner";
 
 export function HealthDashboard() {
   const { currentBranchId, currentBranch } = useBranch();
+  const [mortalityFromDate, setMortalityFromDate] = useState(subDays(new Date(), 60).toISOString().split("T")[0]);
+  const [mortalityToDate, setMortalityToDate] = useState(new Date().toISOString().split("T")[0]);
 
   const { data: mortalityData } = useQuery({
     queryKey: ["mortality-trends", currentBranchId],
