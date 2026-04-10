@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.increment-batch-age]
 verify_jwt = false
+
+[functions.clinic-ai-suggestions]
+verify_jwt = false

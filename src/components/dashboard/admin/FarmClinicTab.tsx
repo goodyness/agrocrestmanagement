@@ -14,10 +14,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Stethoscope, Plus, Eye, Skull, CheckCircle2, Clock, Pill, ClipboardList, History } from "lucide-react";
+import { Stethoscope, Plus, Eye, Skull, CheckCircle2, Clock, Pill, ClipboardList, History, Sparkles, Loader2, AlertTriangle, Shield, Lightbulb } from "lucide-react";
 
 const SEVERITIES = ["mild", "moderate", "severe", "critical"];
 const ANIMAL_TYPES = ["Chicken", "Turkey", "Goat", "Cattle", "Sheep", "Pig", "Other"];
+
+interface AISuggestion {
+  likely_diagnoses?: { condition: string; confidence: string; explanation: string }[];
+  immediate_actions?: { action: string; priority: string; details: string }[];
+  medications?: { name: string; dosage: string; frequency: string; duration: string; notes: string }[];
+  warning_signs?: string[];
+  recovery_timeline?: string;
+  prevention_tips?: string[];
+  general_advice?: string;
+}
 
 export default function FarmClinicTab() {
   const { currentBranchId } = useBranch();
@@ -36,6 +46,13 @@ export default function FarmClinicTab() {
   const [treatmentForm, setTreatmentForm] = useState({ treatment_description: "", medication: "", dosage: "" });
   // Observation form
   const [observationText, setObservationText] = useState("");
+
+  // AI Suggestions state
+  const [aiSuggestions, setAiSuggestions] = useState<AISuggestion | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [detailAiSuggestions, setDetailAiSuggestions] = useState<AISuggestion | null>(null);
+  const [detailAiLoading, setDetailAiLoading] = useState(false);
 
   const { data: admissions, isLoading } = useQuery({
     queryKey: ["clinic-admissions", currentBranchId, activeView],
@@ -85,19 +102,77 @@ export default function FarmClinicTab() {
     },
   });
 
+  const fetchAiSuggestions = async (params: {
+    animal_type: string; category: string; age_weeks: number;
+    condition: string; symptoms: string; severity: string;
+    treatments?: any[]; observations?: any[];
+  }) => {
+    const { data, error } = await supabase.functions.invoke("clinic-ai-suggestions", { body: params });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data as AISuggestion;
+  };
+
+  const handleAdmitAiSuggest = async () => {
+    if (!form.animal_type || !form.category) {
+      toast.error("Please select animal type and category first");
+      return;
+    }
+    if (!form.condition && !form.symptoms) {
+      toast.error("Please enter a condition or symptoms for AI analysis");
+      return;
+    }
+    setAiLoading(true);
+    setShowAiPanel(true);
+    try {
+      const result = await fetchAiSuggestions({
+        animal_type: form.animal_type, category: form.category,
+        age_weeks: form.age_weeks, condition: form.condition,
+        symptoms: form.symptoms, severity: form.severity,
+      });
+      setAiSuggestions(result);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to get AI suggestions");
+      setShowAiPanel(false);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleDetailAiSuggest = async () => {
+    if (!selectedAdmission) return;
+    setDetailAiLoading(true);
+    try {
+      const result = await fetchAiSuggestions({
+        animal_type: selectedAdmission.animal_type,
+        category: selectedAdmission.category,
+        age_weeks: selectedAdmission.age_weeks,
+        condition: selectedAdmission.condition || "",
+        symptoms: selectedAdmission.symptoms || "",
+        severity: selectedAdmission.severity,
+        treatments: treatments?.map(t => ({
+          treatment_description: t.treatment_description,
+          medication: t.medication, dosage: t.dosage,
+        })),
+        observations: observations?.map(o => ({ observation: o.observation })),
+      });
+      setDetailAiSuggestions(result);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to get AI suggestions");
+    } finally {
+      setDetailAiLoading(false);
+    }
+  };
+
   const admitMutation = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       const { error } = await supabase.from("clinic_admissions").insert({
-        animal_type: form.animal_type,
-        category: form.category,
-        age_weeks: form.age_weeks,
-        condition: form.condition || null,
-        symptoms: form.symptoms || null,
-        severity: form.severity,
-        notes: form.notes || null,
-        branch_id: currentBranchId || null,
+        animal_type: form.animal_type, category: form.category,
+        age_weeks: form.age_weeks, condition: form.condition || null,
+        symptoms: form.symptoms || null, severity: form.severity,
+        notes: form.notes || null, branch_id: currentBranchId || null,
         admitted_by: user.id,
       });
       if (error) throw error;
@@ -107,6 +182,8 @@ export default function FarmClinicTab() {
       queryClient.invalidateQueries({ queryKey: ["clinic-admissions"] });
       setShowAdmitDialog(false);
       setForm({ animal_type: "", category: "", age_weeks: 0, condition: "", symptoms: "", severity: "moderate", notes: "" });
+      setAiSuggestions(null);
+      setShowAiPanel(false);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -169,6 +246,7 @@ export default function FarmClinicTab() {
       queryClient.invalidateQueries({ queryKey: ["clinic-admissions"] });
       setShowDetailDialog(false);
       setSelectedAdmission(null);
+      setDetailAiSuggestions(null);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -197,7 +275,143 @@ export default function FarmClinicTab() {
     }
   };
 
-  const activeCount = admissions?.filter(a => a.status === "admitted").length || 0;
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "critical": return "text-destructive font-bold";
+      case "high": return "text-orange-600 font-semibold";
+      default: return "text-foreground";
+    }
+  };
+
+  const getConfidenceBadge = (confidence: string) => {
+    switch (confidence) {
+      case "high": return <Badge variant="default">High</Badge>;
+      case "medium": return <Badge variant="secondary">Medium</Badge>;
+      default: return <Badge variant="outline">Low</Badge>;
+    }
+  };
+
+  const AiSuggestionsPanel = ({ suggestions, loading }: { suggestions: AISuggestion | null; loading: boolean }) => {
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-8 gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">AI is analyzing symptoms...</p>
+        </div>
+      );
+    }
+    if (!suggestions) return null;
+
+    return (
+      <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
+        <div className="flex items-center gap-2 text-primary font-semibold">
+          <Sparkles className="h-5 w-5" />
+          AI Veterinary Suggestions
+        </div>
+
+        {/* Likely Diagnoses */}
+        {suggestions.likely_diagnoses && suggestions.likely_diagnoses.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold flex items-center gap-1 mb-2">
+              <Stethoscope className="h-4 w-4" /> Likely Diagnoses
+            </h4>
+            <div className="space-y-2">
+              {suggestions.likely_diagnoses.map((d, i) => (
+                <div key={i} className="p-2 bg-background rounded border text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{d.condition}</span>
+                    {getConfidenceBadge(d.confidence)}
+                  </div>
+                  <p className="text-muted-foreground mt-1">{d.explanation}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Immediate Actions */}
+        {suggestions.immediate_actions && suggestions.immediate_actions.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold flex items-center gap-1 mb-2">
+              <AlertTriangle className="h-4 w-4" /> Immediate Actions
+            </h4>
+            <div className="space-y-1">
+              {suggestions.immediate_actions.map((a, i) => (
+                <div key={i} className="p-2 bg-background rounded border text-sm">
+                  <span className={getPriorityColor(a.priority)}>
+                    [{a.priority.toUpperCase()}] {a.action}
+                  </span>
+                  <p className="text-muted-foreground">{a.details}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Medications */}
+        {suggestions.medications && suggestions.medications.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold flex items-center gap-1 mb-2">
+              <Pill className="h-4 w-4" /> Recommended Medications
+            </h4>
+            <div className="space-y-2">
+              {suggestions.medications.map((m, i) => (
+                <div key={i} className="p-2 bg-background rounded border text-sm">
+                  <div className="font-medium">💊 {m.name}</div>
+                  <div className="grid grid-cols-2 gap-1 text-muted-foreground text-xs mt-1">
+                    <span>Dosage: {m.dosage}</span>
+                    <span>Frequency: {m.frequency}</span>
+                    <span>Duration: {m.duration}</span>
+                  </div>
+                  {m.notes && <p className="text-xs text-muted-foreground mt-1 italic">{m.notes}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Warning Signs */}
+        {suggestions.warning_signs && suggestions.warning_signs.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold flex items-center gap-1 mb-2">
+              <Eye className="h-4 w-4" /> Warning Signs to Watch
+            </h4>
+            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+              {suggestions.warning_signs.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {/* Recovery Timeline */}
+        {suggestions.recovery_timeline && (
+          <div className="p-2 bg-background rounded border text-sm">
+            <span className="font-medium">⏱ Recovery Timeline:</span>{" "}
+            <span className="text-muted-foreground">{suggestions.recovery_timeline}</span>
+          </div>
+        )}
+
+        {/* Prevention Tips */}
+        {suggestions.prevention_tips && suggestions.prevention_tips.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold flex items-center gap-1 mb-2">
+              <Shield className="h-4 w-4" /> Prevention Tips
+            </h4>
+            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+              {suggestions.prevention_tips.map((t, i) => <li key={i}>{t}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {/* General Advice */}
+        {suggestions.general_advice && (
+          <div className="p-2 bg-primary/5 rounded border border-primary/20 text-sm flex gap-2">
+            <Lightbulb className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <span>{suggestions.general_advice}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -240,7 +454,7 @@ export default function FarmClinicTab() {
           {admissions.map((admission) => (
             <Card key={admission.id} className="cursor-pointer hover:shadow-md transition-shadow border-l-4"
               style={{ borderLeftColor: admission.severity === "critical" ? "hsl(var(--destructive))" : admission.severity === "severe" ? "hsl(var(--destructive))" : "hsl(var(--primary))" }}
-              onClick={() => { setSelectedAdmission(admission); setShowDetailDialog(true); }}>
+              onClick={() => { setSelectedAdmission(admission); setShowDetailDialog(true); setDetailAiSuggestions(null); }}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">{admission.animal_type}</CardTitle>
@@ -272,51 +486,70 @@ export default function FarmClinicTab() {
       )}
 
       {/* Admit Dialog */}
-      <Dialog open={showAdmitDialog} onOpenChange={setShowAdmitDialog}>
-        <DialogContent className="max-w-md">
+      <Dialog open={showAdmitDialog} onOpenChange={(open) => { setShowAdmitDialog(open); if (!open) { setAiSuggestions(null); setShowAiPanel(false); } }}>
+        <DialogContent className={showAiPanel ? "max-w-4xl max-h-[90vh] overflow-y-auto" : "max-w-md"}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Plus className="h-5 w-5" /> Admit Animal</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Animal Type</Label>
-              <Select value={form.animal_type} onValueChange={(v) => setForm({ ...form, animal_type: v })}>
-                <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                <SelectContent>{ANIMAL_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select>
+          <div className={showAiPanel ? "grid grid-cols-1 md:grid-cols-2 gap-6" : ""}>
+            <div className="space-y-4">
+              <div>
+                <Label>Animal Type</Label>
+                <Select value={form.animal_type} onValueChange={(v) => setForm({ ...form, animal_type: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                  <SelectContent>{ANIMAL_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Category</Label>
+                <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectContent>
+                    {categories?.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Age (weeks)</Label>
+                <Input type="number" min={0} value={form.age_weeks} onChange={(e) => setForm({ ...form, age_weeks: parseInt(e.target.value) || 0 })} />
+              </div>
+              <div>
+                <Label>Condition (if known)</Label>
+                <Input value={form.condition} onChange={(e) => setForm({ ...form, condition: e.target.value })} placeholder="e.g. Newcastle Disease" />
+              </div>
+              <div>
+                <Label>Symptoms / Physical Observations</Label>
+                <Textarea value={form.symptoms} onChange={(e) => setForm({ ...form, symptoms: e.target.value })} placeholder="Describe visible symptoms..." />
+              </div>
+              <div>
+                <Label>Severity</Label>
+                <Select value={form.severity} onValueChange={(v) => setForm({ ...form, severity: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{SEVERITIES.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Additional Notes</Label>
+                <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Any extra info..." />
+              </div>
+
+              {/* AI Suggestion Button */}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-primary/30 text-primary hover:bg-primary/5"
+                onClick={handleAdmitAiSuggest}
+                disabled={aiLoading}
+              >
+                {aiLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                {aiLoading ? "Analyzing..." : "Get AI Suggestions"}
+              </Button>
             </div>
-            <div>
-              <Label>Category</Label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                <SelectContent>
-                  {categories?.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Age (weeks)</Label>
-              <Input type="number" min={0} value={form.age_weeks} onChange={(e) => setForm({ ...form, age_weeks: parseInt(e.target.value) || 0 })} />
-            </div>
-            <div>
-              <Label>Condition (if known)</Label>
-              <Input value={form.condition} onChange={(e) => setForm({ ...form, condition: e.target.value })} placeholder="e.g. Newcastle Disease" />
-            </div>
-            <div>
-              <Label>Symptoms / Physical Observations</Label>
-              <Textarea value={form.symptoms} onChange={(e) => setForm({ ...form, symptoms: e.target.value })} placeholder="Describe visible symptoms..." />
-            </div>
-            <div>
-              <Label>Severity</Label>
-              <Select value={form.severity} onValueChange={(v) => setForm({ ...form, severity: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{SEVERITIES.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Additional Notes</Label>
-              <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Any extra info..." />
-            </div>
+
+            {/* AI Panel in Admit Dialog */}
+            {showAiPanel && (
+              <AiSuggestionsPanel suggestions={aiSuggestions} loading={aiLoading} />
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAdmitDialog(false)}>Cancel</Button>
@@ -328,7 +561,7 @@ export default function FarmClinicTab() {
       </Dialog>
 
       {/* Detail Dialog */}
-      <Dialog open={showDetailDialog} onOpenChange={(open) => { setShowDetailDialog(open); if (!open) setSelectedAdmission(null); }}>
+      <Dialog open={showDetailDialog} onOpenChange={(open) => { setShowDetailDialog(open); if (!open) { setSelectedAdmission(null); setDetailAiSuggestions(null); } }}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           {selectedAdmission && (
             <>
@@ -351,6 +584,22 @@ export default function FarmClinicTab() {
                 {selectedAdmission.discharge_notes && <div className="col-span-2"><span className="text-muted-foreground">Discharge Notes:</span> {selectedAdmission.discharge_notes}</div>}
                 {selectedAdmission.cause_of_death && <div className="col-span-2"><span className="text-muted-foreground">Cause of Death:</span> {selectedAdmission.cause_of_death}</div>}
               </div>
+
+              {/* AI Suggestions Button for Detail View */}
+              <Button
+                variant="outline"
+                className="w-full border-primary/30 text-primary hover:bg-primary/5"
+                onClick={handleDetailAiSuggest}
+                disabled={detailAiLoading}
+              >
+                {detailAiLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                {detailAiLoading ? "Analyzing with treatment history..." : "Get AI Treatment Suggestions"}
+              </Button>
+
+              {/* AI Suggestions in Detail View */}
+              {(detailAiSuggestions || detailAiLoading) && (
+                <AiSuggestionsPanel suggestions={detailAiSuggestions} loading={detailAiLoading} />
+              )}
 
               {selectedAdmission.status === "admitted" && (
                 <>
