@@ -400,8 +400,24 @@ export function HealthDashboard() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <TrendingDown className="h-5 w-5" />
-              Mortality Trend (60 Days)
+              Mortality Trend
             </CardTitle>
+            <CardDescription>Filter by date range</CardDescription>
+            <div className="flex flex-wrap items-end gap-3 mt-2">
+              <div>
+                <Label className="text-xs">From</Label>
+                <Input type="date" value={mortalityFromDate} onChange={(e) => setMortalityFromDate(e.target.value)} className="w-auto" />
+              </div>
+              <div>
+                <Label className="text-xs">To</Label>
+                <Input type="date" value={mortalityToDate} onChange={(e) => setMortalityToDate(e.target.value)} className="w-auto" />
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => { setMortalityFromDate(subDays(new Date(), 7).toISOString().split("T")[0]); setMortalityToDate(new Date().toISOString().split("T")[0]); }}>7d</Button>
+                <Button size="sm" variant="outline" onClick={() => { setMortalityFromDate(subDays(new Date(), 30).toISOString().split("T")[0]); setMortalityToDate(new Date().toISOString().split("T")[0]); }}>30d</Button>
+                <Button size="sm" variant="outline" onClick={() => { setMortalityFromDate(subDays(new Date(), 60).toISOString().split("T")[0]); setMortalityToDate(new Date().toISOString().split("T")[0]); }}>60d</Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -447,6 +463,49 @@ export function HealthDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Detailed Mortality Records */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Detailed Mortality Records ({mortalityFromDate} to {mortalityToDate})
+          </CardTitle>
+          <CardDescription>
+            Total: {mortalityData?.reduce((s, r) => s + r.quantity_dead, 0) || 0} deaths across {mortalityData?.length || 0} records
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="max-h-[400px] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Qty Dead</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Recorded By</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {mortalityData && mortalityData.length > 0 ? (
+                  mortalityData.map((record) => (
+                    <TableRow key={record.id}>
+                      <TableCell>{format(new Date(record.date), "MMM dd, yyyy")}</TableCell>
+                      <TableCell>{(record.livestock_categories as any)?.name || "—"}</TableCell>
+                      <TableCell className="font-medium text-destructive">{record.quantity_dead}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{record.reason || "—"}</TableCell>
+                      <TableCell>{(record.profiles as any)?.name || "Unknown"}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No mortality records in this period</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
