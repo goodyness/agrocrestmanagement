@@ -103,6 +103,62 @@ export type Database = {
           },
         ]
       }
+      ai_chat_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_chat_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bank_accounts: {
         Row: {
           account_name: string
@@ -180,6 +236,7 @@ export type Database = {
           created_at: string
           id: string
           notes: string | null
+          photo_url: string | null
         }
         Insert: {
           branch_id?: string | null
@@ -189,6 +246,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          photo_url?: string | null
         }
         Update: {
           branch_id?: string | null
@@ -198,6 +256,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          photo_url?: string | null
         }
         Relationships: [
           {
@@ -621,6 +680,69 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      egg_grading_records: {
+        Row: {
+          batch_id: string | null
+          branch_id: string | null
+          cracked_count: number
+          created_at: string
+          date: string
+          extra_large_count: number
+          id: string
+          large_count: number
+          medium_count: number
+          notes: string | null
+          recorded_by: string
+          small_count: number
+          total_eggs: number
+        }
+        Insert: {
+          batch_id?: string | null
+          branch_id?: string | null
+          cracked_count?: number
+          created_at?: string
+          date?: string
+          extra_large_count?: number
+          id?: string
+          large_count?: number
+          medium_count?: number
+          notes?: string | null
+          recorded_by: string
+          small_count?: number
+          total_eggs?: number
+        }
+        Update: {
+          batch_id?: string | null
+          branch_id?: string | null
+          cracked_count?: number
+          created_at?: string
+          date?: string
+          extra_large_count?: number
+          id?: string
+          large_count?: number
+          medium_count?: number
+          notes?: string | null
+          recorded_by?: string
+          small_count?: number
+          total_eggs?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "egg_grading_records_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "egg_grading_records_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
             referencedColumns: ["id"]
           },
         ]
@@ -1305,6 +1427,7 @@ export type Database = {
           date: string
           id: string
           livestock_category_id: string
+          photo_url: string | null
           quantity_dead: number
           reason: string | null
           recorded_by: string
@@ -1316,6 +1439,7 @@ export type Database = {
           date?: string
           id?: string
           livestock_category_id: string
+          photo_url?: string | null
           quantity_dead: number
           reason?: string | null
           recorded_by: string
@@ -1327,6 +1451,7 @@ export type Database = {
           date?: string
           id?: string
           livestock_category_id?: string
+          photo_url?: string | null
           quantity_dead?: number
           reason?: string | null
           recorded_by?: string
@@ -2106,6 +2231,7 @@ export type Database = {
           follow_up_date: string | null
           id: string
           notes: string | null
+          photo_url: string | null
           prescription: string | null
           recorded_by: string
           treatment: string | null
@@ -2122,6 +2248,7 @@ export type Database = {
           follow_up_date?: string | null
           id?: string
           notes?: string | null
+          photo_url?: string | null
           prescription?: string | null
           recorded_by: string
           treatment?: string | null
@@ -2138,6 +2265,7 @@ export type Database = {
           follow_up_date?: string | null
           id?: string
           notes?: string | null
+          photo_url?: string | null
           prescription?: string | null
           recorded_by?: string
           treatment?: string | null

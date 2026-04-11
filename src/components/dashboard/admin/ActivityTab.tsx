@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Activity, Filter, Search, User } from "lucide-react";
@@ -21,10 +19,9 @@ const ActivityTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
   const [entityFilter, setEntityFilter] = useState("all");
+  const [workerFilter, setWorkerFilter] = useState("all");
 
-  useEffect(() => {
-    fetchActivities();
-  }, [currentBranchId]);
+  useEffect(() => { fetchActivities(); }, [currentBranchId]);
 
   useEffect(() => {
     let filtered = activities;
@@ -37,48 +34,34 @@ const ActivityTab = () => {
         (a.details && JSON.stringify(a.details).toLowerCase().includes(term))
       );
     }
-    if (actionFilter !== "all") {
-      filtered = filtered.filter(a => a.action?.includes(actionFilter));
-    }
-    if (entityFilter !== "all") {
-      filtered = filtered.filter(a => a.entity_type === entityFilter);
-    }
+    if (actionFilter !== "all") filtered = filtered.filter(a => a.action?.includes(actionFilter));
+    if (entityFilter !== "all") filtered = filtered.filter(a => a.entity_type === entityFilter);
+    if (workerFilter !== "all") filtered = filtered.filter(a => a.user_id === workerFilter);
     setFilteredActivities(filtered);
-  }, [activities, searchTerm, actionFilter, entityFilter]);
+  }, [activities, searchTerm, actionFilter, entityFilter, workerFilter]);
 
   const fetchActivities = async () => {
     setLoading(true);
-    let query = supabase
-      .from("activity_logs")
-      .select("*, profiles(name)")
-      .order("created_at", { ascending: false });
+    let query = supabase.from("activity_logs").select("*, profiles(name)").order("created_at", { ascending: false });
     if (currentBranchId) query = query.eq("branch_id", currentBranchId);
-    const { data: logs } = await query;
-    setActivities(logs || []);
+    const { data } = await query;
+    setActivities(data || []);
     setLoading(false);
   };
 
   const { currentPage, totalPages, paginatedRange, goToPage, getPageNumbers } = usePagination({
-    totalItems: filteredActivities.length,
-    itemsPerPage: ITEMS_PER_PAGE,
+    totalItems: filteredActivities.length, itemsPerPage: ITEMS_PER_PAGE,
   });
-
   const paginatedActivities = filteredActivities.slice(paginatedRange.startIndex, paginatedRange.endIndex);
 
-  // Get unique entity types and actions for filters
   const entityTypes = [...new Set(activities.map(a => a.entity_type).filter(Boolean))];
-  const actionTypes = [...new Set(activities.map(a => {
-    if (a.action?.includes("create") || a.action?.includes("add")) return "create";
-    if (a.action?.includes("update") || a.action?.includes("edit")) return "update";
-    if (a.action?.includes("delete") || a.action?.includes("remove")) return "delete";
-    return "other";
-  }))];
+  const workers = [...new Map(activities.filter(a => a.profiles?.name).map(a => [a.user_id, a.profiles.name])).entries()];
 
   const getActionBadgeColor = (action: string) => {
-    if (action.includes("create") || action.includes("add")) return "default";
-    if (action.includes("update") || action.includes("edit")) return "secondary";
-    if (action.includes("delete") || action.includes("remove")) return "destructive";
-    return "outline";
+    if (action.includes("create") || action.includes("add")) return "default" as const;
+    if (action.includes("update") || action.includes("edit")) return "secondary" as const;
+    if (action.includes("delete") || action.includes("remove")) return "destructive" as const;
+    return "outline" as const;
   };
 
   const getTimeAgo = (dateStr: string) => {
@@ -100,27 +83,25 @@ const ActivityTab = () => {
           <Activity className="h-6 w-6 text-primary" />
           Activity Timeline
         </h2>
-        <p className="text-muted-foreground">Complete audit trail of all farm activities ({filteredActivities.length} events)</p>
+        <p className="text-muted-foreground">Complete audit trail — filterable by worker, branch, and action ({filteredActivities.length} events)</p>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search activities..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
+              <Input placeholder="Search activities..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
             </div>
+            <Select value={workerFilter} onValueChange={setWorkerFilter}>
+              <SelectTrigger><User className="h-4 w-4 mr-2" /><SelectValue placeholder="Filter by worker" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Workers</SelectItem>
+                {workers.map(([id, name]) => <SelectItem key={id} value={id}>{name}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Select value={actionFilter} onValueChange={setActionFilter}>
-              <SelectTrigger>
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by action" />
-              </SelectTrigger>
+              <SelectTrigger><Filter className="h-4 w-4 mr-2" /><SelectValue placeholder="Filter by action" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Actions</SelectItem>
                 <SelectItem value="create">Created</SelectItem>
@@ -129,21 +110,16 @@ const ActivityTab = () => {
               </SelectContent>
             </Select>
             <Select value={entityFilter} onValueChange={setEntityFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Filter by type" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                {entityTypes.map(type => (
-                  <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
-                ))}
+                {entityTypes.map(type => <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Timeline View */}
       <Card className="shadow-md">
         <CardHeader>
           <CardTitle>Activity Log</CardTitle>
@@ -157,7 +133,7 @@ const ActivityTab = () => {
           ) : (
             <>
               <div className="space-y-3">
-                {paginatedActivities.map((activity, idx) => (
+                {paginatedActivities.map((activity) => (
                   <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
                     <div className={`mt-1 h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                       activity.action?.includes("create") || activity.action?.includes("add") ? "bg-primary/10 text-primary" :
@@ -169,39 +145,23 @@ const ActivityTab = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm">{activity.profiles?.name || "System"}</span>
-                        <Badge variant={getActionBadgeColor(activity.action)} className="text-xs">
-                          {activity.action}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {activity.entity_type}
-                        </Badge>
+                        <Badge variant={getActionBadgeColor(activity.action)} className="text-xs">{activity.action}</Badge>
+                        <Badge variant="outline" className="text-xs capitalize">{activity.entity_type}</Badge>
                       </div>
                       {activity.details && (
                         <p className="text-xs text-muted-foreground mt-1 truncate">
-                          {typeof activity.details === 'object' ? 
-                            Object.entries(activity.details as Record<string, any>)
-                              .slice(0, 3)
-                              .map(([k, v]) => `${k}: ${v}`)
-                              .join(" • ") 
-                            : String(activity.details)
-                          }
+                          {typeof activity.details === 'object' ?
+                            Object.entries(activity.details as Record<string, any>).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(" • ")
+                            : String(activity.details)}
                         </p>
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {getTimeAgo(activity.created_at)}
-                    </span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">{getTimeAgo(activity.created_at)}</span>
                   </div>
                 ))}
               </div>
-
               <div className="mt-4">
-                <PaginationControls
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={goToPage}
-                  getPageNumbers={getPageNumbers}
-                />
+                <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} getPageNumbers={getPageNumbers} />
               </div>
             </>
           )}
