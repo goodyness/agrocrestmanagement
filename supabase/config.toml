@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.clinic-ai-suggestions]
 verify_jwt = false
+
+[functions.farm-ai-chat]
+verify_jwt = false
