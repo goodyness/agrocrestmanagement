@@ -159,6 +159,63 @@ export type Database = {
           },
         ]
       }
+      anomaly_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          baseline_value: number
+          branch_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_acknowledged: boolean
+          metric_value: number
+          severity: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          baseline_value?: number
+          branch_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_acknowledged?: boolean
+          metric_value?: number
+          severity?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          baseline_value?: number
+          branch_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_acknowledged?: boolean
+          metric_value?: number
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anomaly_alerts_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomaly_alerts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bank_accounts: {
         Row: {
           account_name: string
@@ -483,6 +540,60 @@ export type Database = {
             columns: ["admission_id"]
             isOneToOne: false
             referencedRelation: "clinic_admissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_orders: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          customer_id: string
+          delivery_date: string | null
+          id: string
+          notes: string | null
+          order_items: Json
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          customer_id: string
+          delivery_date?: string | null
+          id?: string
+          notes?: string | null
+          order_items?: Json
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          customer_id?: string
+          delivery_date?: string | null
+          id?: string
+          notes?: string | null
+          order_items?: Json
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_orders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sprout, TrendingUp, AlertCircle, DollarSign, Package } from "lucide-react";
 import FeedAnalyticsWidget from "./FeedAnalyticsWidget";
+import AnomalyAlertsWidget from "./AnomalyAlertsWidget";
 import BatchMilestoneAlerts from "./BatchMilestoneAlerts";
 import LivestockInvestmentWidget from "./LivestockInvestmentWidget";
 import AllBranchesSummary from "./AllBranchesSummary";
@@ -234,6 +235,11 @@ const OverviewTab = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Anomaly Alerts */}
+      <div className="mt-6">
+        <AnomalyAlertsWidget />
       </div>
 
       {/* Livestock Investment Widget */}

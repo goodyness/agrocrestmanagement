@@ -2,7 +2,7 @@ import { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck, PawPrint, AlertCircle, Landmark, Wallet, Stethoscope, Bot, Egg } from "lucide-react";
+import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck, PawPrint, AlertCircle, Landmark, Wallet, Stethoscope, Bot, Egg, Brain, Flame } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
@@ -35,6 +35,10 @@ import WorkerSalaryTab from "./admin/WorkerSalaryTab";
 import FarmClinicTab from "./admin/FarmClinicTab";
 import AiFarmAdvisorTab from "./admin/AiFarmAdvisorTab";
 import EggGradingTab from "./admin/EggGradingTab";
+import ProductionForecast from "./admin/ProductionForecast";
+import ProfitabilityHeatmap from "./admin/ProfitabilityHeatmap";
+import CustomerOrdersSection from "./admin/CustomerOrdersSection";
+import WeeklyReportButton from "./admin/WeeklyReportButton";
 
 interface AdminDashboardProps {
   user: User | null;
@@ -244,6 +248,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="production" className="space-y-4">
             <ProductionTab />
+            <ProductionForecast />
           </TabsContent>
 
           <TabsContent value="sales" className="space-y-4">
@@ -269,6 +274,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="reports" className="space-y-4">
             <ReportsTab />
+            <WeeklyReportButton />
           </TabsContent>
 
           <TabsContent value="cleaning" className="space-y-4">
@@ -289,6 +295,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="customers" className="space-y-4">
             <CustomersTab />
+            <CustomerOrdersSection />
           </TabsContent>
 
           <TabsContent value="reviews" className="space-y-4">
@@ -301,6 +308,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="finance" className="space-y-4">
             <FinanceTab />
+            <ProfitabilityHeatmap />
           </TabsContent>
 
           <TabsContent value="salary" className="space-y-4">
