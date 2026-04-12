@@ -12,6 +12,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Analytics from "./pages/Analytics";
 import FarmSummary from "./pages/FarmSummary";
 import NotFound from "./pages/NotFound";
+import CustomerPortal from "./pages/CustomerPortal";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/farm-summary" element={<FarmSummary />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/customer-portal" element={<CustomerPortal />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

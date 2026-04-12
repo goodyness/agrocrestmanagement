@@ -11,3 +11,12 @@ verify_jwt = false
 
 [functions.farm-ai-chat]
 verify_jwt = false
+
+[functions.detect-anomalies]
+verify_jwt = false
+
+[functions.predict-production]
+verify_jwt = false
+
+[functions.generate-weekly-report]
+verify_jwt = false
