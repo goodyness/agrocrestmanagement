@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DollarSign, ChevronsUpDown, Check, Plus } from "lucide-react";
+import { DollarSign, ChevronsUpDown, Check, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
 import { useBranch } from "@/contexts/BranchContext";
@@ -39,10 +39,12 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
   const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
   const [buyerName, setBuyerName] = useState("");
   const [isNewCustomer, setIsNewCustomer] = useState(false);
+  const [withdrawalAlerts, setWithdrawalAlerts] = useState<any[]>([]);
 
   useEffect(() => {
     if (open) {
       fetchCustomers();
+      fetchWithdrawalAlerts();
     }
   }, [open, currentBranchId]);
 
@@ -51,6 +53,17 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
     if (currentBranchId) query = query.eq("branch_id", currentBranchId);
     const { data } = await query;
     setCustomers(data || []);
+  };
+
+  const fetchWithdrawalAlerts = async () => {
+    const today = new Date().toISOString().split("T")[0];
+    let query = supabase
+      .from("livestock_care_logs")
+      .select("id, product_name, care_type, withdrawal_end_date, batch_id, livestock_batches(species, species_type)")
+      .gte("withdrawal_end_date", today);
+    if (currentBranchId) query = query.eq("branch_id", currentBranchId);
+    const { data } = await query;
+    setWithdrawalAlerts(data || []);
   };
 
   const handleSelectCustomer = (customerId: string, customerName: string) => {
@@ -174,6 +187,27 @@ const AddSalesDialog = ({ onSuccess }: AddSalesDialogProps) => {
           <DialogDescription>Enter sales transaction details</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {withdrawalAlerts.length > 0 && (
+            <div className="p-3 rounded-lg border border-warning/40 bg-warning/5">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                <div className="flex-1 text-xs">
+                  <p className="font-semibold text-warning">⚠️ Drug withdrawal in effect</p>
+                  <p className="text-muted-foreground mt-1">
+                    {withdrawalAlerts.length} batch(es) under withdrawal — verify the product you're selling is NOT from these:
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {withdrawalAlerts.slice(0, 3).map((a: any) => (
+                      <li key={a.id}>
+                        • {a.livestock_batches?.species} {a.livestock_batches?.species_type ? `(${a.livestock_batches.species_type})` : ""}
+                        {" — "}safe from {new Date(a.withdrawal_end_date).toLocaleDateString()}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="product_name">Product Name</Label>
             <Input

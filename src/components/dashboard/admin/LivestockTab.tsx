@@ -6,6 +6,7 @@ import AddCensusDialog from "./dialogs/AddCensusDialog";
 import EditCensusDialog from "./dialogs/EditCensusDialog";
 import EditLivestockCategoryDialog from "./dialogs/EditLivestockCategoryDialog";
 import DeleteCensusDialog from "./dialogs/DeleteCensusDialog";
+import CareLogTemplatesManager from "./livestock/CareLogTemplatesManager";
 import { useBranch } from "@/contexts/BranchContext";
 
 const LivestockTab = () => {
