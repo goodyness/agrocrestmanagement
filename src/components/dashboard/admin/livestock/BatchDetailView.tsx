@@ -17,6 +17,7 @@ import CareLogsView from "./CareLogsView";
 import TreatmentCoursesWidget from "./TreatmentCoursesWidget";
 import CareCostAnalytics from "./CareCostAnalytics";
 import WithdrawalWarning from "./WithdrawalWarning";
+import BatchPnLBreakdown from "./BatchPnLBreakdown";
 
 interface Props {
   batch: any;
@@ -360,6 +361,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           </div>
 
           <TreatmentCoursesWidget logs={careLogs} />
+          <BatchPnLBreakdown batch={batchData} careLogs={careLogs} expenses={expenses} />
           <CareCostAnalytics logs={careLogs} currentQuantity={batchData.current_quantity} />
           <CareLogsView logs={careLogs} />
         </TabsContent>
