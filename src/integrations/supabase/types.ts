@@ -284,6 +284,57 @@ export type Database = {
         }
         Relationships: []
       }
+      care_log_templates: {
+        Row: {
+          branch_id: string | null
+          care_type: string
+          created_at: string
+          created_by: string
+          default_cost: number | null
+          description: string | null
+          dosage: string | null
+          duration_days: number | null
+          id: string
+          name: string
+          notes: string | null
+          product_name: string | null
+          updated_at: string
+          withdrawal_days: number | null
+        }
+        Insert: {
+          branch_id?: string | null
+          care_type: string
+          created_at?: string
+          created_by: string
+          default_cost?: number | null
+          description?: string | null
+          dosage?: string | null
+          duration_days?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          product_name?: string | null
+          updated_at?: string
+          withdrawal_days?: number | null
+        }
+        Update: {
+          branch_id?: string | null
+          care_type?: string
+          created_at?: string
+          created_by?: string
+          default_cost?: number | null
+          description?: string | null
+          dosage?: string | null
+          duration_days?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          product_name?: string | null
+          updated_at?: string
+          withdrawal_days?: number | null
+        }
+        Relationships: []
+      }
       cleaning_records: {
         Row: {
           branch_id: string | null
@@ -1236,6 +1287,12 @@ export type Database = {
           branch_id: string | null
           care_date: string
           care_type: string
+          cost: number | null
+          course_day_number: number | null
+          course_end_date: string | null
+          course_id: string | null
+          course_start_date: string | null
+          course_total_days: number | null
           created_at: string
           description: string
           dosage: string | null
@@ -1243,6 +1300,8 @@ export type Database = {
           notes: string | null
           product_name: string | null
           quantity_affected: number | null
+          withdrawal_days: number | null
+          withdrawal_end_date: string | null
         }
         Insert: {
           administered_by: string
@@ -1250,6 +1309,12 @@ export type Database = {
           branch_id?: string | null
           care_date?: string
           care_type: string
+          cost?: number | null
+          course_day_number?: number | null
+          course_end_date?: string | null
+          course_id?: string | null
+          course_start_date?: string | null
+          course_total_days?: number | null
           created_at?: string
           description: string
           dosage?: string | null
@@ -1257,6 +1322,8 @@ export type Database = {
           notes?: string | null
           product_name?: string | null
           quantity_affected?: number | null
+          withdrawal_days?: number | null
+          withdrawal_end_date?: string | null
         }
         Update: {
           administered_by?: string
@@ -1264,6 +1331,12 @@ export type Database = {
           branch_id?: string | null
           care_date?: string
           care_type?: string
+          cost?: number | null
+          course_day_number?: number | null
+          course_end_date?: string | null
+          course_id?: string | null
+          course_start_date?: string | null
+          course_total_days?: number | null
           created_at?: string
           description?: string
           dosage?: string | null
@@ -1271,6 +1344,8 @@ export type Database = {
           notes?: string | null
           product_name?: string | null
           quantity_affected?: number | null
+          withdrawal_days?: number | null
+          withdrawal_end_date?: string | null
         }
         Relationships: [
           {
