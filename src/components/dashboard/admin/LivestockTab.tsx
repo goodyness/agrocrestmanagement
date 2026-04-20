@@ -124,6 +124,8 @@ const LivestockTab = () => {
           </CardContent>
         </Card>
       </div>
+
+      <CareLogTemplatesManager />
     </div>
   );
 };
