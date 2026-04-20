@@ -13,6 +13,8 @@ import { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import AddProductionDialog from "@/components/dashboard/worker/AddProductionDialog";
+import BulkProductionDialog from "@/components/dashboard/worker/BulkProductionDialog";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -145,6 +147,15 @@ const ProductionTab = () => {
                 <X className="h-4 w-4" />
               </Button>
             )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="w-[180px]">
+              <AddProductionDialog onSuccess={fetchData} />
+            </div>
+            <div className="w-[200px]">
+              <BulkProductionDialog onSuccess={fetchData} />
+            </div>
           </div>
 
           <Button onClick={() => navigate("/analytics")} variant="outline">

@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import AddSalesDialog from "@/components/dashboard/worker/AddSalesDialog";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -252,6 +253,10 @@ const SalesTab = () => {
                 <X className="h-4 w-4" />
               </Button>
             )}
+          </div>
+
+          <div className="w-[180px]">
+            <AddSalesDialog onSuccess={fetchData} />
           </div>
 
           <Button onClick={() => navigate("/analytics")} variant="outline">
