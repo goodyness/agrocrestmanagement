@@ -13,8 +13,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Plus, Sparkles, CheckCircle, Clock, AlertTriangle, Loader2, DollarSign, Skull, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 import AddCareLogDialog from "./AddCareLogDialog";
-import PaginationControls from "@/components/PaginationControls";
-import { usePagination } from "@/hooks/usePagination";
+import CareLogsView from "./CareLogsView";
+import TreatmentCoursesWidget from "./TreatmentCoursesWidget";
+import CareCostAnalytics from "./CareCostAnalytics";
+import WithdrawalWarning from "./WithdrawalWarning";
 
 interface Props {
   batch: any;
@@ -56,13 +58,6 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const [mortalityReason, setMortalityReason] = useState("");
   const [mortalityDate, setMortalityDate] = useState(new Date().toISOString().split("T")[0]);
   const [addingMortality, setAddingMortality] = useState(false);
-
-  const { currentPage, totalPages, paginatedRange, goToPage, getPageNumbers } = usePagination({
-    totalItems: careLogs.length,
-    itemsPerPage: 10,
-  });
-
-  const paginatedItems = careLogs.slice(paginatedRange.startIndex, paginatedRange.endIndex);
 
   const fetchCareLogs = async () => {
     const { data } = await supabase
@@ -266,6 +261,8 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
         )}
       </div>
 
+      <WithdrawalWarning logs={careLogs} />
+
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card><CardContent className="p-3 text-center"><p className="text-lg font-bold">{batchData.current_quantity}</p><p className="text-xs text-muted-foreground">Current Count</p></CardContent></Card>
@@ -362,37 +359,9 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
             </Button>
           </div>
 
-          {paginatedItems.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                <p>No care records yet. Start logging daily care!</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {paginatedItems.map((log: any) => (
-                <Card key={log.id}>
-                  <CardContent className="p-3">
-                    <div className="flex items-start gap-3">
-                      <Badge className={`${CARE_TYPE_COLORS[log.care_type]} text-white text-xs`}>{log.care_type}</Badge>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{log.description}</p>
-                        <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
-                          <span>📅 {new Date(log.care_date).toLocaleDateString()}</span>
-                          {log.product_name && <span>💊 {log.product_name}</span>}
-                          {log.dosage && <span>📏 {log.dosage}</span>}
-                          {log.quantity_affected && <span>🐾 {log.quantity_affected} animals</span>}
-                          {log.profiles?.name && <span>👤 {log.profiles.name}</span>}
-                        </div>
-                        {log.notes && <p className="text-xs mt-1 italic">{log.notes}</p>}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} getPageNumbers={getPageNumbers} />
-            </div>
-          )}
+          <TreatmentCoursesWidget logs={careLogs} />
+          <CareCostAnalytics logs={careLogs} currentQuantity={batchData.current_quantity} />
+          <CareLogsView logs={careLogs} />
         </TabsContent>
 
         {/* ===== MORTALITY TAB ===== */}
