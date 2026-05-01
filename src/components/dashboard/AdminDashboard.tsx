@@ -331,6 +331,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
           <TabsContent value="egg-grading" className="space-y-4">
             <EggGradingTab />
           </TabsContent>
+
+          <TabsContent value="expected-stock" className="space-y-4">
+            <ExpectedStockTab />
+          </TabsContent>
         </Tabs>
       </main>
     </div>
