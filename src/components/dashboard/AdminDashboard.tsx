@@ -2,7 +2,7 @@ import { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck, PawPrint, AlertCircle, Landmark, Wallet, Stethoscope, Bot, Egg, Brain, Flame } from "lucide-react";
+import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck, PawPrint, AlertCircle, Landmark, Wallet, Stethoscope, Bot, Egg, Brain, Flame, Boxes } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
@@ -39,6 +39,7 @@ import ProductionForecast from "./admin/ProductionForecast";
 import ProfitabilityHeatmap from "./admin/ProfitabilityHeatmap";
 import CustomerOrdersSection from "./admin/CustomerOrdersSection";
 import WeeklyReportButton from "./admin/WeeklyReportButton";
+import ExpectedStockTab from "./admin/ExpectedStockTab";
 
 interface AdminDashboardProps {
   user: User | null;
@@ -219,6 +220,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
                 <Egg className="h-4 w-4" />
                 <span className="hidden sm:inline">Egg Grading</span>
               </TabsTrigger>
+              <TabsTrigger value="expected-stock" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Boxes className="h-4 w-4" />
+                <span className="hidden sm:inline">Expected Stock</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -325,6 +330,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="egg-grading" className="space-y-4">
             <EggGradingTab />
+          </TabsContent>
+
+          <TabsContent value="expected-stock" className="space-y-4">
+            <ExpectedStockTab />
           </TabsContent>
         </Tabs>
       </main>
