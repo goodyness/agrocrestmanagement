@@ -2008,6 +2008,48 @@ export type Database = {
           },
         ]
       }
+      stock_baselines: {
+        Row: {
+          animal_count: number
+          baseline_at: string
+          batch_id: string | null
+          branch_id: string | null
+          crates: number
+          created_at: string
+          created_by: string
+          id: string
+          item_type: string
+          notes: string | null
+          pieces: number
+        }
+        Insert: {
+          animal_count?: number
+          baseline_at?: string
+          batch_id?: string | null
+          branch_id?: string | null
+          crates?: number
+          created_at?: string
+          created_by: string
+          id?: string
+          item_type: string
+          notes?: string | null
+          pieces?: number
+        }
+        Update: {
+          animal_count?: number
+          baseline_at?: string
+          batch_id?: string | null
+          branch_id?: string | null
+          crates?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          item_type?: string
+          notes?: string | null
+          pieces?: number
+        }
+        Relationships: []
+      }
       stock_reconciliations: {
         Row: {
           adjustment_crates: number
@@ -2109,6 +2151,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stock_recounts: {
+        Row: {
+          actual_animal_count: number
+          actual_crates: number
+          actual_pieces: number
+          baseline_id: string | null
+          batch_id: string | null
+          branch_id: string | null
+          created_at: string
+          expected_animal_count: number
+          expected_crates: number
+          expected_pieces: number
+          id: string
+          item_type: string
+          notes: string | null
+          recorded_by: string
+          recount_at: string
+          variance_animals: number
+          variance_pieces: number
+        }
+        Insert: {
+          actual_animal_count?: number
+          actual_crates?: number
+          actual_pieces?: number
+          baseline_id?: string | null
+          batch_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          expected_animal_count?: number
+          expected_crates?: number
+          expected_pieces?: number
+          id?: string
+          item_type: string
+          notes?: string | null
+          recorded_by: string
+          recount_at?: string
+          variance_animals?: number
+          variance_pieces?: number
+        }
+        Update: {
+          actual_animal_count?: number
+          actual_crates?: number
+          actual_pieces?: number
+          baseline_id?: string | null
+          batch_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          expected_animal_count?: number
+          expected_crates?: number
+          expected_pieces?: number
+          id?: string
+          item_type?: string
+          notes?: string | null
+          recorded_by?: string
+          recount_at?: string
+          variance_animals?: number
+          variance_pieces?: number
+        }
+        Relationships: []
       }
       supplier_pricing_history: {
         Row: {
