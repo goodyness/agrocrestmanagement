@@ -39,6 +39,7 @@ import ProductionForecast from "./admin/ProductionForecast";
 import ProfitabilityHeatmap from "./admin/ProfitabilityHeatmap";
 import CustomerOrdersSection from "./admin/CustomerOrdersSection";
 import WeeklyReportButton from "./admin/WeeklyReportButton";
+import ExpectedStockTab from "./admin/ExpectedStockTab";
 
 interface AdminDashboardProps {
   user: User | null;
