@@ -29,10 +29,11 @@ import {
 } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { logActivity } from "@/lib/activityLogger";
 
 const PIECES_PER_CRATE = 30;
-const VARIANCE_THRESHOLD_KEY = "expected_stock_variance_threshold";
-const DEFAULT_THRESHOLD = 10; // pieces or animals
+const THRESHOLDS_KEY = "expected_stock_variance_thresholds";
+const DEFAULT_THRESHOLD = 10;
 
 type Baseline = {
   id: string;
@@ -74,13 +75,28 @@ type Batch = {
   date_acquired: string;
 };
 
+type Thresholds = { eggs: number; [key: string]: number };
+
 const toPieces = (crates: number, pieces: number) => crates * PIECES_PER_CRATE + pieces;
 const fromPieces = (total: number) => ({
   crates: Math.floor(total / PIECES_PER_CRATE),
   pieces: total % PIECES_PER_CRATE,
 });
 
-// CSV helper
+const loadThresholds = (): Thresholds => {
+  try {
+    const raw = localStorage.getItem(THRESHOLDS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { eggs: DEFAULT_THRESHOLD };
+};
+const saveThresholds = (t: Thresholds) => localStorage.setItem(THRESHOLDS_KEY, JSON.stringify(t));
+const getThreshold = (thresholds: Thresholds, itemType: string, species?: string) => {
+  if (itemType === "eggs") return thresholds.eggs ?? DEFAULT_THRESHOLD;
+  if (species && thresholds[species.toLowerCase()] !== undefined) return thresholds[species.toLowerCase()];
+  return thresholds.livestock ?? DEFAULT_THRESHOLD;
+};
+
 const toCsv = (rows: Record<string, any>[]) => {
   if (rows.length === 0) return "";
   const headers = Object.keys(rows[0]);
@@ -117,12 +133,11 @@ export default function ExpectedStockTab() {
   const [recountTarget, setRecountTarget] = useState<{ type: "eggs" | "livestock"; batchId?: string; label: string } | null>(null);
   const [thresholdOpen, setThresholdOpen] = useState(false);
 
-  const [threshold, setThreshold] = useState<number>(() => {
-    const v = typeof window !== "undefined" ? localStorage.getItem(VARIANCE_THRESHOLD_KEY) : null;
-    return v ? parseInt(v) || DEFAULT_THRESHOLD : DEFAULT_THRESHOLD;
-  });
+  const [thresholds, setThresholds] = useState<Thresholds>(loadThresholds);
 
-  // ----- Admin gate (defense in depth; RLS also enforces) -----
+  // Chart filter state
+  const [chartFilter, setChartFilter] = useState<"all" | "eggs" | string>("all");
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase.rpc("is_admin");
@@ -147,7 +162,7 @@ export default function ExpectedStockTab() {
       setProduction(p.data || []);
       setSales(s.data || []);
       setMortality(m.data || []);
-    } catch (e: any) {
+    } catch {
       toast.error("Failed to load stock data");
     } finally {
       setLoading(false);
@@ -159,7 +174,7 @@ export default function ExpectedStockTab() {
   const branchFilter = (row: any) =>
     !currentBranchId || row.branch_id === currentBranchId || row.branch_id === null;
 
-  // ---- EGGS expected calc (current) ----
+  // ---- EGGS expected calc ----
   const eggBaseline = useMemo(
     () => baselines
       .filter((b) => b.item_type === "eggs" && branchFilter(b))
@@ -222,7 +237,7 @@ export default function ExpectedStockTab() {
     });
   }, [visibleBatches, baselines, mortality, sales, currentBranchId]);
 
-  // ---- TIME SERIES: build daily expected series for chart ----
+  // ---- TIME SERIES with actual recount points ----
   const eggSeries = useMemo(() => {
     if (!eggBaseline) return [];
     const baselineTime = new Date(eggBaseline.baseline_at).getTime();
@@ -232,7 +247,6 @@ export default function ExpectedStockTab() {
     startDay.setHours(0, 0, 0, 0);
     const days = Math.min(60, Math.max(1, Math.ceil((now - startDay.getTime()) / dayMs) + 1));
 
-    // Pre-compute movements
     const moves: { t: number; delta: number }[] = [];
     production.filter(branchFilter).forEach((p) => {
       const t = new Date(p.created_at || p.date).getTime();
@@ -248,15 +262,25 @@ export default function ExpectedStockTab() {
       }
     });
 
-    const series: { date: string; expected: number }[] = [];
+    // Recount actuals mapped to day
+    const recountMap = new Map<string, number>();
+    recounts.filter((r) => r.item_type === "eggs" && branchFilter(r)).forEach((r) => {
+      const day = format(new Date(r.recount_at), "MMM d");
+      recountMap.set(day, toPieces(r.actual_crates, r.actual_pieces));
+    });
+
+    const series: { date: string; expected: number; actual?: number }[] = [];
     for (let i = 0; i < days; i++) {
       const dayEnd = startDay.getTime() + (i + 1) * dayMs;
       let total = toPieces(eggBaseline.crates, eggBaseline.pieces);
       moves.forEach((m) => { if (m.t <= dayEnd) total += m.delta; });
-      series.push({ date: format(new Date(startDay.getTime() + i * dayMs), "MMM d"), expected: Math.max(total, 0) });
+      const dateLabel = format(new Date(startDay.getTime() + i * dayMs), "MMM d");
+      const entry: any = { date: dateLabel, expected: Math.max(total, 0) };
+      if (recountMap.has(dateLabel)) entry.actual = recountMap.get(dateLabel);
+      series.push(entry);
     }
     return series;
-  }, [eggBaseline, production, sales, currentBranchId]);
+  }, [eggBaseline, production, sales, recounts, currentBranchId]);
 
   const livestockSeries = useMemo(() => {
     return livestockExpected
@@ -283,27 +307,38 @@ export default function ExpectedStockTab() {
           }
         });
 
-        const series: { date: string; expected: number }[] = [];
+        const recountMap = new Map<string, number>();
+        recounts.filter((r) => r.item_type === "livestock" && r.batch_id === batch.id).forEach((r) => {
+          const day = format(new Date(r.recount_at), "MMM d");
+          recountMap.set(day, r.actual_animal_count);
+        });
+
+        const series: { date: string; expected: number; actual?: number }[] = [];
         for (let i = 0; i < days; i++) {
           const dayEnd = startDay.getTime() + (i + 1) * dayMs;
           let total = baseline!.animal_count;
           moves.forEach((m) => { if (m.t <= dayEnd) total += m.delta; });
-          series.push({ date: format(new Date(startDay.getTime() + i * dayMs), "MMM d"), expected: Math.max(total, 0) });
+          const dateLabel = format(new Date(startDay.getTime() + i * dayMs), "MMM d");
+          const entry: any = { date: dateLabel, expected: Math.max(total, 0) };
+          if (recountMap.has(dateLabel)) entry.actual = recountMap.get(dateLabel);
+          series.push(entry);
         }
         return { batch, series };
       });
-  }, [livestockExpected, mortality, sales, currentBranchId]);
+  }, [livestockExpected, mortality, sales, recounts, currentBranchId]);
 
-  // ---- VARIANCE ALERTS ----
+  // ---- VARIANCE ALERTS (per-item thresholds) ----
   const varianceAlerts = useMemo(() => {
     return recounts
       .filter(branchFilter)
       .filter((r) => {
+        const batch = batches.find((bt) => bt.id === r.batch_id);
+        const th = getThreshold(thresholds, r.item_type, batch?.species);
         const v = r.item_type === "eggs" ? Math.abs(r.variance_pieces) : Math.abs(r.variance_animals);
-        return v > threshold;
+        return v > th;
       })
       .slice(0, 10);
-  }, [recounts, threshold, currentBranchId]);
+  }, [recounts, thresholds, batches, currentBranchId]);
 
   // ---- EXPORT helpers ----
   const exportCsv = (which: "baselines" | "recounts") => {
@@ -336,6 +371,7 @@ export default function ExpectedStockTab() {
       });
       downloadFile(toCsv(rows), `recounts-${format(new Date(), "yyyyMMdd")}.csv`);
     }
+    logActivity("export_stock_data", "expected_stock", undefined, { type: which }, currentBranchId);
   };
 
   const exportPdf = () => {
@@ -359,10 +395,6 @@ export default function ExpectedStockTab() {
       head: [["When", "Item", "Quantity", "Notes"]],
       body: baseRows,
       headStyles: { fillColor: [60, 90, 60] },
-      didDrawPage: (d) => {
-        doc.setFontSize(12);
-        doc.text("Baselines", 14, d.cursor!.y - baseRows.length * 7 - 8);
-      },
     });
 
     const recRows = recounts.filter(branchFilter).map((r) => {
@@ -377,7 +409,7 @@ export default function ExpectedStockTab() {
         r.notes || "",
       ];
     });
-    const lastY = (doc as any).lastAutoTable.finalY || 40;
+    const lastY = (doc as any).lastAutoTable?.finalY || 40;
     doc.setFontSize(12);
     doc.text("Recounts", 14, lastY + 10);
     autoTable(doc, {
@@ -388,7 +420,18 @@ export default function ExpectedStockTab() {
     });
 
     doc.save(`stock-audit-${format(new Date(), "yyyyMMdd")}.pdf`);
+    logActivity("export_stock_pdf", "expected_stock", undefined, {}, currentBranchId);
   };
+
+  // ---- Chart filter options ----
+  const chartFilterOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [{ value: "all", label: "All Items" }];
+    if (eggBaseline) opts.push({ value: "eggs", label: "Eggs" });
+    livestockSeries.forEach(({ batch }) => {
+      opts.push({ value: batch.id, label: `${batch.species}${batch.species_type ? ` (${batch.species_type})` : ""}` });
+    });
+    return opts;
+  }, [eggBaseline, livestockSeries]);
 
   // ---- ADMIN GATE ----
   if (isAdmin === false) {
@@ -403,6 +446,9 @@ export default function ExpectedStockTab() {
     );
   }
 
+  // Unique species for threshold dialog
+  const uniqueSpecies = [...new Set(visibleBatches.map((b) => b.species.toLowerCase()))];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-3 items-start sm:items-center">
@@ -415,7 +461,7 @@ export default function ExpectedStockTab() {
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => setThresholdOpen(true)}>
             <Settings className="h-4 w-4 mr-2" />
-            Alert Threshold ({threshold})
+            Alert Thresholds
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -445,17 +491,19 @@ export default function ExpectedStockTab() {
       {varianceAlerts.length > 0 && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>{varianceAlerts.length} variance alert{varianceAlerts.length > 1 ? "s" : ""} above threshold ({threshold})</AlertTitle>
+          <AlertTitle>{varianceAlerts.length} variance alert{varianceAlerts.length > 1 ? "s" : ""}</AlertTitle>
           <AlertDescription>
             <ul className="mt-2 space-y-1 text-sm">
               {varianceAlerts.map((r) => {
                 const isEgg = r.item_type === "eggs";
                 const v = isEgg ? r.variance_pieces : r.variance_animals;
                 const batch = batches.find((bt) => bt.id === r.batch_id);
+                const th = getThreshold(thresholds, r.item_type, batch?.species);
                 return (
                   <li key={r.id}>
                     <strong>{isEgg ? "Eggs" : (batch?.species || "Livestock")}</strong>
                     {" — variance "}{v > 0 ? `+${v}` : v}
+                    {" (threshold: "}{th}{")"}
                     {" on "}{format(new Date(r.recount_at), "PPp")}
                   </li>
                 );
@@ -586,59 +634,80 @@ export default function ExpectedStockTab() {
           </Card>
         </TabsContent>
 
-        {/* TREND tab */}
+        {/* TREND tab with filter */}
         <TabsContent value="trend" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Eggs — Expected Stock Over Time</CardTitle>
-              <CardDescription>From most recent baseline (pieces)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {eggSeries.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No baseline yet.</p>
-              ) : (
-                <div className="h-72 w-full">
-                  <ResponsiveContainer>
-                    <LineChart data={eggSeries}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="date" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <RTooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="expected" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} name="Expected pieces" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <div className="flex items-center gap-3">
+            <Label className="text-sm whitespace-nowrap">Filter:</Label>
+            <Select value={chartFilter} onValueChange={setChartFilter}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {chartFilterOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          {livestockSeries.map(({ batch, series }) => (
-            <Card key={batch.id}>
+          {(chartFilter === "all" || chartFilter === "eggs") && (
+            <Card>
               <CardHeader>
-                <CardTitle className="capitalize">{batch.species} {batch.species_type ? `(${batch.species_type})` : ""}</CardTitle>
-                <CardDescription>Expected animal count over time</CardDescription>
+                <CardTitle>Eggs — Expected vs Actual</CardTitle>
+                <CardDescription>From most recent baseline (pieces). Dots = physical recounts.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64 w-full">
-                  <ResponsiveContainer>
-                    <LineChart data={series}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="date" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <RTooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="expected" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} name="Expected animals" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                {eggSeries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No baseline yet.</p>
+                ) : (
+                  <div className="h-72 w-full">
+                    <ResponsiveContainer>
+                      <LineChart data={eggSeries}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="date" className="text-xs" />
+                        <YAxis className="text-xs" />
+                        <RTooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="expected" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} name="Expected" />
+                        <Line type="monotone" dataKey="actual" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 5 }} connectNulls={false} name="Actual (recount)" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          ))}
-          {livestockSeries.length === 0 && (
+          )}
+
+          {livestockSeries
+            .filter(({ batch }) => chartFilter === "all" || chartFilter === batch.id)
+            .map(({ batch, series }) => (
+              <Card key={batch.id}>
+                <CardHeader>
+                  <CardTitle className="capitalize">{batch.species} {batch.species_type ? `(${batch.species_type})` : ""} — Expected vs Actual</CardTitle>
+                  <CardDescription>Expected animal count over time. Dots = physical recounts.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer>
+                      <LineChart data={series}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="date" className="text-xs" />
+                        <YAxis className="text-xs" />
+                        <RTooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="expected" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} name="Expected" />
+                        <Line type="monotone" dataKey="actual" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 5 }} connectNulls={false} name="Actual (recount)" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
+          {chartFilter !== "eggs" && livestockSeries.filter(({ batch }) => chartFilter === "all" || chartFilter === batch.id).length === 0 && chartFilter !== "all" && (
             <Card>
               <CardContent className="p-6 text-sm text-muted-foreground">
-                No livestock baselines yet — create one to see trend.
+                No baseline for this batch yet.
               </CardContent>
             </Card>
           )}
@@ -676,7 +745,7 @@ export default function ExpectedStockTab() {
                         <TableCell>
                           {b.item_type === "eggs" ? `${b.crates} crates ${b.pieces} pieces` : `${b.animal_count} animals`}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{b.notes || "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{b.notes || "—"}</TableCell>
                       </TableRow>
                     );
                   })}
@@ -701,6 +770,7 @@ export default function ExpectedStockTab() {
                     <TableHead>Expected</TableHead>
                     <TableHead>Actual</TableHead>
                     <TableHead>Variance</TableHead>
+                    <TableHead>Notes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -708,7 +778,8 @@ export default function ExpectedStockTab() {
                     const isEgg = r.item_type === "eggs";
                     const variance = isEgg ? r.variance_pieces : r.variance_animals;
                     const batch = batches.find((bt) => bt.id === r.batch_id);
-                    const overThreshold = Math.abs(variance) > threshold;
+                    const th = getThreshold(thresholds, r.item_type, batch?.species);
+                    const overThreshold = Math.abs(variance) > th;
                     return (
                       <TableRow key={r.id} className={overThreshold ? "bg-destructive/5" : ""}>
                         <TableCell className="text-sm">{format(new Date(r.recount_at), "PPp")}</TableCell>
@@ -724,6 +795,7 @@ export default function ExpectedStockTab() {
                             {overThreshold && <Badge variant="destructive" className="ml-1">over</Badge>}
                           </div>
                         </TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate">{r.notes || "—"}</TableCell>
                       </TableRow>
                     );
                   })}
@@ -756,11 +828,12 @@ export default function ExpectedStockTab() {
       <ThresholdDialog
         open={thresholdOpen}
         onOpenChange={setThresholdOpen}
-        threshold={threshold}
-        onSave={(v) => {
-          setThreshold(v);
-          localStorage.setItem(VARIANCE_THRESHOLD_KEY, String(v));
-          toast.success(`Alert threshold set to ${v}`);
+        thresholds={thresholds}
+        uniqueSpecies={uniqueSpecies}
+        onSave={(t) => {
+          setThresholds(t);
+          saveThresholds(t);
+          toast.success("Variance thresholds saved");
         }}
       />
     </div>
@@ -777,31 +850,53 @@ function Stat({ label, value, small }: { label: string; value: string | number; 
 }
 
 function ThresholdDialog({
-  open, onOpenChange, threshold, onSave,
+  open, onOpenChange, thresholds, uniqueSpecies, onSave,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  threshold: number;
-  onSave: (v: number) => void;
+  thresholds: Thresholds;
+  uniqueSpecies: string[];
+  onSave: (t: Thresholds) => void;
 }) {
-  const [v, setV] = useState(String(threshold));
-  useEffect(() => { if (open) setV(String(threshold)); }, [open, threshold]);
+  const [local, setLocal] = useState<Thresholds>(thresholds);
+  useEffect(() => { if (open) setLocal({ ...thresholds }); }, [open, thresholds]);
+
+  const update = (key: string, val: string) => {
+    setLocal((prev) => ({ ...prev, [key]: Math.max(0, parseInt(val) || 0) }));
+  };
+
+  const items = [
+    { key: "eggs", label: "Eggs (pieces)" },
+    ...uniqueSpecies.map((s) => ({ key: s, label: `${s.charAt(0).toUpperCase() + s.slice(1)} (animals)` })),
+  ];
+
+  // Add a general livestock fallback
+  if (uniqueSpecies.length > 0) {
+    items.push({ key: "livestock", label: "Other livestock (default)" });
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader><DialogTitle>Variance Alert Threshold</DialogTitle></DialogHeader>
-        <div className="space-y-2">
-          <Label>Trigger an alert when |actual − expected| exceeds:</Label>
-          <Input type="number" min="0" value={v} onChange={(e) => setV(e.target.value)} />
-          <p className="text-xs text-muted-foreground">Applies to eggs (pieces) and livestock (animals).</p>
+        <DialogHeader><DialogTitle>Variance Alert Thresholds</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">Set the maximum allowed variance per item type before an alert triggers.</p>
+        <div className="space-y-3 mt-2">
+          {items.map((item) => (
+            <div key={item.key} className="flex items-center gap-3">
+              <Label className="w-40 text-sm capitalize">{item.label}</Label>
+              <Input
+                type="number"
+                min="0"
+                className="w-24"
+                value={local[item.key] ?? DEFAULT_THRESHOLD}
+                onChange={(e) => update(item.key, e.target.value)}
+              />
+            </div>
+          ))}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => {
-            const n = Math.max(0, parseInt(v) || 0);
-            onSave(n);
-            onOpenChange(false);
-          }}>Save</Button>
+          <Button onClick={() => { onSave(local); onOpenChange(false); }}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -830,7 +925,6 @@ function NewBaselineDialog({
   });
   const [saving, setSaving] = useState(false);
 
-  // Validation: pieces must be 0..29 (else roll into crates)
   const piecesNum = parseInt(pieces);
   const cratesNum = parseInt(crates);
   const piecesInvalid = !isNaN(piecesNum) && (piecesNum < 0 || piecesNum >= PIECES_PER_CRATE);
@@ -869,6 +963,18 @@ function NewBaselineDialog({
       }
       const { error } = await supabase.from("stock_baselines").insert(payload);
       if (error) throw error;
+
+      // Audit log
+      const batch = batches.find((b) => b.id === batchId);
+      await logActivity("create_baseline", "expected_stock", undefined, {
+        item_type: itemType,
+        item: itemType === "eggs" ? "Eggs" : batch?.species || "Livestock",
+        crates: payload.crates,
+        pieces: payload.pieces,
+        animal_count: payload.animal_count,
+        baseline_at: payload.baseline_at,
+      }, branchId);
+
       toast.success("Baseline saved");
       onOpenChange(false);
       onCreated();
@@ -937,8 +1043,8 @@ function NewBaselineDialog({
             <Input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
           </div>
           <div>
-            <Label>Notes (optional)</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+            <Label>Reconciliation Notes</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Why is this baseline being set? E.g. physical count, inventory reset..." />
           </div>
         </div>
         <DialogFooter>
@@ -1029,6 +1135,14 @@ function RecountDialog({
 
       const { error } = await supabase.from("stock_recounts").insert(payload);
       if (error) throw error;
+
+      // Audit log
+      await logActivity("create_recount", "expected_stock", undefined, {
+        item_type: target.type,
+        item: target.label,
+        variance: target.type === "eggs" ? payload.variance_pieces : payload.variance_animals,
+      }, branchId);
+
       toast.success("Recount saved");
       onOpenChange(false);
       onCreated();
@@ -1075,8 +1189,8 @@ function RecountDialog({
             </>
           )}
           <div>
-            <Label>Notes (optional)</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+            <Label>Reconciliation Notes</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Reason for recount, discrepancies observed..." />
           </div>
         </div>
         <DialogFooter>
