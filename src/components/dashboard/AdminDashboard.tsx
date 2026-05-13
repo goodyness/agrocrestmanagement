@@ -225,6 +225,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
                 <Boxes className="h-4 w-4" />
                 <span className="hidden sm:inline">Expected Stock</span>
               </TabsTrigger>
+              <TabsTrigger value="expected-profit" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Wallet className="h-4 w-4" />
+                <span className="hidden sm:inline">Expected Profit</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
