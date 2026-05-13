@@ -340,6 +340,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
           <TabsContent value="expected-stock" className="space-y-4">
             <ExpectedStockTab />
           </TabsContent>
+
+          <TabsContent value="expected-profit" className="space-y-4">
+            <ExpectedProfitTab />
+          </TabsContent>
         </Tabs>
       </main>
     </div>
