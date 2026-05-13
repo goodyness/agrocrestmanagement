@@ -1760,6 +1760,72 @@ export type Database = {
           },
         ]
       }
+      profit_monitors: {
+        Row: {
+          bags_per_day: number
+          baseline_crates: number
+          baseline_pieces: number
+          batch_id: string | null
+          bird_count: number
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          end_date: string
+          fallback_price_per_crate: number
+          fallback_price_per_piece: number
+          id: string
+          is_active: boolean
+          livestock_category_id: string | null
+          name: string
+          notes: string | null
+          price_per_bag: number
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          bags_per_day?: number
+          baseline_crates?: number
+          baseline_pieces?: number
+          batch_id?: string | null
+          bird_count?: number
+          branch_id?: string | null
+          created_at?: string
+          created_by: string
+          end_date: string
+          fallback_price_per_crate?: number
+          fallback_price_per_piece?: number
+          id?: string
+          is_active?: boolean
+          livestock_category_id?: string | null
+          name: string
+          notes?: string | null
+          price_per_bag?: number
+          start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          bags_per_day?: number
+          baseline_crates?: number
+          baseline_pieces?: number
+          batch_id?: string | null
+          bird_count?: number
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string
+          end_date?: string
+          fallback_price_per_crate?: number
+          fallback_price_per_piece?: number
+          id?: string
+          is_active?: boolean
+          livestock_category_id?: string | null
+          name?: string
+          notes?: string | null
+          price_per_bag?: number
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       salary_advances: {
         Row: {
           advance_date: string
