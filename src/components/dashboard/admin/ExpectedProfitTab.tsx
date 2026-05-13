@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { format, differenceInCalendarDays, parseISO } from "date-fns";
+import { format, differenceInCalendarDays, parseISO, addDays, isAfter, isBefore } from "date-fns";
 import { CalendarIcon, Plus, TrendingUp, TrendingDown, Trash2, Wallet } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
