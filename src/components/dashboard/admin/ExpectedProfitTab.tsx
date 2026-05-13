@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { format, differenceInCalendarDays, parseISO } from "date-fns";
+import { format, differenceInCalendarDays, parseISO, addDays, isAfter, isBefore } from "date-fns";
 import { CalendarIcon, Plus, TrendingUp, TrendingDown, Trash2, Wallet } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -460,11 +461,106 @@ function MonitorCard({
     };
   }, [monitor, production, sales, expenses]);
 
+  // Daily trend series: expected (linear projection) vs actual (cumulative real revenue/cost/profit)
+  const trend = useMemo(() => {
+    const start = parseISO(monitor.start_date);
+    const end = parseISO(monitor.end_date);
+    const totalDays = differenceInCalendarDays(end, start) + 1;
+    const today = new Date();
+    const fallbackPerPiece =
+      monitor.fallback_price_per_piece > 0
+        ? monitor.fallback_price_per_piece
+        : monitor.fallback_price_per_crate / PIECES_PER_CRATE;
+
+    const inBranch = (b: string | null) => !monitor.branch_id || b === monitor.branch_id;
+
+    // Pre-bucket data by day
+    const prodByDay = new Map<string, number>();
+    for (const p of production) {
+      if (!inBranch(p.branch_id)) continue;
+      const key = p.date;
+      prodByDay.set(key, (prodByDay.get(key) || 0) + (p.crates || 0) * PIECES_PER_CRATE + (p.pieces || 0));
+    }
+    const salesByDay = new Map<string, { revenue: number; pieces: number }>();
+    for (const s of sales) {
+      if (!inBranch(s.branch_id)) continue;
+      if (!/egg/i.test(s.product_type || "")) continue;
+      const key = s.date;
+      const cur = salesByDay.get(key) || { revenue: 0, pieces: 0 };
+      cur.revenue += Number(s.total_amount || 0);
+      const q = Number(s.quantity || 0);
+      const u = (s.unit || "").toLowerCase();
+      cur.pieces += u.includes("crate") ? q * PIECES_PER_CRATE : q;
+      salesByDay.set(key, cur);
+    }
+    const expByDay = new Map<string, number>();
+    for (const e of expenses) {
+      if (!inBranch(e.branch_id)) continue;
+      expByDay.set(e.date, (expByDay.get(e.date) || 0) + Number(e.amount || 0));
+    }
+
+    const dailyFeed = monitor.bags_per_day * monitor.price_per_bag;
+    const totalProjectedRevenue =
+      stats.totalRevenue + (stats.profitPerDay >= 0 ? 0 : 0); // not used; expected is linear below
+    // Expected revenue is unknown; use linear projection of current actual rate, or just feed-cost line.
+    // We'll plot: actual cumulative revenue, cumulative cost, cumulative profit, plus expected break-even line.
+
+    let cumRev = 0;
+    let cumCost = 0;
+    let cumPiecesProduced = monitor.baseline_crates * PIECES_PER_CRATE + monitor.baseline_pieces;
+    let cumPiecesSold = 0;
+    const data: Array<{
+      date: string;
+      day: number;
+      revenue: number;
+      cost: number;
+      profit: number;
+      expectedCost: number;
+    }> = [];
+
+    for (let i = 0; i < totalDays; i++) {
+      const d = addDays(start, i);
+      if (isAfter(d, today)) {
+        // future days: only show expected cost line
+        data.push({
+          date: format(d, "MMM d"),
+          day: i + 1,
+          revenue: NaN as any,
+          cost: NaN as any,
+          profit: NaN as any,
+          expectedCost: dailyFeed * (i + 1),
+        });
+        continue;
+      }
+      const key = format(d, "yyyy-MM-dd");
+      cumPiecesProduced += prodByDay.get(key) || 0;
+      const sd = salesByDay.get(key);
+      if (sd) {
+        cumRev += sd.revenue;
+        cumPiecesSold += sd.pieces;
+      }
+      cumCost += dailyFeed + (expByDay.get(key) || 0);
+      const unsold = Math.max(cumPiecesProduced - cumPiecesSold, 0);
+      const revWithUnsold = cumRev + unsold * fallbackPerPiece;
+      data.push({
+        date: format(d, "MMM d"),
+        day: i + 1,
+        revenue: Math.round(revWithUnsold),
+        cost: Math.round(cumCost),
+        profit: Math.round(revWithUnsold - cumCost),
+        expectedCost: Math.round(dailyFeed * (i + 1)),
+      });
+    }
+    return data;
+  }, [monitor, production, sales, expenses, stats]);
+
   const fmt = (n: number) => `₦${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   const eggsDisplay = (pieces: number) =>
     `${Math.floor(pieces / PIECES_PER_CRATE)} crates ${pieces % PIECES_PER_CRATE} pcs`;
 
   const isProfit = stats.profit >= 0;
+  const eggSalesPct = stats.totalRevenue > 0 ? (stats.revenueFromSales / stats.totalRevenue) * 100 : 0;
+  const feedPct = stats.totalCost > 0 ? (stats.feedCost / stats.totalCost) * 100 : 0;
 
   return (
     <Card>
@@ -490,41 +586,100 @@ function MonitorCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      <CardContent className="space-y-4 text-sm">
+        {/* Top KPIs */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-md bg-muted/40 p-2">
-            <div className="text-xs text-muted-foreground">Revenue</div>
-            <div className="font-semibold">{fmt(stats.totalRevenue)}</div>
-            <div className="text-[10px] text-muted-foreground">
-              Sales {fmt(stats.revenueFromSales)} · Unsold {fmt(stats.revenueFromUnsold)}
-            </div>
+          <div className="rounded-md bg-green-500/10 p-2 border border-green-500/20">
+            <div className="text-xs text-muted-foreground">Total Revenue</div>
+            <div className="font-semibold text-green-700 dark:text-green-400">{fmt(stats.totalRevenue)}</div>
           </div>
-          <div className="rounded-md bg-muted/40 p-2">
-            <div className="text-xs text-muted-foreground">Cost</div>
-            <div className="font-semibold">{fmt(stats.totalCost)}</div>
-            <div className="text-[10px] text-muted-foreground">
-              Feed {fmt(stats.feedCost)} · Expenses {fmt(stats.periodExpenses)}
-            </div>
+          <div className="rounded-md bg-red-500/10 p-2 border border-red-500/20">
+            <div className="text-xs text-muted-foreground">Total Cost</div>
+            <div className="font-semibold text-red-700 dark:text-red-400">{fmt(stats.totalCost)}</div>
           </div>
-          <div className="rounded-md bg-muted/40 p-2">
-            <div className="text-xs text-muted-foreground">Eggs Produced</div>
-            <div className="font-semibold">{eggsDisplay(stats.totalProducedPieces)}</div>
+        </div>
+
+        {/* Revenue breakdown */}
+        <div className="space-y-1.5">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Revenue Breakdown</div>
+          <div className="h-2 rounded-full overflow-hidden bg-muted flex">
+            <div className="bg-green-500" style={{ width: `${eggSalesPct}%` }} />
+            <div className="bg-amber-400" style={{ width: `${100 - eggSalesPct}%` }} />
           </div>
-          <div className="rounded-md bg-muted/40 p-2">
-            <div className="text-xs text-muted-foreground">Eggs Sold</div>
-            <div className="font-semibold">{eggsDisplay(stats.soldPieces)}</div>
+          <div className="flex justify-between text-xs">
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-green-500" />
+              Egg Sales: <strong>{fmt(stats.revenueFromSales)}</strong> ({eggsDisplay(stats.soldPieces)})
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-amber-400" />
+              Unsold @ fallback: <strong>{fmt(stats.revenueFromUnsold)}</strong> ({eggsDisplay(stats.unsoldPieces)})
+            </span>
           </div>
-          <div className="rounded-md bg-muted/40 p-2">
-            <div className="text-xs text-muted-foreground">Days Elapsed</div>
-            <div className="font-semibold">{stats.daysElapsed} / {stats.totalDays}</div>
+        </div>
+
+        {/* Cost breakdown */}
+        <div className="space-y-1.5">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Cost Breakdown</div>
+          <div className="h-2 rounded-full overflow-hidden bg-muted flex">
+            <div className="bg-orange-500" style={{ width: `${feedPct}%` }} />
+            <div className="bg-rose-500" style={{ width: `${100 - feedPct}%` }} />
           </div>
-          <div className="rounded-md bg-muted/40 p-2">
-            <div className="text-xs text-muted-foreground">Avg Profit/Day</div>
-            <div className={cn("font-semibold", stats.profitPerDay >= 0 ? "text-green-600" : "text-destructive")}>
+          <div className="flex justify-between text-xs">
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-orange-500" />
+              Feed: <strong>{fmt(stats.feedCost)}</strong>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-rose-500" />
+              Misc Expenses: <strong>{fmt(stats.periodExpenses)}</strong>
+            </span>
+          </div>
+        </div>
+
+        {/* Trend chart */}
+        <div className="space-y-1.5">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Profit Trend ({stats.daysElapsed} of {stats.totalDays} days)
+          </div>
+          <div className="h-48 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trend} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip
+                  formatter={(v: any) => (typeof v === "number" ? fmt(v) : "—")}
+                  contentStyle={{ fontSize: 12 }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Line type="monotone" dataKey="revenue" stroke="hsl(142 76% 36%)" name="Revenue" dot={false} strokeWidth={2} connectNulls={false} />
+                <Line type="monotone" dataKey="cost" stroke="hsl(0 84% 55%)" name="Cost" dot={false} strokeWidth={2} connectNulls={false} />
+                <Line type="monotone" dataKey="profit" stroke="hsl(217 91% 55%)" name="Profit" dot={false} strokeWidth={2} connectNulls={false} />
+                <Line type="monotone" dataKey="expectedCost" stroke="hsl(25 95% 53%)" name="Expected Cost" dot={false} strokeDasharray="4 4" strokeWidth={1.5} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Footer KPIs */}
+        <div className="grid grid-cols-3 gap-2 pt-1 border-t">
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase">Eggs Produced</div>
+            <div className="text-xs font-semibold">{eggsDisplay(stats.totalProducedPieces)}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase">Avg/Day</div>
+            <div className={cn("text-xs font-semibold", stats.profitPerDay >= 0 ? "text-green-600" : "text-destructive")}>
               {fmt(stats.profitPerDay)}
             </div>
           </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground uppercase">Projected Feed</div>
+            <div className="text-xs font-semibold">{fmt(stats.projectedFeedCost)}</div>
+          </div>
         </div>
+
         {monitor.notes && (
           <p className="text-xs text-muted-foreground italic border-l-2 pl-2">{monitor.notes}</p>
         )}
