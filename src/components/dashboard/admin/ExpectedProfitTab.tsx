@@ -439,27 +439,41 @@ function MonitorCard({
 
     const monitorBaselinePieces =
       monitor.baseline_crates * PIECES_PER_CRATE + monitor.baseline_pieces;
-    const startingPieces = anchor ? anchor.pieces : monitorBaselinePieces;
-    // Production filter starts from anchor date (or start_date if no anchor)
-    const accumulationStart = anchor ? anchor.at : start;
-    const inProdRange = (d: string) => {
-      const dt = parseISO(d);
-      return dt >= accumulationStart && dt <= periodEnd;
+    const anchorBasePieces = anchor ? anchor.pieces : monitorBaselinePieces;
+    const anchorDate = anchor ? anchor.at : start;
+
+    // Helper: convert a sales row to pieces
+    const salesPieces = (s: any) => {
+      const q = Number(s.quantity || 0);
+      const u = (s.unit || "").toLowerCase();
+      return u.includes("crate") ? q * PIECES_PER_CRATE : q;
     };
 
-    // Eggs produced since anchor
-    const prod = production.filter((p) => inProdRange(p.date) && inBranch(p.branch_id));
-    const producedSinceAnchor = prod.reduce(
-      (s, p) => s + (p.crates || 0) * PIECES_PER_CRATE + (p.pieces || 0),
-      0
-    );
-    const totalProducedPieces = startingPieces + producedSinceAnchor;
+    // Net out production & sales between anchor date and start_date so that
+    // startingPieces accurately reflects on-farm stock at start_date.
+    const interimProduced = production
+      .filter((p) => inBranch(p.branch_id) && parseISO(p.date) >= anchorDate && parseISO(p.date) < start)
+      .reduce((s, p) => s + (p.crates || 0) * PIECES_PER_CRATE + (p.pieces || 0), 0);
+    const interimSold = sales
+      .filter((s) => inBranch(s.branch_id) && /egg/i.test(s.product_type || "") &&
+        parseISO(s.date) >= anchorDate && parseISO(s.date) < start)
+      .reduce((acc, s) => acc + salesPieces(s), 0);
+    const startingPieces = Math.max(anchorBasePieces + interimProduced - interimSold, 0);
+
     const inRange = (d: string) => {
       const dt = parseISO(d);
       return dt >= start && dt <= periodEnd;
     };
 
-    // Egg sales (revenue + qty sold)
+    // Eggs produced within the monitor period
+    const prod = production.filter((p) => inRange(p.date) && inBranch(p.branch_id));
+    const producedSinceAnchor = prod.reduce(
+      (s, p) => s + (p.crates || 0) * PIECES_PER_CRATE + (p.pieces || 0),
+      0
+    );
+    const totalProducedPieces = startingPieces + producedSinceAnchor;
+
+    // Egg sales (revenue + qty sold) within the monitor period
     const eggSales = sales.filter(
       (s) => inRange(s.date) && inBranch(s.branch_id) && /egg/i.test(s.product_type || "")
     );
@@ -467,10 +481,7 @@ function MonitorCard({
     let soldPieces = 0;
     for (const s of eggSales) {
       revenueFromSales += Number(s.total_amount || 0);
-      const q = Number(s.quantity || 0);
-      const u = (s.unit || "").toLowerCase();
-      if (u.includes("crate")) soldPieces += q * PIECES_PER_CRATE;
-      else soldPieces += q;
+      soldPieces += salesPieces(s);
     }
 
     // Unsold eggs valued at fallback
