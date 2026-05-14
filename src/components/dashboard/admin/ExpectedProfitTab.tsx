@@ -388,14 +388,19 @@ function MonitorCard({
   production,
   sales,
   expenses,
+  baselines,
+  recounts,
   onDelete,
 }: {
   monitor: Monitor;
   production: any[];
   sales: any[];
   expenses: any[];
+  baselines: any[];
+  recounts: any[];
   onDelete?: () => void;
 }) {
+  const [showDaily, setShowDaily] = useState(false);
   const stats = useMemo(() => {
     const start = parseISO(monitor.start_date);
     const end = parseISO(monitor.end_date);
