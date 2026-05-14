@@ -416,11 +416,52 @@ function MonitorCard({
     const inBranch = (b: string | null) =>
       !monitor.branch_id || b === monitor.branch_id;
 
-    // Eggs produced
-    const prod = production.filter((p) => inRange(p.date) && inBranch(p.branch_id));
-    const totalProducedPieces =
-      prod.reduce((s, p) => s + (p.crates || 0) * PIECES_PER_CRATE + (p.pieces || 0), 0) +
+    // Determine effective starting stock: latest stock_baseline or stock_recount at-or-before start_date.
+    // Falls back to the monitor's manually entered baseline if none found.
+    const anchorEvents: { at: Date; pieces: number; kind: string }[] = [];
+    for (const sb of baselines) {
+      if (!inBranch(sb.branch_id)) continue;
+      anchorEvents.push({
+        at: new Date(sb.baseline_at),
+        pieces: (sb.crates || 0) * PIECES_PER_CRATE + (sb.pieces || 0),
+        kind: "baseline",
+      });
+    }
+    for (const rc of recounts) {
+      if (!inBranch(rc.branch_id)) continue;
+      anchorEvents.push({
+        at: new Date(rc.recount_at),
+        pieces: (rc.actual_crates || 0) * PIECES_PER_CRATE + (rc.actual_pieces || 0),
+        kind: "recount",
+      });
+    }
+    const startEnd = addDays(start, 1); // anchor must be strictly before the day after start
+    const eligibleAnchors = anchorEvents
+      .filter((a) => a.at < startEnd)
+      .sort((a, b) => b.at.getTime() - a.at.getTime());
+    const anchor = eligibleAnchors[0] || null;
+
+    const monitorBaselinePieces =
       monitor.baseline_crates * PIECES_PER_CRATE + monitor.baseline_pieces;
+    const startingPieces = anchor ? anchor.pieces : monitorBaselinePieces;
+    // Production filter starts from anchor date (or start_date if no anchor)
+    const accumulationStart = anchor ? anchor.at : start;
+    const inProdRange = (d: string) => {
+      const dt = parseISO(d);
+      return dt >= accumulationStart && dt <= periodEnd;
+    };
+
+    // Eggs produced since anchor
+    const prod = production.filter((p) => inProdRange(p.date) && inBranch(p.branch_id));
+    const producedSinceAnchor = prod.reduce(
+      (s, p) => s + (p.crates || 0) * PIECES_PER_CRATE + (p.pieces || 0),
+      0
+    );
+    const totalProducedPieces = startingPieces + producedSinceAnchor;
+    const inRange = (d: string) => {
+      const dt = parseISO(d);
+      return dt >= start && dt <= periodEnd;
+    };
 
     // Egg sales (revenue + qty sold)
     const eggSales = sales.filter(
