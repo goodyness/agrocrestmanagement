@@ -635,6 +635,11 @@ function MonitorCard({
             <CardDescription>
               {format(parseISO(monitor.start_date), "MMM d")} – {format(parseISO(monitor.end_date), "MMM d, yyyy")}
               {" · "}{monitor.bird_count} birds · {monitor.bags_per_day} bag/day
+              {stats.anchor && (
+                <span className="block text-[10px] mt-0.5">
+                  Anchored to {stats.anchor.kind} of {eggsDisplay(stats.startingPieces)} on {format(stats.anchor.at, "MMM d")}
+                </span>
+              )}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
