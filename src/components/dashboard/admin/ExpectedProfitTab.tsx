@@ -409,10 +409,6 @@ function MonitorCard({
     const daysElapsed = Math.max(1, differenceInCalendarDays(periodEnd, start) + 1);
     const totalDays = differenceInCalendarDays(end, start) + 1;
 
-    const inRange = (d: string) => {
-      const dt = parseISO(d);
-      return dt >= start && dt <= periodEnd;
-    };
     const inBranch = (b: string | null) =>
       !monitor.branch_id || b === monitor.branch_id;
 
