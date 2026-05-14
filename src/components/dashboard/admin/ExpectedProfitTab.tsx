@@ -562,7 +562,7 @@ function MonitorCard({
 
     let cumRev = 0;
     let cumCost = 0;
-    let cumPiecesProduced = monitor.baseline_crates * PIECES_PER_CRATE + monitor.baseline_pieces;
+    let cumPiecesProduced = stats.startingPieces;
     let cumPiecesSold = 0;
     const data: Array<{
       date: string;
