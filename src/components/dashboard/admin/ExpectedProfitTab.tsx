@@ -92,6 +92,8 @@ export default function ExpectedProfitTab() {
   const [production, setProduction] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [baselines, setBaselines] = useState<any[]>([]);
+  const [recounts, setRecounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<typeof emptyForm>(emptyForm);
@@ -107,13 +109,15 @@ export default function ExpectedProfitTab() {
 
   const loadAll = async () => {
     setLoading(true);
-    const [m, b, c, p, s, e] = await Promise.all([
+    const [m, b, c, p, s, e, sb, sr] = await Promise.all([
       supabase.from("profit_monitors").select("*").order("created_at", { ascending: false }),
       supabase.from("livestock_batches").select("id, species, species_type, stage, current_quantity, branch_id, livestock_category_id").eq("is_active", true),
       supabase.from("livestock_categories").select("id, name, branch_id"),
       supabase.from("daily_production").select("date, crates, pieces, branch_id"),
       supabase.from("sales_records").select("date, product_type, quantity, unit, total_amount, price_per_unit, branch_id"),
       supabase.from("miscellaneous_expenses").select("date, amount, branch_id, batch_id, expense_type"),
+      supabase.from("stock_baselines").select("baseline_at, crates, pieces, branch_id, item_type").eq("item_type", "eggs"),
+      supabase.from("stock_recounts").select("recount_at, actual_crates, actual_pieces, branch_id, item_type").eq("item_type", "eggs"),
     ]);
     setMonitors((m.data as Monitor[]) || []);
     setBatches((b.data as Batch[]) || []);
@@ -121,6 +125,8 @@ export default function ExpectedProfitTab() {
     setProduction(p.data || []);
     setSales(s.data || []);
     setExpenses(e.data || []);
+    setBaselines(sb.data || []);
+    setRecounts(sr.data || []);
     setLoading(false);
   };
 
