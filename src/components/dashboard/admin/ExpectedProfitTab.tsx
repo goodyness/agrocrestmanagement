@@ -498,6 +498,9 @@ function MonitorCard({
       daysElapsed,
       totalDays,
       totalProducedPieces,
+      startingPieces,
+      producedSinceAnchor,
+      anchor,
       soldPieces,
       unsoldPieces,
       revenueFromSales,
@@ -509,8 +512,9 @@ function MonitorCard({
       totalCost,
       profit,
       profitPerDay,
+      fallbackPerPiece,
     };
-  }, [monitor, production, sales, expenses]);
+  }, [monitor, production, sales, expenses, baselines, recounts]);
 
   // Daily trend series: expected (linear projection) vs actual (cumulative real revenue/cost/profit)
   const trend = useMemo(() => {
