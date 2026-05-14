@@ -372,6 +372,8 @@ export default function ExpectedProfitTab() {
               production={production}
               sales={sales}
               expenses={expenses}
+              baselines={baselines}
+              recounts={recounts}
               onDelete={isAdmin ? () => handleDelete(m.id) : undefined}
             />
           ))}
