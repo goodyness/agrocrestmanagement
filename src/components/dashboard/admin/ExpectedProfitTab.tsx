@@ -599,12 +599,21 @@ function MonitorCard({
       const revWithUnsold = cumRev + unsold * fallbackPerPiece;
       data.push({
         date: format(d, "MMM d"),
+        dateKey: key,
         day: i + 1,
         revenue: Math.round(revWithUnsold),
         cost: Math.round(cumCost),
         profit: Math.round(revWithUnsold - cumCost),
         expectedCost: Math.round(dailyFeed * (i + 1)),
-      });
+        salesRev: sd?.revenue || 0,
+        salesPieces: sd?.pieces || 0,
+        producedPieces: prodByDay.get(key) || 0,
+        unsoldPieces: unsold,
+        unsoldValue: Math.round(unsold * fallbackPerPiece),
+        feedCost: dailyFeed,
+        miscExpenses: expByDay.get(key) || 0,
+        dayProfit: Math.round((sd?.revenue || 0) - dailyFeed - (expByDay.get(key) || 0)),
+      } as any);
     }
     return data;
   }, [monitor, production, sales, expenses, stats]);
