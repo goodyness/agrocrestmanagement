@@ -723,6 +723,7 @@ function MonitorCard({
                 <Line type="monotone" dataKey="expectedCost" stroke="hsl(25 95% 53%)" name="Expected Cost" dot={false} strokeDasharray="4 4" strokeWidth={1.5} />
               </LineChart>
             </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Collapsible daily breakdown */}
