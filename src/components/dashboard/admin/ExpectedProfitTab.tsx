@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format, differenceInCalendarDays, parseISO, addDays, isAfter, isBefore } from "date-fns";
-import { CalendarIcon, Plus, TrendingUp, TrendingDown, Trash2, Wallet } from "lucide-react";
+import { CalendarIcon, Plus, TrendingUp, TrendingDown, Trash2, Wallet, ChevronDown, ChevronRight } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -91,6 +92,8 @@ export default function ExpectedProfitTab() {
   const [production, setProduction] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [baselines, setBaselines] = useState<any[]>([]);
+  const [recounts, setRecounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<typeof emptyForm>(emptyForm);
@@ -106,13 +109,15 @@ export default function ExpectedProfitTab() {
 
   const loadAll = async () => {
     setLoading(true);
-    const [m, b, c, p, s, e] = await Promise.all([
+    const [m, b, c, p, s, e, sb, sr] = await Promise.all([
       supabase.from("profit_monitors").select("*").order("created_at", { ascending: false }),
       supabase.from("livestock_batches").select("id, species, species_type, stage, current_quantity, branch_id, livestock_category_id").eq("is_active", true),
       supabase.from("livestock_categories").select("id, name, branch_id"),
       supabase.from("daily_production").select("date, crates, pieces, branch_id"),
       supabase.from("sales_records").select("date, product_type, quantity, unit, total_amount, price_per_unit, branch_id"),
       supabase.from("miscellaneous_expenses").select("date, amount, branch_id, batch_id, expense_type"),
+      supabase.from("stock_baselines").select("baseline_at, crates, pieces, branch_id, item_type").eq("item_type", "eggs"),
+      supabase.from("stock_recounts").select("recount_at, actual_crates, actual_pieces, branch_id, item_type").eq("item_type", "eggs"),
     ]);
     setMonitors((m.data as Monitor[]) || []);
     setBatches((b.data as Batch[]) || []);
@@ -120,6 +125,8 @@ export default function ExpectedProfitTab() {
     setProduction(p.data || []);
     setSales(s.data || []);
     setExpenses(e.data || []);
+    setBaselines(sb.data || []);
+    setRecounts(sr.data || []);
     setLoading(false);
   };
 
@@ -365,6 +372,8 @@ export default function ExpectedProfitTab() {
               production={production}
               sales={sales}
               expenses={expenses}
+              baselines={baselines}
+              recounts={recounts}
               onDelete={isAdmin ? () => handleDelete(m.id) : undefined}
             />
           ))}
@@ -379,14 +388,19 @@ function MonitorCard({
   production,
   sales,
   expenses,
+  baselines,
+  recounts,
   onDelete,
 }: {
   monitor: Monitor;
   production: any[];
   sales: any[];
   expenses: any[];
+  baselines: any[];
+  recounts: any[];
   onDelete?: () => void;
 }) {
+  const [showDaily, setShowDaily] = useState(false);
   const stats = useMemo(() => {
     const start = parseISO(monitor.start_date);
     const end = parseISO(monitor.end_date);
@@ -395,18 +409,55 @@ function MonitorCard({
     const daysElapsed = Math.max(1, differenceInCalendarDays(periodEnd, start) + 1);
     const totalDays = differenceInCalendarDays(end, start) + 1;
 
+    const inBranch = (b: string | null) =>
+      !monitor.branch_id || b === monitor.branch_id;
+
+    // Determine effective starting stock: latest stock_baseline or stock_recount at-or-before start_date.
+    // Falls back to the monitor's manually entered baseline if none found.
+    const anchorEvents: { at: Date; pieces: number; kind: string }[] = [];
+    for (const sb of baselines) {
+      if (!inBranch(sb.branch_id)) continue;
+      anchorEvents.push({
+        at: new Date(sb.baseline_at),
+        pieces: (sb.crates || 0) * PIECES_PER_CRATE + (sb.pieces || 0),
+        kind: "baseline",
+      });
+    }
+    for (const rc of recounts) {
+      if (!inBranch(rc.branch_id)) continue;
+      anchorEvents.push({
+        at: new Date(rc.recount_at),
+        pieces: (rc.actual_crates || 0) * PIECES_PER_CRATE + (rc.actual_pieces || 0),
+        kind: "recount",
+      });
+    }
+    const startEnd = addDays(start, 1); // anchor must be strictly before the day after start
+    const eligibleAnchors = anchorEvents
+      .filter((a) => a.at < startEnd)
+      .sort((a, b) => b.at.getTime() - a.at.getTime());
+    const anchor = eligibleAnchors[0] || null;
+
+    const monitorBaselinePieces =
+      monitor.baseline_crates * PIECES_PER_CRATE + monitor.baseline_pieces;
+    const startingPieces = anchor ? anchor.pieces : monitorBaselinePieces;
+    // Production filter starts from anchor date (or start_date if no anchor)
+    const accumulationStart = anchor ? anchor.at : start;
+    const inProdRange = (d: string) => {
+      const dt = parseISO(d);
+      return dt >= accumulationStart && dt <= periodEnd;
+    };
+
+    // Eggs produced since anchor
+    const prod = production.filter((p) => inProdRange(p.date) && inBranch(p.branch_id));
+    const producedSinceAnchor = prod.reduce(
+      (s, p) => s + (p.crates || 0) * PIECES_PER_CRATE + (p.pieces || 0),
+      0
+    );
+    const totalProducedPieces = startingPieces + producedSinceAnchor;
     const inRange = (d: string) => {
       const dt = parseISO(d);
       return dt >= start && dt <= periodEnd;
     };
-    const inBranch = (b: string | null) =>
-      !monitor.branch_id || b === monitor.branch_id;
-
-    // Eggs produced
-    const prod = production.filter((p) => inRange(p.date) && inBranch(p.branch_id));
-    const totalProducedPieces =
-      prod.reduce((s, p) => s + (p.crates || 0) * PIECES_PER_CRATE + (p.pieces || 0), 0) +
-      monitor.baseline_crates * PIECES_PER_CRATE + monitor.baseline_pieces;
 
     // Egg sales (revenue + qty sold)
     const eggSales = sales.filter(
@@ -447,6 +498,9 @@ function MonitorCard({
       daysElapsed,
       totalDays,
       totalProducedPieces,
+      startingPieces,
+      producedSinceAnchor,
+      anchor,
       soldPieces,
       unsoldPieces,
       revenueFromSales,
@@ -458,8 +512,9 @@ function MonitorCard({
       totalCost,
       profit,
       profitPerDay,
+      fallbackPerPiece,
     };
-  }, [monitor, production, sales, expenses]);
+  }, [monitor, production, sales, expenses, baselines, recounts]);
 
   // Daily trend series: expected (linear projection) vs actual (cumulative real revenue/cost/profit)
   const trend = useMemo(() => {
@@ -507,7 +562,7 @@ function MonitorCard({
 
     let cumRev = 0;
     let cumCost = 0;
-    let cumPiecesProduced = monitor.baseline_crates * PIECES_PER_CRATE + monitor.baseline_pieces;
+    let cumPiecesProduced = stats.startingPieces;
     let cumPiecesSold = 0;
     const data: Array<{
       date: string;
@@ -544,12 +599,21 @@ function MonitorCard({
       const revWithUnsold = cumRev + unsold * fallbackPerPiece;
       data.push({
         date: format(d, "MMM d"),
+        dateKey: key,
         day: i + 1,
         revenue: Math.round(revWithUnsold),
         cost: Math.round(cumCost),
         profit: Math.round(revWithUnsold - cumCost),
         expectedCost: Math.round(dailyFeed * (i + 1)),
-      });
+        salesRev: sd?.revenue || 0,
+        salesPieces: sd?.pieces || 0,
+        producedPieces: prodByDay.get(key) || 0,
+        unsoldPieces: unsold,
+        unsoldValue: Math.round(unsold * fallbackPerPiece),
+        feedCost: dailyFeed,
+        miscExpenses: expByDay.get(key) || 0,
+        dayProfit: Math.round((sd?.revenue || 0) - dailyFeed - (expByDay.get(key) || 0)),
+      } as any);
     }
     return data;
   }, [monitor, production, sales, expenses, stats]);
@@ -571,6 +635,11 @@ function MonitorCard({
             <CardDescription>
               {format(parseISO(monitor.start_date), "MMM d")} – {format(parseISO(monitor.end_date), "MMM d, yyyy")}
               {" · "}{monitor.bird_count} birds · {monitor.bags_per_day} bag/day
+              {stats.anchor && (
+                <span className="block text-[10px] mt-0.5">
+                  Anchored to {stats.anchor.kind} of {eggsDisplay(stats.startingPieces)} on {format(stats.anchor.at, "MMM d")}
+                </span>
+              )}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -661,6 +730,62 @@ function MonitorCard({
             </ResponsiveContainer>
           </div>
         </div>
+
+        {/* Collapsible daily breakdown */}
+        <Collapsible open={showDaily} onOpenChange={setShowDaily}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Daily Breakdown
+              </span>
+              {showDaily ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="max-h-72 overflow-auto rounded border mt-1">
+              <table className="w-full text-[11px]">
+                <thead className="sticky top-0 bg-muted/80 backdrop-blur">
+                  <tr className="text-left">
+                    <th className="px-2 py-1 font-medium">Date</th>
+                    <th className="px-2 py-1 font-medium text-right">Sales</th>
+                    <th className="px-2 py-1 font-medium text-right">Unsold@FB</th>
+                    <th className="px-2 py-1 font-medium text-right">Feed</th>
+                    <th className="px-2 py-1 font-medium text-right">Misc</th>
+                    <th className="px-2 py-1 font-medium text-right">Profit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trend
+                    .filter((d: any) => !Number.isNaN(d.revenue))
+                    .map((d: any) => (
+                      <tr key={d.dateKey} className="border-t">
+                        <td className="px-2 py-1 whitespace-nowrap">{d.date}</td>
+                        <td className="px-2 py-1 text-right text-green-700 dark:text-green-400">
+                          {fmt(d.salesRev)}
+                        </td>
+                        <td className="px-2 py-1 text-right text-amber-600">
+                          {fmt(d.unsoldValue)}
+                        </td>
+                        <td className="px-2 py-1 text-right text-orange-600">{fmt(d.feedCost)}</td>
+                        <td className="px-2 py-1 text-right text-rose-600">{fmt(d.miscExpenses)}</td>
+                        <td
+                          className={cn(
+                            "px-2 py-1 text-right font-medium",
+                            d.dayProfit >= 0 ? "text-green-700 dark:text-green-400" : "text-destructive"
+                          )}
+                        >
+                          {fmt(d.dayProfit)}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1 px-1">
+              Profit per day = sales revenue − feed cost − misc expenses (excludes fallback unsold value).
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Footer KPIs */}
         <div className="grid grid-cols-3 gap-2 pt-1 border-t">
