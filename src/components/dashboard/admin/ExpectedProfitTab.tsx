@@ -723,7 +723,63 @@ function MonitorCard({
                 <Line type="monotone" dataKey="expectedCost" stroke="hsl(25 95% 53%)" name="Expected Cost" dot={false} strokeDasharray="4 4" strokeWidth={1.5} />
               </LineChart>
             </ResponsiveContainer>
-          </div>
+        </div>
+
+        {/* Collapsible daily breakdown */}
+        <Collapsible open={showDaily} onOpenChange={setShowDaily}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Daily Breakdown
+              </span>
+              {showDaily ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="max-h-72 overflow-auto rounded border mt-1">
+              <table className="w-full text-[11px]">
+                <thead className="sticky top-0 bg-muted/80 backdrop-blur">
+                  <tr className="text-left">
+                    <th className="px-2 py-1 font-medium">Date</th>
+                    <th className="px-2 py-1 font-medium text-right">Sales</th>
+                    <th className="px-2 py-1 font-medium text-right">Unsold@FB</th>
+                    <th className="px-2 py-1 font-medium text-right">Feed</th>
+                    <th className="px-2 py-1 font-medium text-right">Misc</th>
+                    <th className="px-2 py-1 font-medium text-right">Profit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trend
+                    .filter((d: any) => !Number.isNaN(d.revenue))
+                    .map((d: any) => (
+                      <tr key={d.dateKey} className="border-t">
+                        <td className="px-2 py-1 whitespace-nowrap">{d.date}</td>
+                        <td className="px-2 py-1 text-right text-green-700 dark:text-green-400">
+                          {fmt(d.salesRev)}
+                        </td>
+                        <td className="px-2 py-1 text-right text-amber-600">
+                          {fmt(d.unsoldValue)}
+                        </td>
+                        <td className="px-2 py-1 text-right text-orange-600">{fmt(d.feedCost)}</td>
+                        <td className="px-2 py-1 text-right text-rose-600">{fmt(d.miscExpenses)}</td>
+                        <td
+                          className={cn(
+                            "px-2 py-1 text-right font-medium",
+                            d.dayProfit >= 0 ? "text-green-700 dark:text-green-400" : "text-destructive"
+                          )}
+                        >
+                          {fmt(d.dayProfit)}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1 px-1">
+              Profit per day = sales revenue − feed cost − misc expenses (excludes fallback unsold value).
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
         </div>
 
         {/* Footer KPIs */}
