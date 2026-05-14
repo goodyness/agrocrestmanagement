@@ -781,7 +781,6 @@ function MonitorCard({
             </p>
           </CollapsibleContent>
         </Collapsible>
-        </div>
 
         {/* Footer KPIs */}
         <div className="grid grid-cols-3 gap-2 pt-1 border-t">
