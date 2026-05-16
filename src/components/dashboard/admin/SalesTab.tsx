@@ -259,6 +259,9 @@ const SalesTab = () => {
           <div className="w-[180px]">
             <AddSalesDialog onSuccess={fetchData} />
           </div>
+          <div className="w-[180px]">
+            <BulkSalesDialog onSuccess={fetchData} />
+          </div>
 
           <Button onClick={() => navigate("/analytics")} variant="outline">
             <BarChart3 className="h-4 w-4 mr-2" />
