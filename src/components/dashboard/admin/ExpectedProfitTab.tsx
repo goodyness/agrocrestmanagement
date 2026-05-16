@@ -871,6 +871,110 @@ function MonitorCard({
           </CollapsibleContent>
         </Collapsible>
 
+        {/* Variance warning vs Expected Stock tab */}
+        {showVarianceWarning && (
+          <Alert variant="destructive" className="py-2">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle className="text-xs">Stock mismatch with Expected Stock tab</AlertTitle>
+            <AlertDescription className="text-[11px] leading-snug">
+              This monitor shows <strong>{eggsDisplay(stats.unsoldPieces)}</strong> unsold, but the
+              Expected Stock tab shows <strong>{eggsDisplay(stats.expectedStockPieces!)}</strong>.
+              Difference: <strong>{stockDiff! > 0 ? "+" : ""}{stockDiff} pcs</strong>
+              {" "}({Math.floor(stockDiffAbs / PIECES_PER_CRATE)}c {stockDiffAbs % PIECES_PER_CRATE}p).
+              {" "}Open the reconciliation view below to trace each delta.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* How we calculated this */}
+        <Collapsible open={showCalc} onOpenChange={setShowCalc}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                <Calculator className="h-3 w-3" /> How we calculated this
+              </span>
+              {showCalc ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="rounded border bg-muted/30 p-2 mt-1 space-y-1 text-[11px] font-mono">
+              <CalcRow label="Anchor" value={stats.anchor
+                ? `${stats.anchor.kind} on ${format(stats.anchor.at, "MMM d")} — ${eggsDisplay(stats.anchorBasePieces)}`
+                : `manual baseline — ${eggsDisplay(stats.monitorBaselinePieces)}`} />
+              <CalcRow label="+ Interim produced (anchor → start)" value={`+${stats.interimProduced} pcs`} />
+              <CalcRow label="− Interim sold (anchor → start)" value={`−${stats.interimSold} pcs`} />
+              <CalcRow label="= startingPieces (at start)" value={`${stats.startingPieces} pcs (${eggsDisplay(stats.startingPieces)})`} bold />
+              <CalcRow label="+ Produced in range" value={`+${stats.producedSinceAnchor} pcs`} />
+              <CalcRow label="= Total produced pieces" value={`${stats.totalProducedPieces} pcs`} />
+              <CalcRow label="− Sold in range" value={`−${stats.soldPieces} pcs`} />
+              <CalcRow label="= Unsold pieces" value={`${stats.unsoldPieces} pcs (${eggsDisplay(stats.unsoldPieces)})`} bold />
+              {stats.expectedStockPieces !== null && (
+                <CalcRow
+                  label="Expected Stock tab shows"
+                  value={`${stats.expectedStockPieces} pcs (${eggsDisplay(stats.expectedStockPieces)})`}
+                />
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* Reconciliation view */}
+        <Collapsible open={showRecon} onOpenChange={setShowRecon}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                <Info className="h-3 w-3" /> Reconciliation (every delta by date)
+              </span>
+              {showRecon ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="max-h-72 overflow-auto rounded border mt-1">
+              <table className="w-full text-[11px]">
+                <thead className="sticky top-0 bg-muted/80 backdrop-blur">
+                  <tr className="text-left">
+                    <th className="px-2 py-1 font-medium">Date</th>
+                    <th className="px-2 py-1 font-medium">Source</th>
+                    <th className="px-2 py-1 font-medium text-right">Change</th>
+                    <th className="px-2 py-1 font-medium text-right">Running</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    let running = 0;
+                    return stats.reconciliationEvents.map((evt, idx) => {
+                      if (evt.type === "Baseline" || evt.type === "Recount") running = evt.delta;
+                      else running += evt.delta;
+                      return (
+                        <tr key={idx} className="border-t">
+                          <td className="px-2 py-1 whitespace-nowrap">{evt.date}</td>
+                          <td className="px-2 py-1">{evt.type}</td>
+                          <td className={cn(
+                            "px-2 py-1 text-right font-mono",
+                            evt.type === "Baseline" || evt.type === "Recount"
+                              ? "text-blue-600"
+                              : evt.delta >= 0 ? "text-green-700" : "text-rose-600"
+                          )}>
+                            {evt.detail}
+                          </td>
+                          <td className="px-2 py-1 text-right font-mono">{running}</td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                  {stats.reconciliationEvents.length === 0 && (
+                    <tr><td colSpan={4} className="px-2 py-3 text-center text-muted-foreground">No events</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1 px-1">
+              "pre-start" rows are netted into startingPieces. Running total starts from the anchor
+              and reaches the current Expected Stock value.
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
+
         {/* Footer KPIs */}
         <div className="grid grid-cols-3 gap-2 pt-1 border-t">
           <div>
