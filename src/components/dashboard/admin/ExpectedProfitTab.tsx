@@ -700,6 +700,15 @@ function MonitorCard({
   const isProfit = stats.profit >= 0;
   const eggSalesPct = stats.totalRevenue > 0 ? (stats.revenueFromSales / stats.totalRevenue) * 100 : 0;
   const feedPct = stats.totalCost > 0 ? (stats.feedCost / stats.totalCost) * 100 : 0;
+  const [showCalc, setShowCalc] = useState(false);
+  const [showRecon, setShowRecon] = useState(false);
+
+  // Variance vs Expected Stock tab — threshold of 1 crate (30 pieces)
+  const VARIANCE_THRESHOLD_PIECES = 30;
+  const stockDiff =
+    stats.expectedStockPieces !== null ? stats.unsoldPieces - stats.expectedStockPieces : null;
+  const stockDiffAbs = stockDiff === null ? 0 : Math.abs(stockDiff);
+  const showVarianceWarning = stockDiff !== null && stockDiffAbs > VARIANCE_THRESHOLD_PIECES;
 
   return (
     <Card>
