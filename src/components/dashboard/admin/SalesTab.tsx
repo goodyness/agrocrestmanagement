@@ -19,6 +19,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import AddSalesDialog from "@/components/dashboard/worker/AddSalesDialog";
+import BulkSalesDialog from "@/components/dashboard/worker/BulkSalesDialog";
 
 const ITEMS_PER_PAGE = 15;
 
