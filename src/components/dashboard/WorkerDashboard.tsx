@@ -421,6 +421,7 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <BulkProductionDialog onSuccess={handleRefresh} />
                   <BulkMortalityDialog onSuccess={handleRefresh} />
+                  <BulkSalesDialog onSuccess={handleRefresh} />
                 </div>
               </CardContent>
             </Card>
