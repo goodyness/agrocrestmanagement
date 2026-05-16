@@ -506,13 +506,72 @@ function MonitorCard({
     const profit = totalRevenue - totalCost;
     const profitPerDay = profit / daysElapsed;
 
+    // ----- Expected Stock tab parity -----
+    // The Expected Stock tab uses the MOST RECENT baseline (in branch) regardless of monitor dates,
+    // then nets production - egg sales since that baseline up to today.
+    const latestAnchor = anchorEvents.sort((a, b) => b.at.getTime() - a.at.getTime())[0] || null;
+    let expectedStockPieces: number | null = null;
+    if (latestAnchor) {
+      const sinceProduced = production
+        .filter((p) => inBranch(p.branch_id) && parseISO(p.date) >= latestAnchor.at)
+        .reduce((s, p) => s + (p.crates || 0) * PIECES_PER_CRATE + (p.pieces || 0), 0);
+      const sinceSold = sales
+        .filter((s) => inBranch(s.branch_id) && /egg/i.test(s.product_type || "") &&
+          parseISO(s.date) >= latestAnchor.at)
+        .reduce((acc, s) => acc + salesPieces(s), 0);
+      expectedStockPieces = Math.max(latestAnchor.pieces + sinceProduced - sinceSold, 0);
+    }
+
+    // ----- Reconciliation events (day-by-day delta breakdown from anchor onward) -----
+    type Evt = { date: string; type: string; delta: number; detail: string };
+    const events: Evt[] = [];
+    if (anchor) {
+      events.push({
+        date: format(anchor.at, "yyyy-MM-dd"),
+        type: anchor.kind === "recount" ? "Recount" : "Baseline",
+        delta: anchor.pieces,
+        detail: `Set to ${Math.floor(anchor.pieces / PIECES_PER_CRATE)}c ${anchor.pieces % PIECES_PER_CRATE}p`,
+      });
+    }
+    const today2 = new Date();
+    for (const p of production) {
+      if (!inBranch(p.branch_id)) continue;
+      const dt = parseISO(p.date);
+      if (dt < anchorDate || dt > today2) continue;
+      const pcs = (p.crates || 0) * PIECES_PER_CRATE + (p.pieces || 0);
+      if (pcs === 0) continue;
+      events.push({
+        date: p.date,
+        type: dt < start ? "Produced (pre-start)" : "Produced",
+        delta: pcs,
+        detail: `+${p.crates || 0}c ${p.pieces || 0}p`,
+      });
+    }
+    for (const s of sales) {
+      if (!inBranch(s.branch_id) || !/egg/i.test(s.product_type || "")) continue;
+      const dt = parseISO(s.date);
+      if (dt < anchorDate || dt > today2) continue;
+      const pcs = salesPieces(s);
+      if (pcs === 0) continue;
+      events.push({
+        date: s.date,
+        type: dt < start ? "Sold (pre-start)" : "Sold",
+        delta: -pcs,
+        detail: `-${pcs} pcs (${s.quantity} ${s.unit})`,
+      });
+    }
+    events.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
     return {
       daysElapsed,
       totalDays,
       totalProducedPieces,
       startingPieces,
       producedSinceAnchor,
+      interimProduced,
+      interimSold,
       anchor,
+      anchorDate,
       soldPieces,
       unsoldPieces,
       revenueFromSales,
@@ -525,6 +584,10 @@ function MonitorCard({
       profit,
       profitPerDay,
       fallbackPerPiece,
+      expectedStockPieces,
+      reconciliationEvents: events,
+      monitorBaselinePieces,
+      anchorBasePieces,
     };
   }, [monitor, production, sales, expenses, baselines, recounts]);
 
