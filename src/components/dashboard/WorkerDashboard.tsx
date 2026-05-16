@@ -20,6 +20,7 @@ import AddSalesDialog from "./worker/AddSalesDialog";
 import AddFeedConsumptionDialog from "./worker/AddFeedConsumptionDialog";
 import BulkMortalityDialog from "./worker/BulkMortalityDialog";
 import BulkProductionDialog from "./worker/BulkProductionDialog";
+import BulkSalesDialog from "./worker/BulkSalesDialog";
 import CleaningReminderPopup from "./worker/CleaningReminderPopup";
 import CleaningStatusCard from "./worker/CleaningStatusCard";
 import WorkerReviewNotification from "./worker/WorkerReviewNotification";
