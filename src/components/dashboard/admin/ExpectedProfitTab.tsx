@@ -1000,3 +1000,12 @@ function MonitorCard({
     </Card>
   );
 }
+
+function CalcRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div className={cn("flex justify-between gap-2", bold && "font-semibold text-foreground border-t pt-1 mt-1")}>
+      <span className="text-muted-foreground">{label}</span>
+      <span>{value}</span>
+    </div>
+  );
+}
