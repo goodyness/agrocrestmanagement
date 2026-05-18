@@ -505,21 +505,14 @@ function MonitorCard({
     const profit = totalRevenue - totalCost;
     const profitPerDay = profit / daysElapsed;
 
-    // ----- Expected Stock tab parity -----
-    // The Expected Stock tab uses the MOST RECENT baseline (in branch) regardless of monitor dates,
-    // then nets production - egg sales since that baseline up to today.
-    const latestAnchor = anchorEvents.sort((a, b) => b.at.getTime() - a.at.getTime())[0] || null;
-    let expectedStockPieces: number | null = null;
-    if (latestAnchor) {
-      const sinceProduced = production
-        .filter((p) => inBranch(p.branch_id) && parseISO(p.date) >= latestAnchor.at)
-        .reduce((s, p) => s + (p.crates || 0) * PIECES_PER_CRATE + (p.pieces || 0), 0);
-      const sinceSold = sales
-        .filter((s) => inBranch(s.branch_id) && /egg/i.test(s.product_type || "") &&
-          parseISO(s.date) >= latestAnchor.at)
-        .reduce((acc, s) => acc + salesPieces(s), 0);
-      expectedStockPieces = Math.max(latestAnchor.pieces + sinceProduced - sinceSold, 0);
-    }
+    // ----- Expected Stock tab parity (canonical shared computation) -----
+    const stockBreakdown = computeExpectedEggStock(
+      currentBranchId,
+      baselines as any,
+      production as any,
+      sales as any
+    );
+    const expectedStockPieces: number | null = stockBreakdown.expectedPieces;
 
     // ----- Reconciliation events (day-by-day delta breakdown from anchor onward) -----
     type Evt = { date: string; type: string; delta: number; detail: string };
