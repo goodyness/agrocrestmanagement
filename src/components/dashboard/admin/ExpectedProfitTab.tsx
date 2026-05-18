@@ -31,8 +31,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { logActivity } from "@/lib/activityLogger";
-
-const PIECES_PER_CRATE = 30;
+import { computeExpectedEggStock, PIECES_PER_CRATE } from "@/hooks/useEggStock";
 
 interface Batch {
   id: string;
