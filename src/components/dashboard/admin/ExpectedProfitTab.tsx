@@ -507,7 +507,7 @@ function MonitorCard({
 
     // ----- Expected Stock tab parity (canonical shared computation) -----
     const stockBreakdown = computeExpectedEggStock(
-      currentBranchId,
+      monitor.branch_id,
       baselines as any,
       production as any,
       sales as any
