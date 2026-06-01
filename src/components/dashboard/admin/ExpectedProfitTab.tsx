@@ -111,7 +111,7 @@ export default function ExpectedProfitTab() {
     setLoading(true);
     const [m, b, c, p, s, e, sb, sr] = await Promise.all([
       supabase.from("profit_monitors").select("*").order("created_at", { ascending: false }),
-      supabase.from("livestock_batches").select("id, species, species_type, stage, current_quantity, branch_id, livestock_category_id").eq("is_active", true),
+      supabase.from("livestock_batches").select("id, species, species_type, stage, current_quantity, branch_id, livestock_category_id, total_cost, date_acquired").eq("is_active", true),
       supabase.from("livestock_categories").select("id, name, branch_id"),
       supabase.from("daily_production").select("date, crates, pieces, branch_id"),
       supabase.from("sales_records").select("date, product_type, quantity, unit, total_amount, price_per_unit, branch_id"),
