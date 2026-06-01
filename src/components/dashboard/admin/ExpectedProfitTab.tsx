@@ -559,6 +559,41 @@ function MonitorCard({
     }
     events.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
+    // ----- Per-Batch P&L (when monitor is linked to a batch) -----
+    const linkedBatch = monitor.batch_id ? batches.find((b) => b.id === monitor.batch_id) : null;
+    let batchPnL: null | {
+      batchName: string;
+      acquisitionCost: number;
+      batchExpenses: number;
+      feedCost: number;
+      revenueFromSales: number;
+      revenueFromUnsold: number;
+      totalRevenue: number;
+      totalCost: number;
+      profit: number;
+    } = null;
+    if (linkedBatch) {
+      const acquisitionCost = Number(linkedBatch.total_cost || 0);
+      const batchExpenses = expenses
+        .filter((e) => e.batch_id === linkedBatch.id)
+        .reduce((s, e) => s + Number(e.amount || 0), 0);
+      const batchRev = revenueFromSales; // best-effort: sales aren't batch-tagged today, use branch-period
+      const batchUnsoldRev = revenueFromUnsold;
+      const batchTotalRev = batchRev + batchUnsoldRev;
+      const batchTotalCost = acquisitionCost + batchExpenses + feedCost;
+      batchPnL = {
+        batchName: `${linkedBatch.species}${linkedBatch.species_type ? ` (${linkedBatch.species_type})` : ""}`,
+        acquisitionCost,
+        batchExpenses,
+        feedCost,
+        revenueFromSales: batchRev,
+        revenueFromUnsold: batchUnsoldRev,
+        totalRevenue: batchTotalRev,
+        totalCost: batchTotalCost,
+        profit: batchTotalRev - batchTotalCost,
+      };
+    }
+
     return {
       daysElapsed,
       totalDays,
