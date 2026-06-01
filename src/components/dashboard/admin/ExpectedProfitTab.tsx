@@ -41,6 +41,8 @@ interface Batch {
   current_quantity: number;
   branch_id: string | null;
   livestock_category_id: string | null;
+  total_cost: number | null;
+  date_acquired: string | null;
 }
 
 interface Category {
