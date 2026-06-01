@@ -620,8 +620,9 @@ function MonitorCard({
       reconciliationEvents: events,
       monitorBaselinePieces,
       anchorBasePieces,
+      batchPnL,
     };
-  }, [monitor, production, sales, expenses, baselines, recounts]);
+  }, [monitor, batches, production, sales, expenses, baselines, recounts]);
 
   // Daily trend series: expected (linear projection) vs actual (cumulative real revenue/cost/profit)
   const trend = useMemo(() => {
