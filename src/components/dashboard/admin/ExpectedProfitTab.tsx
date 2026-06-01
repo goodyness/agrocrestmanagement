@@ -735,6 +735,7 @@ function MonitorCard({
   const feedPct = stats.totalCost > 0 ? (stats.feedCost / stats.totalCost) * 100 : 0;
   const [showCalc, setShowCalc] = useState(false);
   const [showRecon, setShowRecon] = useState(false);
+  const [showBatchPnL, setShowBatchPnL] = useState(false);
 
   // Variance vs Expected Stock tab — threshold of 1 crate (30 pieces)
   const VARIANCE_THRESHOLD_PIECES = 30;
