@@ -920,6 +920,43 @@ function MonitorCard({
           </Alert>
         )}
 
+        {/* Per-Batch P&L */}
+        {stats.batchPnL && (
+          <Collapsible open={showBatchPnL} onOpenChange={setShowBatchPnL}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                  <Wallet className="h-3 w-3" /> Per-Batch P&L · {stats.batchPnL.batchName}
+                </span>
+                <Badge
+                  variant={stats.batchPnL.profit >= 0 ? "default" : "destructive"}
+                  className="text-[10px] mr-1"
+                >
+                  {fmt(stats.batchPnL.profit)}
+                </Badge>
+                {showBatchPnL ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="rounded border bg-muted/30 p-2 mt-1 space-y-1 text-[11px] font-mono">
+                <CalcRow label="Acquisition cost (batch)" value={fmt(stats.batchPnL.acquisitionCost)} />
+                <CalcRow label="+ Batch-tagged expenses" value={fmt(stats.batchPnL.batchExpenses)} />
+                <CalcRow label="+ Feed cost (period)" value={fmt(stats.batchPnL.feedCost)} />
+                <CalcRow label="= Batch total cost" value={fmt(stats.batchPnL.totalCost)} bold />
+                <CalcRow label="Egg sales revenue" value={fmt(stats.batchPnL.revenueFromSales)} />
+                <CalcRow label="+ Unsold @ fallback" value={fmt(stats.batchPnL.revenueFromUnsold)} />
+                <CalcRow label="= Batch total revenue" value={fmt(stats.batchPnL.totalRevenue)} bold />
+                <CalcRow label="= Batch P&L" value={fmt(stats.batchPnL.profit)} bold />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1 px-1">
+                Uses the canonical egg-stock math for revenue. Sales aren't yet batch-tagged, so
+                branch egg sales in the period are attributed to this batch.
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+
         {/* How we calculated this */}
         <Collapsible open={showCalc} onOpenChange={setShowCalc}>
           <CollapsibleTrigger asChild>
