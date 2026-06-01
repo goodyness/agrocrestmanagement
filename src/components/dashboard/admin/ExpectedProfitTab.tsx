@@ -371,6 +371,7 @@ export default function ExpectedProfitTab() {
             <MonitorCard
               key={m.id}
               monitor={m}
+              batches={batches}
               production={production}
               sales={sales}
               expenses={expenses}
@@ -387,6 +388,7 @@ export default function ExpectedProfitTab() {
 
 function MonitorCard({
   monitor,
+  batches,
   production,
   sales,
   expenses,
@@ -395,6 +397,7 @@ function MonitorCard({
   onDelete,
 }: {
   monitor: Monitor;
+  batches: Batch[];
   production: any[];
   sales: any[];
   expenses: any[];
