@@ -216,6 +216,42 @@ export type Database = {
           },
         ]
       }
+      audit_trail: {
+        Row: {
+          after_data: Json | null
+          before_data: Json | null
+          branch_id: string | null
+          changed_by: string | null
+          created_at: string
+          id: string
+          operation: string
+          record_id: string | null
+          table_name: string
+        }
+        Insert: {
+          after_data?: Json | null
+          before_data?: Json | null
+          branch_id?: string | null
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          operation: string
+          record_id?: string | null
+          table_name: string
+        }
+        Update: {
+          after_data?: Json | null
+          before_data?: Json | null
+          branch_id?: string | null
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          operation?: string
+          record_id?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       bank_accounts: {
         Row: {
           account_name: string
@@ -2113,6 +2149,48 @@ export type Database = {
           item_type?: string
           notes?: string | null
           pieces?: number
+        }
+        Relationships: []
+      }
+      stock_drift_checks: {
+        Row: {
+          branch_id: string | null
+          branch_name: string | null
+          created_at: string
+          details: Json | null
+          drift_pieces: number
+          expected_pieces: number
+          flagged: boolean
+          id: string
+          item_type: string
+          run_at: string
+          threshold_pieces: number
+        }
+        Insert: {
+          branch_id?: string | null
+          branch_name?: string | null
+          created_at?: string
+          details?: Json | null
+          drift_pieces?: number
+          expected_pieces?: number
+          flagged?: boolean
+          id?: string
+          item_type?: string
+          run_at?: string
+          threshold_pieces?: number
+        }
+        Update: {
+          branch_id?: string | null
+          branch_name?: string | null
+          created_at?: string
+          details?: Json | null
+          drift_pieces?: number
+          expected_pieces?: number
+          flagged?: boolean
+          id?: string
+          item_type?: string
+          run_at?: string
+          threshold_pieces?: number
         }
         Relationships: []
       }

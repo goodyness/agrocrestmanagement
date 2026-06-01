@@ -41,6 +41,8 @@ interface Batch {
   current_quantity: number;
   branch_id: string | null;
   livestock_category_id: string | null;
+  total_cost: number | null;
+  date_acquired: string | null;
 }
 
 interface Category {
@@ -111,7 +113,7 @@ export default function ExpectedProfitTab() {
     setLoading(true);
     const [m, b, c, p, s, e, sb, sr] = await Promise.all([
       supabase.from("profit_monitors").select("*").order("created_at", { ascending: false }),
-      supabase.from("livestock_batches").select("id, species, species_type, stage, current_quantity, branch_id, livestock_category_id").eq("is_active", true),
+      supabase.from("livestock_batches").select("id, species, species_type, stage, current_quantity, branch_id, livestock_category_id, total_cost, date_acquired").eq("is_active", true),
       supabase.from("livestock_categories").select("id, name, branch_id"),
       supabase.from("daily_production").select("date, crates, pieces, branch_id"),
       supabase.from("sales_records").select("date, product_type, quantity, unit, total_amount, price_per_unit, branch_id"),
@@ -369,6 +371,7 @@ export default function ExpectedProfitTab() {
             <MonitorCard
               key={m.id}
               monitor={m}
+              batches={batches}
               production={production}
               sales={sales}
               expenses={expenses}
@@ -385,6 +388,7 @@ export default function ExpectedProfitTab() {
 
 function MonitorCard({
   monitor,
+  batches,
   production,
   sales,
   expenses,
@@ -393,6 +397,7 @@ function MonitorCard({
   onDelete,
 }: {
   monitor: Monitor;
+  batches: Batch[];
   production: any[];
   sales: any[];
   expenses: any[];
@@ -554,6 +559,41 @@ function MonitorCard({
     }
     events.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
+    // ----- Per-Batch P&L (when monitor is linked to a batch) -----
+    const linkedBatch = monitor.batch_id ? batches.find((b) => b.id === monitor.batch_id) : null;
+    let batchPnL: null | {
+      batchName: string;
+      acquisitionCost: number;
+      batchExpenses: number;
+      feedCost: number;
+      revenueFromSales: number;
+      revenueFromUnsold: number;
+      totalRevenue: number;
+      totalCost: number;
+      profit: number;
+    } = null;
+    if (linkedBatch) {
+      const acquisitionCost = Number(linkedBatch.total_cost || 0);
+      const batchExpenses = expenses
+        .filter((e) => e.batch_id === linkedBatch.id)
+        .reduce((s, e) => s + Number(e.amount || 0), 0);
+      const batchRev = revenueFromSales; // best-effort: sales aren't batch-tagged today, use branch-period
+      const batchUnsoldRev = revenueFromUnsold;
+      const batchTotalRev = batchRev + batchUnsoldRev;
+      const batchTotalCost = acquisitionCost + batchExpenses + feedCost;
+      batchPnL = {
+        batchName: `${linkedBatch.species}${linkedBatch.species_type ? ` (${linkedBatch.species_type})` : ""}`,
+        acquisitionCost,
+        batchExpenses,
+        feedCost,
+        revenueFromSales: batchRev,
+        revenueFromUnsold: batchUnsoldRev,
+        totalRevenue: batchTotalRev,
+        totalCost: batchTotalCost,
+        profit: batchTotalRev - batchTotalCost,
+      };
+    }
+
     return {
       daysElapsed,
       totalDays,
@@ -580,8 +620,9 @@ function MonitorCard({
       reconciliationEvents: events,
       monitorBaselinePieces,
       anchorBasePieces,
+      batchPnL,
     };
-  }, [monitor, production, sales, expenses, baselines, recounts]);
+  }, [monitor, batches, production, sales, expenses, baselines, recounts]);
 
   // Daily trend series: expected (linear projection) vs actual (cumulative real revenue/cost/profit)
   const trend = useMemo(() => {
@@ -694,6 +735,7 @@ function MonitorCard({
   const feedPct = stats.totalCost > 0 ? (stats.feedCost / stats.totalCost) * 100 : 0;
   const [showCalc, setShowCalc] = useState(false);
   const [showRecon, setShowRecon] = useState(false);
+  const [showBatchPnL, setShowBatchPnL] = useState(false);
 
   // Variance vs Expected Stock tab — threshold of 1 crate (30 pieces)
   const VARIANCE_THRESHOLD_PIECES = 30;
@@ -877,6 +919,43 @@ function MonitorCard({
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Per-Batch P&L */}
+        {stats.batchPnL && (
+          <Collapsible open={showBatchPnL} onOpenChange={setShowBatchPnL}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-between h-8 px-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                  <Wallet className="h-3 w-3" /> Per-Batch P&L · {stats.batchPnL.batchName}
+                </span>
+                <Badge
+                  variant={stats.batchPnL.profit >= 0 ? "default" : "destructive"}
+                  className="text-[10px] mr-1"
+                >
+                  {fmt(stats.batchPnL.profit)}
+                </Badge>
+                {showBatchPnL ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="rounded border bg-muted/30 p-2 mt-1 space-y-1 text-[11px] font-mono">
+                <CalcRow label="Acquisition cost (batch)" value={fmt(stats.batchPnL.acquisitionCost)} />
+                <CalcRow label="+ Batch-tagged expenses" value={fmt(stats.batchPnL.batchExpenses)} />
+                <CalcRow label="+ Feed cost (period)" value={fmt(stats.batchPnL.feedCost)} />
+                <CalcRow label="= Batch total cost" value={fmt(stats.batchPnL.totalCost)} bold />
+                <CalcRow label="Egg sales revenue" value={fmt(stats.batchPnL.revenueFromSales)} />
+                <CalcRow label="+ Unsold @ fallback" value={fmt(stats.batchPnL.revenueFromUnsold)} />
+                <CalcRow label="= Batch total revenue" value={fmt(stats.batchPnL.totalRevenue)} bold />
+                <CalcRow label="= Batch P&L" value={fmt(stats.batchPnL.profit)} bold />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1 px-1">
+                Uses the canonical egg-stock math for revenue. Sales aren't yet batch-tagged, so
+                branch egg sales in the period are attributed to this batch.
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
 
         {/* How we calculated this */}
         <Collapsible open={showCalc} onOpenChange={setShowCalc}>
