@@ -1583,6 +1583,101 @@ export type Database = {
           },
         ]
       }
+      medicine_movements: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          id: string
+          medicine_id: string
+          movement_date: string
+          movement_type: string
+          notes: string | null
+          quantity: number
+          recorded_by: string
+          reference_id: string | null
+          total_cost: number | null
+          unit_cost: number | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          medicine_id: string
+          movement_date?: string
+          movement_type: string
+          notes?: string | null
+          quantity: number
+          recorded_by: string
+          reference_id?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          medicine_id?: string
+          movement_date?: string
+          movement_type?: string
+          notes?: string | null
+          quantity?: number
+          recorded_by?: string
+          reference_id?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicine_movements_medicine_id_fkey"
+            columns: ["medicine_id"]
+            isOneToOne: false
+            referencedRelation: "medicines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicines: {
+        Row: {
+          branch_id: string | null
+          category: string
+          created_at: string
+          current_stock: number
+          expiry_date: string | null
+          id: string
+          name: string
+          notes: string | null
+          reorder_point: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          category?: string
+          created_at?: string
+          current_stock?: number
+          expiry_date?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          reorder_point?: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          category?: string
+          created_at?: string
+          current_stock?: number
+          expiry_date?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          reorder_point?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       miscellaneous_expenses: {
         Row: {
           amount: number
@@ -1858,6 +1953,107 @@ export type Database = {
           notes?: string | null
           price_per_bag?: number
           start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      purchase_order_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_name: string
+          item_ref_id: string | null
+          item_type: string
+          line_total: number
+          po_id: string
+          quantity: number
+          received_quantity: number
+          unit: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_name: string
+          item_ref_id?: string | null
+          item_type: string
+          line_total?: number
+          po_id: string
+          quantity: number
+          received_quantity?: number
+          unit?: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_name?: string
+          item_ref_id?: string | null
+          item_type?: string
+          line_total?: number
+          po_id?: string
+          quantity?: number
+          received_quantity?: number
+          unit?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          created_by: string
+          expected_delivery: string | null
+          id: string
+          notes: string | null
+          order_date: string
+          po_number: string
+          received_date: string | null
+          status: string
+          supplier_name: string
+          supplier_phone: string | null
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          created_by: string
+          expected_delivery?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          po_number?: string
+          received_date?: string | null
+          status?: string
+          supplier_name: string
+          supplier_phone?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string
+          expected_delivery?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          po_number?: string
+          received_date?: string | null
+          status?: string
+          supplier_name?: string
+          supplier_phone?: string | null
+          total_amount?: number
           updated_at?: string
         }
         Relationships: []
@@ -2453,6 +2649,95 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplies: {
+        Row: {
+          branch_id: string | null
+          category: string
+          created_at: string
+          current_stock: number
+          id: string
+          name: string
+          notes: string | null
+          reorder_point: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          category?: string
+          created_at?: string
+          current_stock?: number
+          id?: string
+          name: string
+          notes?: string | null
+          reorder_point?: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          category?: string
+          created_at?: string
+          current_stock?: number
+          id?: string
+          name?: string
+          notes?: string | null
+          reorder_point?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      supply_movements: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          id: string
+          movement_date: string
+          movement_type: string
+          notes: string | null
+          quantity: number
+          recorded_by: string
+          supply_id: string
+          total_cost: number | null
+          unit_cost: number | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          movement_date?: string
+          movement_type: string
+          notes?: string | null
+          quantity: number
+          recorded_by: string
+          supply_id: string
+          total_cost?: number | null
+          unit_cost?: number | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          movement_date?: string
+          movement_type?: string
+          notes?: string | null
+          quantity?: number
+          recorded_by?: string
+          supply_id?: string
+          total_cost?: number | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_movements_supply_id_fkey"
+            columns: ["supply_id"]
+            isOneToOne: false
+            referencedRelation: "supplies"
             referencedColumns: ["id"]
           },
         ]
