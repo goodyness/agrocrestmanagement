@@ -41,6 +41,7 @@ import CustomerOrdersSection from "./admin/CustomerOrdersSection";
 import WeeklyReportButton from "./admin/WeeklyReportButton";
 import ExpectedStockTab from "./admin/ExpectedStockTab";
 import ExpectedProfitTab from "./admin/ExpectedProfitTab";
+import InventoryPlusTab from "./admin/InventoryPlusTab";
 
 interface AdminDashboardProps {
   user: User | null;
@@ -229,6 +230,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
                 <Wallet className="h-4 w-4" />
                 <span className="hidden sm:inline">Expected Profit</span>
               </TabsTrigger>
+              <TabsTrigger value="inventory-plus" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Boxes className="h-4 w-4" />
+                <span className="hidden sm:inline">Inventory+</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -343,6 +348,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="expected-profit" className="space-y-4">
             <ExpectedProfitTab />
+          </TabsContent>
+
+          <TabsContent value="inventory-plus" className="space-y-4">
+            <InventoryPlusTab />
           </TabsContent>
         </Tabs>
       </main>
