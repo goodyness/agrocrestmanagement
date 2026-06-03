@@ -2,7 +2,7 @@ import { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck, PawPrint, AlertCircle, Landmark, Wallet, Stethoscope, Bot, Egg, Brain, Flame, Boxes } from "lucide-react";
+import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck, PawPrint, AlertCircle, Landmark, Wallet, Stethoscope, Bot, Egg, Brain, Flame, Boxes, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
@@ -42,6 +42,7 @@ import WeeklyReportButton from "./admin/WeeklyReportButton";
 import ExpectedStockTab from "./admin/ExpectedStockTab";
 import ExpectedProfitTab from "./admin/ExpectedProfitTab";
 import InventoryPlusTab from "./admin/InventoryPlusTab";
+import OperationsTab from "./admin/OperationsTab";
 
 interface AdminDashboardProps {
   user: User | null;
@@ -234,6 +235,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
                 <Boxes className="h-4 w-4" />
                 <span className="hidden sm:inline">Inventory+</span>
               </TabsTrigger>
+              <TabsTrigger value="operations" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Wrench className="h-4 w-4" />
+                <span className="hidden sm:inline">Operations</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -352,6 +357,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="inventory-plus" className="space-y-4">
             <InventoryPlusTab />
+          </TabsContent>
+
+          <TabsContent value="operations" className="space-y-4">
+            <OperationsTab />
           </TabsContent>
         </Tabs>
       </main>
