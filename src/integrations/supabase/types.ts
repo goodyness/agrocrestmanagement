@@ -296,6 +296,59 @@ export type Database = {
           },
         ]
       }
+      biosecurity_checks: {
+        Row: {
+          area: string | null
+          branch_id: string | null
+          check_date: string
+          check_type: string
+          created_at: string
+          id: string
+          notes: string | null
+          performed_by: string | null
+          performed_by_name: string | null
+          photo_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          area?: string | null
+          branch_id?: string | null
+          check_date?: string
+          check_type: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+          performed_by_name?: string | null
+          photo_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string | null
+          branch_id?: string | null
+          check_date?: string
+          check_type?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+          performed_by_name?: string | null
+          photo_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biosecurity_checks_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           created_at: string
@@ -945,6 +998,124 @@ export type Database = {
           },
         ]
       }
+      equipment: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          location: string | null
+          name: string
+          notes: string | null
+          purchase_cost: number | null
+          purchase_date: string | null
+          serial_number: string | null
+          status: string
+          type: string | null
+          updated_at: string
+          warranty_end: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          notes?: string | null
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          serial_number?: string | null
+          status?: string
+          type?: string | null
+          updated_at?: string
+          warranty_end?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          notes?: string | null
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          serial_number?: string | null
+          status?: string
+          type?: string | null
+          updated_at?: string
+          warranty_end?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      farm_tasks: {
+        Row: {
+          assigned_by: string | null
+          assigned_to: string | null
+          branch_id: string | null
+          category: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          priority: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          assigned_to?: string | null
+          branch_id?: string | null
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          assigned_to?: string | null
+          branch_id?: string | null
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_tasks_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_consumption: {
         Row: {
           branch_id: string | null
@@ -1579,6 +1750,66 @@ export type Database = {
             columns: ["feed_type_id"]
             isOneToOne: false
             referencedRelation: "feed_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_logs: {
+        Row: {
+          branch_id: string | null
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          equipment_id: string
+          id: string
+          next_due_date: string | null
+          performed_by: string | null
+          service_date: string
+          service_type: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          equipment_id: string
+          id?: string
+          next_due_date?: string | null
+          performed_by?: string | null
+          service_date?: string
+          service_type: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          equipment_id?: string
+          id?: string
+          next_due_date?: string | null
+          performed_by?: string | null
+          service_date?: string
+          service_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_logs_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
             referencedColumns: ["id"]
           },
         ]
