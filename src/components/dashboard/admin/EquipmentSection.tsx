@@ -13,7 +13,7 @@ import { Plus, Wrench, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useBranch } from "@/contexts/BranchContext";
 import { usePagination } from "@/hooks/usePagination";
-import { PaginationControls } from "@/components/PaginationControls";
+import PaginationControls from "@/components/PaginationControls";
 import { differenceInDays, parseISO, format } from "date-fns";
 
 type Equipment = {
@@ -51,7 +51,8 @@ const EquipmentSection = () => {
   };
   useEffect(() => { load(); }, [currentBranchId]);
 
-  const pag = usePagination(equipment, 15);
+  const pag = usePagination({ totalItems: equipment.length, itemsPerPage: 15 });
+  const paginatedEquipment = equipment.slice(pag.paginatedRange.startIndex, pag.paginatedRange.endIndex);
 
   const handleAdd = async () => {
     if (!form.name) return toast.error("Name required");
@@ -132,7 +133,7 @@ const EquipmentSection = () => {
             <Table>
               <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Warranty</TableHead><TableHead>Alerts</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>
-                {pag.paginatedItems.map(e => {
+                {paginatedEquipment.map(e => {
                   const alert = getAlert(e);
                   return (
                     <TableRow key={e.id}>
@@ -154,7 +155,7 @@ const EquipmentSection = () => {
                 })}
               </TableBody>
             </Table>
-            <PaginationControls currentPage={pag.currentPage} totalPages={pag.totalPages} onPageChange={pag.setCurrentPage} />
+            <PaginationControls currentPage={pag.currentPage} totalPages={pag.totalPages} onPageChange={pag.goToPage} getPageNumbers={pag.getPageNumbers} />
           </>
         )}
 

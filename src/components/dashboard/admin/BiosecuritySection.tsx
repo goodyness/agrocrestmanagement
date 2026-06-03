@@ -13,9 +13,9 @@ import { Plus, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useBranch } from "@/contexts/BranchContext";
 import { usePagination } from "@/hooks/usePagination";
-import { PaginationControls } from "@/components/PaginationControls";
+import PaginationControls from "@/components/PaginationControls";
 import { format, parseISO } from "date-fns";
-import { uploadPhoto } from "@/lib/photoUpload";
+import { uploadEvidencePhoto } from "@/lib/photoUpload";
 
 type Check = {
   id: string; check_date: string; check_type: string; area: string | null;
@@ -50,14 +50,15 @@ const BiosecuritySection = () => {
   };
   useEffect(() => { load(); }, [currentBranchId]);
 
-  const pag = usePagination(checks, 15);
+  const pag = usePagination({ totalItems: checks.length, itemsPerPage: 15 });
+  const paginatedChecks = checks.slice(pag.paginatedRange.startIndex, pag.paginatedRange.endIndex);
 
   const handleSave = async () => {
     const { data: u } = await supabase.auth.getUser();
     let photo_url: string | null = null;
     if (photo) {
-      try { photo_url = await uploadPhoto(photo, "evidence-photos", "biosecurity"); }
-      catch (e: any) { return toast.error(e.message || "Photo upload failed"); }
+      photo_url = await uploadEvidencePhoto(photo, "biosecurity");
+      if (!photo_url) return toast.error("Photo upload failed");
     }
     const { error } = await supabase.from("biosecurity_checks").insert({
       check_date: form.check_date, check_type: form.check_type, area: form.area || null,
@@ -118,7 +119,7 @@ const BiosecuritySection = () => {
             <Table>
               <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Area</TableHead><TableHead>By</TableHead><TableHead>Status</TableHead><TableHead>Photo</TableHead></TableRow></TableHeader>
               <TableBody>
-                {pag.paginatedItems.map(c => (
+                {paginatedChecks.map(c => (
                   <TableRow key={c.id}>
                     <TableCell>{format(parseISO(c.check_date), "MMM d, yyyy")}</TableCell>
                     <TableCell>{c.check_type}</TableCell>
@@ -132,7 +133,7 @@ const BiosecuritySection = () => {
                 ))}
               </TableBody>
             </Table>
-            <PaginationControls currentPage={pag.currentPage} totalPages={pag.totalPages} onPageChange={pag.setCurrentPage} />
+            <PaginationControls currentPage={pag.currentPage} totalPages={pag.totalPages} onPageChange={pag.goToPage} getPageNumbers={pag.getPageNumbers} />
           </>
         )}
       </CardContent>
