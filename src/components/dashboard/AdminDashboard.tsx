@@ -43,6 +43,7 @@ import ExpectedStockTab from "./admin/ExpectedStockTab";
 import ExpectedProfitTab from "./admin/ExpectedProfitTab";
 import InventoryPlusTab from "./admin/InventoryPlusTab";
 import OperationsTab from "./admin/OperationsTab";
+import CrackedEggsTab from "./admin/CrackedEggsTab";
 
 interface AdminDashboardProps {
   user: User | null;
