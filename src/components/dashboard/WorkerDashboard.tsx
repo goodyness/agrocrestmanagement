@@ -11,8 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   LogOut, Sprout, Plus, TrendingUp, AlertCircle, Package, UserCircle, 
   Egg, ShoppingCart, Skull, BarChart3, ClipboardCheck, Landmark, Wallet,
-  Calendar, Clock
+  Calendar, Clock, Filter
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import AddMortalityDialog from "./worker/AddMortalityDialog";
 import AddProductionDialog from "./worker/AddProductionDialog";
