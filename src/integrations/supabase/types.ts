@@ -837,9 +837,11 @@ export type Database = {
         Row: {
           branch_id: string | null
           comment: string | null
+          crack_reason: string | null
           crates: number
           created_at: string | null
           date: string
+          egg_type: string
           id: string
           pieces: number
           recorded_by: string
@@ -847,9 +849,11 @@ export type Database = {
         Insert: {
           branch_id?: string | null
           comment?: string | null
+          crack_reason?: string | null
           crates?: number
           created_at?: string | null
           date?: string
+          egg_type?: string
           id?: string
           pieces?: number
           recorded_by: string
@@ -857,9 +861,11 @@ export type Database = {
         Update: {
           branch_id?: string | null
           comment?: string | null
+          crack_reason?: string | null
           crates?: number
           created_at?: string | null
           date?: string
+          egg_type?: string
           id?: string
           pieces?: number
           recorded_by?: string
