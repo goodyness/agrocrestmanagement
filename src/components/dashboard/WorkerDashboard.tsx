@@ -72,7 +72,6 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
   const userBranchId = userProfile?.branch_id || null;
   const cleaningSchedule = useCleaningSchedule(userBranchId);
 
-  const productionPagination = usePagination({ totalItems: recentProduction.length, itemsPerPage: ITEMS_PER_PAGE });
   const salesPagination = usePagination({ totalItems: recentSales.length, itemsPerPage: ITEMS_PER_PAGE });
   
   useEffect(() => {
