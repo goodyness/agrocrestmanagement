@@ -240,8 +240,13 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
                 <Wrench className="h-4 w-4" />
                 <span className="hidden sm:inline">Operations</span>
               </TabsTrigger>
+              <TabsTrigger value="cracked-eggs" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="hidden sm:inline">Cracked Eggs</span>
+              </TabsTrigger>
             </TabsList>
           </div>
+
 
           <TabsContent value="overview" className="space-y-4">
             <OverviewTab />
