@@ -105,6 +105,32 @@ const ProductionTab = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Egg Type Filter */}
+          <div className="flex items-center gap-2">
+            <Select value={eggTypeFilter} onValueChange={setEggTypeFilter}>
+              <SelectTrigger className="w-[160px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="All eggs" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Eggs</SelectItem>
+                <SelectItem value="good">Good Eggs</SelectItem>
+                <SelectItem value="cracked">Cracked Eggs</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {eggTypeFilter !== "all" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setEggTypeFilter("all")}
+                title="Clear egg type filter"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
           {/* Date Range Filter */}
           <div className="flex items-center gap-2">
             <Popover>
