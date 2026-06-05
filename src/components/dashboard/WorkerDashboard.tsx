@@ -49,6 +49,7 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
   const [livestockData, setLivestockData] = useState<any[]>([]);
   const [feedData, setFeedData] = useState<any[]>([]);
   const [recentProduction, setRecentProduction] = useState<any[]>([]);
+  const [productionFilter, setProductionFilter] = useState<string>("all");
   const [recentSales, setRecentSales] = useState<any[]>([]);
   const [pendingDeliveries, setPendingDeliveries] = useState<any[]>([]);
 
