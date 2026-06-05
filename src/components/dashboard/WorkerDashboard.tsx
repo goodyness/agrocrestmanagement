@@ -441,8 +441,23 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
           <TabsContent value="production" className="space-y-4 mt-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Production History</CardTitle>
-                <CardDescription>Showing {paginatedProduction.length} of {recentProduction.length} records</CardDescription>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-lg">Production History</CardTitle>
+                    <CardDescription>Showing {paginatedProduction.length} of {filteredProduction.length} records</CardDescription>
+                  </div>
+                  <Select value={productionFilter} onValueChange={setProductionFilter}>
+                    <SelectTrigger className="w-[150px]">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="All eggs" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Eggs</SelectItem>
+                      <SelectItem value="good">Good Eggs</SelectItem>
+                      <SelectItem value="cracked">Cracked Eggs</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -452,13 +467,14 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
                         <TableHead>Date</TableHead>
                         <TableHead className="text-right">Crates</TableHead>
                         <TableHead className="text-right">Pieces</TableHead>
+                        <TableHead>Type</TableHead>
                         <TableHead className="hidden sm:table-cell">Comment</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedProduction.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground">No records</TableCell>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground">No records</TableCell>
                         </TableRow>
                       ) : (
                         paginatedProduction.map((record) => (
@@ -466,6 +482,17 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
                             <TableCell className="font-medium">{new Date(record.date).toLocaleDateString()}</TableCell>
                             <TableCell className="text-right">{record.crates}</TableCell>
                             <TableCell className="text-right">{record.pieces}</TableCell>
+                            <TableCell>
+                              {record.egg_type === "cracked" ? (
+                                <Badge variant="destructive" className="text-xs">
+                                  cracked
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs bg-success/10 text-success hover:bg-success/20">
+                                  good
+                                </Badge>
+                              )}
+                            </TableCell>
                             <TableCell className="hidden sm:table-cell text-muted-foreground">{record.comment || "-"}</TableCell>
                           </TableRow>
                         ))
