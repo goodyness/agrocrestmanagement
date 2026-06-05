@@ -234,6 +234,7 @@ const ProductionTab = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Crates</TableHead>
                 <TableHead>Pieces</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Recorded By</TableHead>
                 <TableHead>Comment</TableHead>
               </TableRow>
@@ -241,7 +242,7 @@ const ProductionTab = () => {
             <TableBody>
               {paginatedProduction.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     No production records yet
                   </TableCell>
                 </TableRow>
@@ -251,6 +252,18 @@ const ProductionTab = () => {
                     <TableCell>{format(new Date(record.date), "MMM dd, yyyy")}</TableCell>
                     <TableCell>{record.crates}</TableCell>
                     <TableCell>{record.pieces}</TableCell>
+                    <TableCell>
+                      {record.egg_type === "cracked" ? (
+                        <Badge variant="destructive" className="text-xs">
+                          {record.egg_type}
+                          {record.crack_reason ? ` — ${record.crack_reason}` : ""}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs bg-success/10 text-success hover:bg-success/20">
+                          {record.egg_type}
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>{record.profiles?.name || "Unknown"}</TableCell>
                     <TableCell className="max-w-xs truncate">{record.comment || "-"}</TableCell>
                   </TableRow>
