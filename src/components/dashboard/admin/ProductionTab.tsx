@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { useBranch } from "@/contexts/BranchContext";
-import { BarChart3, Calendar as CalendarIcon, X } from "lucide-react";
+import { BarChart3, Calendar as CalendarIcon, X, Filter } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PaginationControls from "@/components/PaginationControls";
 import { usePagination } from "@/hooks/usePagination";
 import { DateRange } from "react-day-picker";
@@ -25,6 +27,7 @@ const ProductionTab = () => {
   const [filteredProduction, setFilteredProduction] = useState<any[]>([]);
   const [totalStats, setTotalStats] = useState({ totalCrates: 0, totalPieces: 0 });
   const [date, setDate] = useState<DateRange | undefined>();
+  const [eggTypeFilter, setEggTypeFilter] = useState<string>("all");
 
   useEffect(() => {
     fetchData();
@@ -47,7 +50,7 @@ const ProductionTab = () => {
     }
   };
 
-  // Filter production based on date range
+  // Filter production based on date range and egg type
   useEffect(() => {
     let result = production;
     if (date?.from) {
@@ -58,6 +61,10 @@ const ProductionTab = () => {
         const recordDate = new Date(record.date);
         return isWithinInterval(recordDate, { start: fromD, end: toD });
       });
+    }
+
+    if (eggTypeFilter !== "all") {
+      result = result.filter((record) => record.egg_type === eggTypeFilter);
     }
 
     setFilteredProduction(result);
@@ -80,7 +87,7 @@ const ProductionTab = () => {
     }
 
     setTotalStats({ totalCrates: finalCrates, totalPieces: finalPieces });
-  }, [production, date]);
+  }, [production, date, eggTypeFilter]);
 
   const { currentPage, totalPages, paginatedRange, goToPage, getPageNumbers } = usePagination({
     totalItems: filteredProduction.length,
@@ -98,6 +105,32 @@ const ProductionTab = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Egg Type Filter */}
+          <div className="flex items-center gap-2">
+            <Select value={eggTypeFilter} onValueChange={setEggTypeFilter}>
+              <SelectTrigger className="w-[160px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="All eggs" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Eggs</SelectItem>
+                <SelectItem value="good">Good Eggs</SelectItem>
+                <SelectItem value="cracked">Cracked Eggs</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {eggTypeFilter !== "all" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setEggTypeFilter("all")}
+                title="Clear egg type filter"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
           {/* Date Range Filter */}
           <div className="flex items-center gap-2">
             <Popover>
@@ -201,6 +234,7 @@ const ProductionTab = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Crates</TableHead>
                 <TableHead>Pieces</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Recorded By</TableHead>
                 <TableHead>Comment</TableHead>
               </TableRow>
@@ -208,7 +242,7 @@ const ProductionTab = () => {
             <TableBody>
               {paginatedProduction.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     No production records yet
                   </TableCell>
                 </TableRow>
@@ -218,6 +252,18 @@ const ProductionTab = () => {
                     <TableCell>{format(new Date(record.date), "MMM dd, yyyy")}</TableCell>
                     <TableCell>{record.crates}</TableCell>
                     <TableCell>{record.pieces}</TableCell>
+                    <TableCell>
+                      {record.egg_type === "cracked" ? (
+                        <Badge variant="destructive" className="text-xs">
+                          {record.egg_type}
+                          {record.crack_reason ? ` — ${record.crack_reason}` : ""}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs bg-success/10 text-success hover:bg-success/20">
+                          {record.egg_type}
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>{record.profiles?.name || "Unknown"}</TableCell>
                     <TableCell className="max-w-xs truncate">{record.comment || "-"}</TableCell>
                   </TableRow>

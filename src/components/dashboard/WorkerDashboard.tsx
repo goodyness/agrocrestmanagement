@@ -11,8 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   LogOut, Sprout, Plus, TrendingUp, AlertCircle, Package, UserCircle, 
   Egg, ShoppingCart, Skull, BarChart3, ClipboardCheck, Landmark, Wallet,
-  Calendar, Clock
+  Calendar, Clock, Filter
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import AddMortalityDialog from "./worker/AddMortalityDialog";
 import AddProductionDialog from "./worker/AddProductionDialog";
@@ -49,6 +50,7 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
   const [livestockData, setLivestockData] = useState<any[]>([]);
   const [feedData, setFeedData] = useState<any[]>([]);
   const [recentProduction, setRecentProduction] = useState<any[]>([]);
+  const [productionFilter, setProductionFilter] = useState<string>("all");
   const [recentSales, setRecentSales] = useState<any[]>([]);
   const [pendingDeliveries, setPendingDeliveries] = useState<any[]>([]);
 
@@ -70,7 +72,6 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
   const userBranchId = userProfile?.branch_id || null;
   const cleaningSchedule = useCleaningSchedule(userBranchId);
 
-  const productionPagination = usePagination({ totalItems: recentProduction.length, itemsPerPage: ITEMS_PER_PAGE });
   const salesPagination = usePagination({ totalItems: recentSales.length, itemsPerPage: ITEMS_PER_PAGE });
   
   useEffect(() => {
@@ -158,7 +159,11 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
 
   const isSuspended = userProfile?.is_suspended;
 
-  const paginatedProduction = recentProduction.slice(productionPagination.paginatedRange.startIndex, productionPagination.paginatedRange.endIndex);
+  const filteredProduction = productionFilter === "all"
+    ? recentProduction
+    : recentProduction.filter((r) => r.egg_type === productionFilter);
+  const productionPagination = usePagination({ totalItems: filteredProduction.length, itemsPerPage: ITEMS_PER_PAGE });
+  const paginatedProduction = filteredProduction.slice(productionPagination.paginatedRange.startIndex, productionPagination.paginatedRange.endIndex);
   const paginatedSales = recentSales.slice(salesPagination.paginatedRange.startIndex, salesPagination.paginatedRange.endIndex);
 
   return (
@@ -436,8 +441,23 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
           <TabsContent value="production" className="space-y-4 mt-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Production History</CardTitle>
-                <CardDescription>Showing {paginatedProduction.length} of {recentProduction.length} records</CardDescription>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-lg">Production History</CardTitle>
+                    <CardDescription>Showing {paginatedProduction.length} of {filteredProduction.length} records</CardDescription>
+                  </div>
+                  <Select value={productionFilter} onValueChange={setProductionFilter}>
+                    <SelectTrigger className="w-[150px]">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="All eggs" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Eggs</SelectItem>
+                      <SelectItem value="good">Good Eggs</SelectItem>
+                      <SelectItem value="cracked">Cracked Eggs</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -447,13 +467,14 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
                         <TableHead>Date</TableHead>
                         <TableHead className="text-right">Crates</TableHead>
                         <TableHead className="text-right">Pieces</TableHead>
+                        <TableHead>Type</TableHead>
                         <TableHead className="hidden sm:table-cell">Comment</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedProduction.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground">No records</TableCell>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground">No records</TableCell>
                         </TableRow>
                       ) : (
                         paginatedProduction.map((record) => (
@@ -461,6 +482,17 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
                             <TableCell className="font-medium">{new Date(record.date).toLocaleDateString()}</TableCell>
                             <TableCell className="text-right">{record.crates}</TableCell>
                             <TableCell className="text-right">{record.pieces}</TableCell>
+                            <TableCell>
+                              {record.egg_type === "cracked" ? (
+                                <Badge variant="destructive" className="text-xs">
+                                  cracked
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs bg-success/10 text-success hover:bg-success/20">
+                                  good
+                                </Badge>
+                              )}
+                            </TableCell>
                             <TableCell className="hidden sm:table-cell text-muted-foreground">{record.comment || "-"}</TableCell>
                           </TableRow>
                         ))

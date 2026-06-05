@@ -296,6 +296,60 @@ export type Database = {
           },
         ]
       }
+      batch_weight_records: {
+        Row: {
+          average_weight_g: number
+          batch_id: string
+          branch_id: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          sample_size: number
+          target_weight_g: number | null
+          updated_at: string | null
+          weight_date: string
+        }
+        Insert: {
+          average_weight_g: number
+          batch_id: string
+          branch_id?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          sample_size?: number
+          target_weight_g?: number | null
+          updated_at?: string | null
+          weight_date?: string
+        }
+        Update: {
+          average_weight_g?: number
+          batch_id?: string
+          branch_id?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          sample_size?: number
+          target_weight_g?: number | null
+          updated_at?: string | null
+          weight_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_weight_records_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_weight_records_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       biosecurity_checks: {
         Row: {
           area: string | null
@@ -372,6 +426,83 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      breeding_records: {
+        Row: {
+          branch_id: string | null
+          chick_batch_id: string | null
+          created_at: string | null
+          dam_batch_id: string | null
+          eggs_fertile: number | null
+          eggs_hatched: number | null
+          eggs_set: number
+          hatch_date: string | null
+          id: string
+          lineage_notes: string | null
+          sire_batch_id: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          chick_batch_id?: string | null
+          created_at?: string | null
+          dam_batch_id?: string | null
+          eggs_fertile?: number | null
+          eggs_hatched?: number | null
+          eggs_set?: number
+          hatch_date?: string | null
+          id?: string
+          lineage_notes?: string | null
+          sire_batch_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          chick_batch_id?: string | null
+          created_at?: string | null
+          dam_batch_id?: string | null
+          eggs_fertile?: number | null
+          eggs_hatched?: number | null
+          eggs_set?: number
+          hatch_date?: string | null
+          id?: string
+          lineage_notes?: string | null
+          sire_batch_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "breeding_records_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "breeding_records_chick_batch_id_fkey"
+            columns: ["chick_batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "breeding_records_dam_batch_id_fkey"
+            columns: ["dam_batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "breeding_records_sire_batch_id_fkey"
+            columns: ["sire_batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       care_log_templates: {
         Row: {
@@ -1398,6 +1529,85 @@ export type Database = {
             columns: ["reconciliation_id"]
             isOneToOne: false
             referencedRelation: "stock_reconciliations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incubation_records: {
+        Row: {
+          branch_id: string | null
+          breeding_record_id: string | null
+          candling_date: string | null
+          created_at: string | null
+          dead_in_shell: number | null
+          eggs_set: number
+          fertile_count: number | null
+          hatch_date: string | null
+          hatched_count: number | null
+          id: string
+          incubator_id: string | null
+          infertile_count: number | null
+          notes: string | null
+          set_date: string
+          transfer_batch_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          breeding_record_id?: string | null
+          candling_date?: string | null
+          created_at?: string | null
+          dead_in_shell?: number | null
+          eggs_set?: number
+          fertile_count?: number | null
+          hatch_date?: string | null
+          hatched_count?: number | null
+          id?: string
+          incubator_id?: string | null
+          infertile_count?: number | null
+          notes?: string | null
+          set_date?: string
+          transfer_batch_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          breeding_record_id?: string | null
+          candling_date?: string | null
+          created_at?: string | null
+          dead_in_shell?: number | null
+          eggs_set?: number
+          fertile_count?: number | null
+          hatch_date?: string | null
+          hatched_count?: number | null
+          id?: string
+          incubator_id?: string | null
+          infertile_count?: number | null
+          notes?: string | null
+          set_date?: string
+          transfer_batch_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incubation_records_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incubation_records_breeding_record_id_fkey"
+            columns: ["breeding_record_id"]
+            isOneToOne: false
+            referencedRelation: "breeding_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incubation_records_transfer_batch_id_fkey"
+            columns: ["transfer_batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
             referencedColumns: ["id"]
           },
         ]
