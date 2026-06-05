@@ -50,7 +50,7 @@ const ProductionTab = () => {
     }
   };
 
-  // Filter production based on date range
+  // Filter production based on date range and egg type
   useEffect(() => {
     let result = production;
     if (date?.from) {
@@ -61,6 +61,10 @@ const ProductionTab = () => {
         const recordDate = new Date(record.date);
         return isWithinInterval(recordDate, { start: fromD, end: toD });
       });
+    }
+
+    if (eggTypeFilter !== "all") {
+      result = result.filter((record) => record.egg_type === eggTypeFilter);
     }
 
     setFilteredProduction(result);
@@ -83,7 +87,7 @@ const ProductionTab = () => {
     }
 
     setTotalStats({ totalCrates: finalCrates, totalPieces: finalPieces });
-  }, [production, date]);
+  }, [production, date, eggTypeFilter]);
 
   const { currentPage, totalPages, paginatedRange, goToPage, getPageNumbers } = usePagination({
     totalItems: filteredProduction.length,
