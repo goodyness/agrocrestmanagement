@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AddLivestockDialog from "./dialogs/AddLivestockDialog";
 import AddCensusDialog from "./dialogs/AddCensusDialog";
 import EditCensusDialog from "./dialogs/EditCensusDialog";
 import EditLivestockCategoryDialog from "./dialogs/EditLivestockCategoryDialog";
 import DeleteCensusDialog from "./dialogs/DeleteCensusDialog";
 import CareLogTemplatesManager from "./livestock/CareLogTemplatesManager";
+import WeightGrowthSection from "./livestock/WeightGrowthSection";
+import BreedingSection from "./livestock/BreedingSection";
+import IncubationSection from "./livestock/IncubationSection";
 import { useBranch } from "@/contexts/BranchContext";
+import { Sprout, Scale, Dna, Egg } from "lucide-react";
 
 const LivestockTab = () => {
   const { currentBranchId } = useBranch();
