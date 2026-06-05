@@ -27,6 +27,7 @@ const ProductionTab = () => {
   const [filteredProduction, setFilteredProduction] = useState<any[]>([]);
   const [totalStats, setTotalStats] = useState({ totalCrates: 0, totalPieces: 0 });
   const [date, setDate] = useState<DateRange | undefined>();
+  const [eggTypeFilter, setEggTypeFilter] = useState<string>("all");
 
   useEffect(() => {
     fetchData();
