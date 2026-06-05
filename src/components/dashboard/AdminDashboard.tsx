@@ -368,10 +368,15 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
           <TabsContent value="operations" className="space-y-4">
             <OperationsTab />
           </TabsContent>
+
+          <TabsContent value="cracked-eggs" className="space-y-4">
+            <CrackedEggsTab />
+          </TabsContent>
         </Tabs>
       </main>
     </div>
   );
 };
+
 
 export default AdminDashboard;
