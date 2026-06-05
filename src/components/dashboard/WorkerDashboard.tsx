@@ -160,7 +160,11 @@ const WorkerDashboard = ({ user }: WorkerDashboardProps) => {
 
   const isSuspended = userProfile?.is_suspended;
 
-  const paginatedProduction = recentProduction.slice(productionPagination.paginatedRange.startIndex, productionPagination.paginatedRange.endIndex);
+  const filteredProduction = productionFilter === "all"
+    ? recentProduction
+    : recentProduction.filter((r) => r.egg_type === productionFilter);
+  const productionPagination = usePagination({ totalItems: filteredProduction.length, itemsPerPage: ITEMS_PER_PAGE });
+  const paginatedProduction = filteredProduction.slice(productionPagination.paginatedRange.startIndex, productionPagination.paginatedRange.endIndex);
   const paginatedSales = recentSales.slice(salesPagination.paginatedRange.startIndex, salesPagination.paginatedRange.endIndex);
 
   return (
