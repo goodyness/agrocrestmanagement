@@ -349,6 +349,43 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
             />
           </div>
 
+          {/* Partner toggle (only on new batches) */}
+          {!batch && (
+            <div className="border rounded-lg p-3 bg-primary/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm">🤝 Has investment partner?</Label>
+                  <p className="text-xs text-muted-foreground">Link this batch to a partner</p>
+                </div>
+                <Switch checked={hasPartner} onCheckedChange={setHasPartner} />
+              </div>
+              {hasPartner && (
+                <div className="space-y-2">
+                  <Select value={partnerId} onValueChange={setPartnerId}>
+                    <SelectTrigger><SelectValue placeholder="Select partner" /></SelectTrigger>
+                    <SelectContent>
+                      {partners.length === 0 ? (
+                        <div className="px-2 py-3 text-xs text-muted-foreground">No partners yet. Create one in the Partners tab.</div>
+                      ) : partners.map((p: any) => (
+                        <SelectItem key={p.id} value={p.id}>{p.profiles?.name} • {p.profiles?.email}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">Share %</Label>
+                      <Input type="number" value={partnerShare} onChange={e => setPartnerShare(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Investment (₦)</Label>
+                      <Input type="number" value={partnerInvestment} onChange={e => setPartnerInvestment(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <Button type="submit" className="w-full" disabled={loading || !species || !stage || quantity <= 0}>
             {loading ? (batch ? "Updating..." : "Registering...") : (batch ? "Update Batch" : "Register Batch")}
           </Button>
