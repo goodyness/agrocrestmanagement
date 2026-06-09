@@ -2,7 +2,8 @@ import { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck, PawPrint, AlertCircle, Landmark, Wallet, Stethoscope, Bot, Egg, Brain, Flame, Boxes, Wrench, AlertTriangle } from "lucide-react";
+import { LogOut, Sprout, BarChart3, Package, TrendingUp, DollarSign, Activity, FileText, Users as UsersIcon, UserCircle, Calculator, Syringe, Heart, StickyNote, Building2, Brush, Scale, Truck, Users, ClipboardCheck, PawPrint, AlertCircle, Landmark, Wallet, Stethoscope, Bot, Egg, Brain, Flame, Boxes, Wrench, AlertTriangle, Handshake } from "lucide-react";
+import PartnersTab from "./admin/PartnersTab";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
@@ -244,6 +245,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
                 <AlertTriangle className="h-4 w-4" />
                 <span className="hidden sm:inline">Cracked Eggs</span>
               </TabsTrigger>
+              <TabsTrigger value="partners" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Handshake className="h-4 w-4" />
+                <span className="hidden sm:inline">Partners</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -371,6 +376,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
           <TabsContent value="cracked-eggs" className="space-y-4">
             <CrackedEggsTab />
+          </TabsContent>
+
+          <TabsContent value="partners" className="space-y-4">
+            <PartnersTab />
           </TabsContent>
         </Tabs>
       </main>
