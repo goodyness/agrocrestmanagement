@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 interface Props {
@@ -80,6 +82,20 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
   const [source, setSource] = useState(batch?.source || "");
   const [costPerUnit, setCostPerUnit] = useState(batch?.cost_per_unit || 0);
   const [notes, setNotes] = useState(batch?.notes || "");
+  const [hasPartner, setHasPartner] = useState(false);
+  const [partnerId, setPartnerId] = useState("");
+  const [partnerShare, setPartnerShare] = useState("50");
+  const [partnerInvestment, setPartnerInvestment] = useState("0");
+  const [partners, setPartners] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (open && !batch) {
+      supabase
+        .from("partners")
+        .select("id, profiles!partners_profile_id_fkey(name, email)")
+        .then(({ data }) => setPartners(data || []));
+    }
+  }, [open, batch]);
 
   const config = SPECIES_CONFIG[species];
   const types = config?.types || [];
@@ -124,6 +140,7 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
     };
 
     let error;
+    let insertedId: string | null = null;
     if (batch?.id) {
       const { error: updateError } = await supabase
         .from("livestock_batches")
@@ -131,18 +148,40 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
         .eq("id", batch.id);
       error = updateError;
     } else {
-      const { error: insertError } = await supabase.from("livestock_batches").insert(batchData);
+      const { data: ins, error: insertError } = await supabase
+        .from("livestock_batches")
+        .insert(batchData)
+        .select("id")
+        .single();
       error = insertError;
+      insertedId = ins?.id || null;
     }
 
     if (error) {
       toast.error(`Failed to ${batch ? 'update' : 'register'} batch: ` + error.message);
+      setLoading(false);
+      return;
+    }
+
+    // If this is a new batch with a partner attached, link it
+    if (!batch && hasPartner && partnerId && insertedId) {
+      {
+        const { error: linkErr } = await supabase.from("partner_batches").insert({
+          partner_id: partnerId,
+          batch_id: insertedId,
+          share_percentage: parseFloat(partnerShare) || 0,
+          investment_amount: parseFloat(partnerInvestment) || 0,
+        });
+        if (linkErr) toast.error("Batch saved, but partner link failed: " + linkErr.message);
+        else toast.success("Batch registered and linked to partner");
+      }
     } else {
       toast.success(`Livestock batch ${batch ? 'updated' : 'registered'} successfully!`);
-      onOpenChange(false);
-      if (!batch) resetForm();
-      onSuccess();
     }
+
+    onOpenChange(false);
+    if (!batch) resetForm();
+    onSuccess();
     setLoading(false);
   };
 
@@ -156,6 +195,10 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
     setSource("");
     setCostPerUnit(0);
     setNotes("");
+    setHasPartner(false);
+    setPartnerId("");
+    setPartnerShare("50");
+    setPartnerInvestment("0");
   };
 
   return (
@@ -304,6 +347,43 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
               placeholder="Additional notes about this batch..."
             />
           </div>
+
+          {/* Partner toggle (only on new batches) */}
+          {!batch && (
+            <div className="border rounded-lg p-3 bg-primary/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm">🤝 Has investment partner?</Label>
+                  <p className="text-xs text-muted-foreground">Link this batch to a partner</p>
+                </div>
+                <Switch checked={hasPartner} onCheckedChange={setHasPartner} />
+              </div>
+              {hasPartner && (
+                <div className="space-y-2">
+                  <Select value={partnerId} onValueChange={setPartnerId}>
+                    <SelectTrigger><SelectValue placeholder="Select partner" /></SelectTrigger>
+                    <SelectContent>
+                      {partners.length === 0 ? (
+                        <div className="px-2 py-3 text-xs text-muted-foreground">No partners yet. Create one in the Partners tab.</div>
+                      ) : partners.map((p: any) => (
+                        <SelectItem key={p.id} value={p.id}>{p.profiles?.name} • {p.profiles?.email}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">Share %</Label>
+                      <Input type="number" value={partnerShare} onChange={e => setPartnerShare(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Investment (₦)</Label>
+                      <Input type="number" value={partnerInvestment} onChange={e => setPartnerInvestment(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <Button type="submit" className="w-full" disabled={loading || !species || !stage || quantity <= 0}>
             {loading ? (batch ? "Updating..." : "Registering...") : (batch ? "Update Batch" : "Register Batch")}

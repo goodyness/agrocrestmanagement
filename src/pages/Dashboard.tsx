@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
 import AdminDashboard from "@/components/dashboard/AdminDashboard";
 import WorkerDashboard from "@/components/dashboard/WorkerDashboard";
+import PartnerDashboard from "@/components/dashboard/PartnerDashboard";
 import SuspensionOverlay from "@/components/dashboard/SuspensionOverlay";
 
 interface UserProfile {
@@ -88,6 +89,10 @@ const Dashboard = () => {
 
   if (userProfile?.role === "admin") {
     return <AdminDashboard user={user} />;
+  }
+
+  if (userProfile?.role === "partner") {
+    return <PartnerDashboard user={user} />;
   }
 
   return <WorkerDashboard user={user} />;
