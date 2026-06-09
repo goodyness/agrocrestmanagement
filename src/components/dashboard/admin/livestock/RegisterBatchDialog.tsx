@@ -168,7 +168,7 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
       {
         const { error: linkErr } = await supabase.from("partner_batches").insert({
           partner_id: partnerId,
-          batch_id: inserted.id,
+          batch_id: insertedId,
           share_percentage: parseFloat(partnerShare) || 0,
           investment_amount: parseFloat(partnerInvestment) || 0,
         });
