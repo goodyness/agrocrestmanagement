@@ -82,6 +82,20 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
   const [source, setSource] = useState(batch?.source || "");
   const [costPerUnit, setCostPerUnit] = useState(batch?.cost_per_unit || 0);
   const [notes, setNotes] = useState(batch?.notes || "");
+  const [hasPartner, setHasPartner] = useState(false);
+  const [partnerId, setPartnerId] = useState("");
+  const [partnerShare, setPartnerShare] = useState("50");
+  const [partnerInvestment, setPartnerInvestment] = useState("0");
+  const [partners, setPartners] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (open && !batch) {
+      supabase
+        .from("partners")
+        .select("id, profiles!partners_profile_id_fkey(name, email)")
+        .then(({ data }) => setPartners(data || []));
+    }
+  }, [open, batch]);
 
   const config = SPECIES_CONFIG[species];
   const types = config?.types || [];
@@ -139,12 +153,36 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
 
     if (error) {
       toast.error(`Failed to ${batch ? 'update' : 'register'} batch: ` + error.message);
+      setLoading(false);
+      return;
+    }
+
+    // If this is a new batch with a partner attached, link it
+    if (!batch && hasPartner && partnerId) {
+      const { data: inserted } = await supabase
+        .from("livestock_batches")
+        .select("id")
+        .eq("branch_id", branchId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (inserted?.id) {
+        const { error: linkErr } = await supabase.from("partner_batches").insert({
+          partner_id: partnerId,
+          batch_id: inserted.id,
+          share_percentage: parseFloat(partnerShare) || 0,
+          investment_amount: parseFloat(partnerInvestment) || 0,
+        });
+        if (linkErr) toast.error("Batch saved, but partner link failed: " + linkErr.message);
+        else toast.success("Batch registered and linked to partner");
+      }
     } else {
       toast.success(`Livestock batch ${batch ? 'updated' : 'registered'} successfully!`);
-      onOpenChange(false);
-      if (!batch) resetForm();
-      onSuccess();
     }
+
+    onOpenChange(false);
+    if (!batch) resetForm();
+    onSuccess();
     setLoading(false);
   };
 
@@ -158,6 +196,10 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
     setSource("");
     setCostPerUnit(0);
     setNotes("");
+    setHasPartner(false);
+    setPartnerId("");
+    setPartnerShare("50");
+    setPartnerInvestment("0");
   };
 
   return (
