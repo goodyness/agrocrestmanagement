@@ -966,6 +966,7 @@ export type Database = {
       }
       daily_production: {
         Row: {
+          batch_id: string | null
           branch_id: string | null
           comment: string | null
           crack_reason: string | null
@@ -978,6 +979,7 @@ export type Database = {
           recorded_by: string
         }
         Insert: {
+          batch_id?: string | null
           branch_id?: string | null
           comment?: string | null
           crack_reason?: string | null
@@ -990,6 +992,7 @@ export type Database = {
           recorded_by: string
         }
         Update: {
+          batch_id?: string | null
           branch_id?: string | null
           comment?: string | null
           crack_reason?: string | null
@@ -1002,6 +1005,13 @@ export type Database = {
           recorded_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "daily_production_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "daily_production_branch_id_fkey"
             columns: ["branch_id"]
@@ -1255,6 +1265,7 @@ export type Database = {
       }
       feed_consumption: {
         Row: {
+          batch_id: string | null
           branch_id: string | null
           created_at: string | null
           date: string
@@ -1266,6 +1277,7 @@ export type Database = {
           unit: string
         }
         Insert: {
+          batch_id?: string | null
           branch_id?: string | null
           created_at?: string | null
           date?: string
@@ -1277,6 +1289,7 @@ export type Database = {
           unit: string
         }
         Update: {
+          batch_id?: string | null
           branch_id?: string | null
           created_at?: string | null
           date?: string
@@ -1288,6 +1301,13 @@ export type Database = {
           unit?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "feed_consumption_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "feed_consumption_branch_id_fkey"
             columns: ["branch_id"]
@@ -2246,6 +2266,92 @@ export type Database = {
             foreignKeyName: "mortality_records_recorded_by_fkey"
             columns: ["recorded_by"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_batches: {
+        Row: {
+          batch_id: string
+          created_at: string
+          id: string
+          investment_amount: number
+          notes: string | null
+          partner_id: string
+          share_percentage: number
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          id?: string
+          investment_amount?: number
+          notes?: string | null
+          partner_id: string
+          share_percentage?: number
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          id?: string
+          investment_amount?: number
+          notes?: string | null
+          partner_id?: string
+          share_percentage?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_batches_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_batches_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partners: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          phone: string | null
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partners_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3231,6 +3337,7 @@ export type Database = {
         Row: {
           administered_by: string
           administered_date: string
+          batch_id: string | null
           branch_id: string | null
           created_at: string | null
           id: string
@@ -3242,6 +3349,7 @@ export type Database = {
         Insert: {
           administered_by: string
           administered_date?: string
+          batch_id?: string | null
           branch_id?: string | null
           created_at?: string | null
           id?: string
@@ -3253,6 +3361,7 @@ export type Database = {
         Update: {
           administered_by?: string
           administered_date?: string
+          batch_id?: string | null
           branch_id?: string | null
           created_at?: string | null
           id?: string
@@ -3267,6 +3376,13 @@ export type Database = {
             columns: ["administered_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccination_records_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
             referencedColumns: ["id"]
           },
           {
@@ -3592,6 +3708,8 @@ export type Database = {
       admin_exists: { Args: never; Returns: boolean }
       increment_batch_ages: { Args: never; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
+      is_partner: { Args: never; Returns: boolean }
+      partner_has_batch: { Args: { _batch_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "worker" | "partner"
