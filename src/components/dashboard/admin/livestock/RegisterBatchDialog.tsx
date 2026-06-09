@@ -140,6 +140,7 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
     };
 
     let error;
+    let insertedId: string | null = null;
     if (batch?.id) {
       const { error: updateError } = await supabase
         .from("livestock_batches")
@@ -147,8 +148,13 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
         .eq("id", batch.id);
       error = updateError;
     } else {
-      const { error: insertError } = await supabase.from("livestock_batches").insert(batchData);
+      const { data: ins, error: insertError } = await supabase
+        .from("livestock_batches")
+        .insert(batchData)
+        .select("id")
+        .single();
       error = insertError;
+      insertedId = ins?.id || null;
     }
 
     if (error) {
@@ -158,15 +164,8 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
     }
 
     // If this is a new batch with a partner attached, link it
-    if (!batch && hasPartner && partnerId) {
-      const { data: inserted } = await supabase
-        .from("livestock_batches")
-        .select("id")
-        .eq("branch_id", branchId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-      if (inserted?.id) {
+    if (!batch && hasPartner && partnerId && insertedId) {
+      {
         const { error: linkErr } = await supabase.from("partner_batches").insert({
           partner_id: partnerId,
           batch_id: inserted.id,
