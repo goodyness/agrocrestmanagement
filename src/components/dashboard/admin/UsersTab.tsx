@@ -52,7 +52,6 @@ const UsersTab = () => {
   };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
-    // Check if trying to change to admin
     if (newRole === 'admin') {
       const { data: adminCheck } = await supabase.rpc('admin_exists');
       if (adminCheck) {
@@ -63,12 +62,18 @@ const UsersTab = () => {
 
     const { error } = await supabase
       .from("profiles")
-      .update({ role: newRole as "admin" | "worker" })
+      .update({ role: newRole as any })
       .eq("id", userId);
 
     if (error) {
       toast.error("Failed to update user role");
     } else {
+      if (newRole === "partner") {
+        const { data: existing } = await supabase.from("partners").select("id").eq("profile_id", userId).maybeSingle();
+        if (!existing) {
+          await supabase.from("partners").insert({ profile_id: userId } as any);
+        }
+      }
       toast.success("User role updated successfully");
       fetchUsers();
     }
@@ -262,6 +267,7 @@ const UsersTab = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="worker">Worker</SelectItem>
+                            <SelectItem value="partner">Partner</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>

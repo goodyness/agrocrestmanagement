@@ -38,7 +38,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { name, email, phone, notes } = body || {};
+    const { name, email, phone, notes, branch_id } = body || {};
     if (!name || !email) {
       return new Response(JSON.stringify({ error: "Name and email are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -56,13 +56,13 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: createErr?.message || "Failed to create user" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Ensure profile row is partner role + name
-    await admin.from("profiles").upsert({ id: created.user.id, name, role: "partner", email });
+    // Ensure profile row is partner role + name (+ branch)
+    await admin.from("profiles").upsert({ id: created.user.id, name, role: "partner", email, branch_id: branch_id || null });
 
     // Insert partner row
     const { data: partnerRow, error: pErr } = await admin
       .from("partners")
-      .insert({ profile_id: created.user.id, phone: phone || null, notes: notes || null, created_by: userData.user.id })
+      .insert({ profile_id: created.user.id, phone: phone || null, notes: notes || null, branch_id: branch_id || null, created_by: userData.user.id })
       .select()
       .single();
     if (pErr) {
