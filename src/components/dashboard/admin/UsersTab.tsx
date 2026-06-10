@@ -267,6 +267,7 @@ const UsersTab = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="worker">Worker</SelectItem>
+                            <SelectItem value="partner">Partner</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
