@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Users, Shield, UserCog, Ban, UserCheck } from "lucide-react";
+import { Users, Shield, UserCog, Ban, UserCheck, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import SuspendUserDialog from "./dialogs/SuspendUserDialog";
 import { logActivity } from "@/lib/activityLogger";
@@ -146,6 +146,21 @@ const UsersTab = () => {
     setActionLoading(false);
   };
 
+  const handleDeleteUser = async (user: Profile) => {
+    if (!confirm(`Permanently delete ${user.name}? Their historical records (production, mortality, expenses, etc.) will be preserved but no longer tagged to them. This cannot be undone.`)) return;
+    setActionLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-user", { body: { user_id: user.id } });
+      if (error || (data as any)?.error) throw new Error(error?.message || (data as any)?.error);
+      await logActivity("delete", "user", user.id, { user_name: user.name });
+      toast.success(`${user.name} deleted`);
+      fetchUsers();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete user");
+    }
+    setActionLoading(false);
+  };
+
   if (loading) {
     return (
       <Card>
@@ -271,6 +286,18 @@ const UsersTab = () => {
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
+                        {user.role !== "admin" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:bg-destructive/10 h-9 w-9"
+                            onClick={() => handleDeleteUser(user)}
+                            disabled={actionLoading}
+                            title="Delete user"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

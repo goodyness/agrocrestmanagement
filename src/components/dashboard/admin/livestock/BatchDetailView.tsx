@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Plus, Sparkles, CheckCircle, Clock, AlertTriangle, Loader2, DollarSign, Skull, TrendingDown } from "lucide-react";
+import { ArrowLeft, Plus, Sparkles, CheckCircle, Clock, AlertTriangle, Loader2, DollarSign, Skull, TrendingDown, Handshake, Wallet } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import AddCareLogDialog from "./AddCareLogDialog";
 import CareLogsView from "./CareLogsView";
@@ -42,6 +43,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const [loadingAi, setLoadingAi] = useState(false);
   const [showAddCare, setShowAddCare] = useState(false);
   const [batchData, setBatchData] = useState(batch);
+  const [partnerLink, setPartnerLink] = useState<any | null>(null);
 
   // Expenses state
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -115,6 +117,12 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
     fetchTemplates();
     fetchExpenses();
     fetchMortality();
+    supabase
+      .from("partner_batches")
+      .select("*, partners(id, phone, notes, profiles!partners_profile_id_fkey(name, email))")
+      .eq("batch_id", batch.id)
+      .maybeSingle()
+      .then(({ data }) => setPartnerLink(data));
   }, [batch.id]);
 
   const getAiSuggestions = async () => {
@@ -272,6 +280,67 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
         <Card><CardContent className="p-3 text-center"><p className="text-lg font-bold text-amber-600">₦{totalInvestment.toLocaleString()}</p><p className="text-xs text-muted-foreground">Total Spent</p></CardContent></Card>
         <Card><CardContent className="p-3 text-center"><p className="text-lg font-bold">{currentWeekTemplates.length}</p><p className="text-xs text-muted-foreground">Due This Week</p></CardContent></Card>
       </div>
+
+      {/* Budget widget */}
+      {Number(batchData.budget || 0) > 0 && (() => {
+        const budget = Number(batchData.budget || 0);
+        const spent = totalExpenses; // Only "other expenses" consume budget (purchase cost separate)
+        const remaining = budget - spent;
+        const pct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
+        const over = remaining < 0;
+        return (
+          <Card className={over ? "border-destructive/50 bg-destructive/5" : "border-primary/30 bg-primary/5"}>
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Wallet className={`h-4 w-4 ${over ? "text-destructive" : "text-primary"}`} />
+                  <p className="font-semibold text-sm">Batch Budget</p>
+                </div>
+                <Badge variant={over ? "destructive" : "secondary"} className="text-xs">
+                  {pct.toFixed(0)}% used
+                </Badge>
+              </div>
+              <Progress value={Math.min(100, pct)} className={over ? "bg-destructive/20" : ""} />
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Spent: ₦{spent.toLocaleString()}</span>
+                <span className="text-muted-foreground">Budget: ₦{budget.toLocaleString()}</span>
+                <span className={`font-semibold ${over ? "text-destructive" : "text-primary"}`}>
+                  {over ? `Over by ₦${Math.abs(remaining).toLocaleString()}` : `Remaining: ₦${remaining.toLocaleString()}`}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* Partner details */}
+      {partnerLink && partnerLink.partners && (
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                <Handshake className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-semibold text-sm">{partnerLink.partners.profiles?.name}</p>
+                  <Badge variant="secondary" className="text-xs">Investment Partner</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{partnerLink.partners.profiles?.email}</p>
+                {partnerLink.partners.phone && (
+                  <p className="text-xs text-muted-foreground">📞 {partnerLink.partners.phone}</p>
+                )}
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  <Badge variant="outline" className="text-xs">Ownership: {partnerLink.share_percentage}%</Badge>
+                  <Badge variant="outline" className="text-xs">Profit Share: {partnerLink.profit_share_percentage ?? partnerLink.share_percentage}%</Badge>
+                  <Badge variant="outline" className="text-xs">Invested: ₦{Number(partnerLink.investment_amount).toLocaleString()}</Badge>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
 
       <Tabs defaultValue="schedule">
         <TabsList className="w-full flex-wrap h-auto">

@@ -28,12 +28,15 @@ const PartnersTab = () => {
   useEffect(() => { load(); }, []);
 
   const remove = async (p: any) => {
-    if (!confirm(`Remove partner ${p.profiles?.name}? This deletes their account and links.`)) return;
-    // Delete profile cascades to partners & partner_batches; auth user requires admin API — leave orphaned auth user
-    const { error } = await supabase.from("profiles").delete().eq("id", p.profile_id);
-    if (error) return toast.error(error.message);
-    toast.success("Partner removed");
-    load();
+    if (!confirm(`Delete partner ${p.profiles?.name}?\n\nTheir account will be removed but all batches and records they created will be preserved.`)) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-user", { body: { user_id: p.profile_id } });
+      if (error || (data as any)?.error) throw new Error(error?.message || (data as any)?.error);
+      toast.success("Partner deleted");
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete partner");
+    }
   };
 
   return (

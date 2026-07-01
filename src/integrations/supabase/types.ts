@@ -976,7 +976,7 @@ export type Database = {
           egg_type: string
           id: string
           pieces: number
-          recorded_by: string
+          recorded_by: string | null
         }
         Insert: {
           batch_id?: string | null
@@ -989,7 +989,7 @@ export type Database = {
           egg_type?: string
           id?: string
           pieces?: number
-          recorded_by: string
+          recorded_by?: string | null
         }
         Update: {
           batch_id?: string | null
@@ -1002,7 +1002,7 @@ export type Database = {
           egg_type?: string
           id?: string
           pieces?: number
-          recorded_by?: string
+          recorded_by?: string | null
         }
         Relationships: [
           {
@@ -1273,7 +1273,7 @@ export type Database = {
           id: string
           livestock_category_id: string
           quantity_used: number
-          recorded_by: string
+          recorded_by: string | null
           unit: string
         }
         Insert: {
@@ -1285,7 +1285,7 @@ export type Database = {
           id?: string
           livestock_category_id: string
           quantity_used: number
-          recorded_by: string
+          recorded_by?: string | null
           unit: string
         }
         Update: {
@@ -1297,7 +1297,7 @@ export type Database = {
           id?: string
           livestock_category_id?: string
           quantity_used?: number
-          recorded_by?: string
+          recorded_by?: string | null
           unit?: string
         }
         Relationships: [
@@ -1636,6 +1636,7 @@ export type Database = {
         Row: {
           age_weeks: number | null
           branch_id: string | null
+          budget: number
           cost_per_unit: number | null
           created_at: string
           current_quantity: number
@@ -1658,6 +1659,7 @@ export type Database = {
         Insert: {
           age_weeks?: number | null
           branch_id?: string | null
+          budget?: number
           cost_per_unit?: number | null
           created_at?: string
           current_quantity?: number
@@ -1680,6 +1682,7 @@ export type Database = {
         Update: {
           age_weeks?: number | null
           branch_id?: string | null
+          budget?: number
           cost_per_unit?: number | null
           created_at?: string
           current_quantity?: number
@@ -1725,7 +1728,7 @@ export type Database = {
       }
       livestock_care_logs: {
         Row: {
-          administered_by: string
+          administered_by: string | null
           batch_id: string
           branch_id: string | null
           care_date: string
@@ -1747,7 +1750,7 @@ export type Database = {
           withdrawal_end_date: string | null
         }
         Insert: {
-          administered_by: string
+          administered_by?: string | null
           batch_id: string
           branch_id?: string | null
           care_date?: string
@@ -1769,7 +1772,7 @@ export type Database = {
           withdrawal_end_date?: string | null
         }
         Update: {
-          administered_by?: string
+          administered_by?: string | null
           batch_id?: string
           branch_id?: string | null
           care_date?: string
@@ -2151,7 +2154,7 @@ export type Database = {
           batch_id: string | null
           branch_id: string | null
           created_at: string | null
-          created_by: string
+          created_by: string | null
           date: string
           description: string | null
           expense_type: string
@@ -2162,7 +2165,7 @@ export type Database = {
           batch_id?: string | null
           branch_id?: string | null
           created_at?: string | null
-          created_by: string
+          created_by?: string | null
           date?: string
           description?: string | null
           expense_type: string
@@ -2173,7 +2176,7 @@ export type Database = {
           batch_id?: string | null
           branch_id?: string | null
           created_at?: string | null
-          created_by?: string
+          created_by?: string | null
           date?: string
           description?: string | null
           expense_type?: string
@@ -2214,7 +2217,7 @@ export type Database = {
           photo_url: string | null
           quantity_dead: number
           reason: string | null
-          recorded_by: string
+          recorded_by: string | null
         }
         Insert: {
           batch_id?: string | null
@@ -2226,7 +2229,7 @@ export type Database = {
           photo_url?: string | null
           quantity_dead: number
           reason?: string | null
-          recorded_by: string
+          recorded_by?: string | null
         }
         Update: {
           batch_id?: string | null
@@ -2238,7 +2241,7 @@ export type Database = {
           photo_url?: string | null
           quantity_dead?: number
           reason?: string | null
-          recorded_by?: string
+          recorded_by?: string | null
         }
         Relationships: [
           {
@@ -2279,6 +2282,7 @@ export type Database = {
           investment_amount: number
           notes: string | null
           partner_id: string
+          profit_share_percentage: number
           share_percentage: number
           updated_at: string
         }
@@ -2289,6 +2293,7 @@ export type Database = {
           investment_amount?: number
           notes?: string | null
           partner_id: string
+          profit_share_percentage?: number
           share_percentage?: number
           updated_at?: string
         }
@@ -2299,6 +2304,7 @@ export type Database = {
           investment_amount?: number
           notes?: string | null
           partner_id?: string
+          profit_share_percentage?: number
           share_percentage?: number
           updated_at?: string
         }
@@ -2747,7 +2753,7 @@ export type Database = {
           product_name: string
           product_type: string
           quantity: number
-          recorded_by: string
+          recorded_by: string | null
           total_amount: number
           unit: string
         }
@@ -2765,7 +2771,7 @@ export type Database = {
           product_name: string
           product_type: string
           quantity: number
-          recorded_by: string
+          recorded_by?: string | null
           total_amount: number
           unit: string
         }
@@ -2783,7 +2789,7 @@ export type Database = {
           product_name?: string
           product_type?: string
           quantity?: number
-          recorded_by?: string
+          recorded_by?: string | null
           total_amount?: number
           unit?: string
         }
@@ -3345,7 +3351,7 @@ export type Database = {
       }
       vaccination_records: {
         Row: {
-          administered_by: string
+          administered_by: string | null
           administered_date: string
           batch_id: string | null
           branch_id: string | null
@@ -3357,7 +3363,7 @@ export type Database = {
           vaccination_type_id: string
         }
         Insert: {
-          administered_by: string
+          administered_by?: string | null
           administered_date?: string
           batch_id?: string | null
           branch_id?: string | null
@@ -3369,7 +3375,7 @@ export type Database = {
           vaccination_type_id: string
         }
         Update: {
-          administered_by?: string
+          administered_by?: string | null
           administered_date?: string
           batch_id?: string | null
           branch_id?: string | null

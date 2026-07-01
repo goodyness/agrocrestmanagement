@@ -82,20 +82,41 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
   const [source, setSource] = useState(batch?.source || "");
   const [costPerUnit, setCostPerUnit] = useState(batch?.cost_per_unit || 0);
   const [notes, setNotes] = useState(batch?.notes || "");
+  const [budget, setBudget] = useState<string>(batch?.budget?.toString() || "0");
   const [hasPartner, setHasPartner] = useState(false);
   const [partnerId, setPartnerId] = useState("");
   const [partnerShare, setPartnerShare] = useState("50");
+  const [partnerProfitShare, setPartnerProfitShare] = useState("50");
   const [partnerInvestment, setPartnerInvestment] = useState("0");
   const [partners, setPartners] = useState<any[]>([]);
+  const [existingPartnerLink, setExistingPartnerLink] = useState<any | null>(null);
 
   useEffect(() => {
-    if (open && !batch) {
+    if (!open) return;
+    supabase
+      .from("partners")
+      .select("id, profiles!partners_profile_id_fkey(name, email)")
+      .then(({ data }) => setPartners(data || []));
+
+    if (batch?.id) {
       supabase
-        .from("partners")
-        .select("id, profiles!partners_profile_id_fkey(name, email)")
-        .then(({ data }) => setPartners(data || []));
+        .from("partner_batches")
+        .select("*, partners(id, profiles!partners_profile_id_fkey(name, email))")
+        .eq("batch_id", batch.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setExistingPartnerLink(data);
+            setHasPartner(true);
+            setPartnerId(data.partner_id);
+            setPartnerShare(String(data.share_percentage ?? "50"));
+            setPartnerProfitShare(String(data.profit_share_percentage ?? data.share_percentage ?? "50"));
+            setPartnerInvestment(String(data.investment_amount ?? "0"));
+          }
+        });
     }
-  }, [open, batch]);
+  }, [open, batch?.id]);
+
 
   const config = SPECIES_CONFIG[species];
   const types = config?.types || [];
@@ -134,10 +155,12 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
       cost_per_unit: costPerUnit,
       total_cost: costPerUnit * quantity,
       notes: notes || null,
+      budget: parseFloat(budget) || 0,
       has_started_laying: stage === "laying",
       laying_start_date: stage === "laying" ? (batch?.laying_start_date || new Date().toISOString().split("T")[0]) : null,
       registered_by: batch?.registered_by || user.id,
     };
+
 
     let error;
     let insertedId: string | null = null;
@@ -163,18 +186,32 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
       return;
     }
 
-    // If this is a new batch with a partner attached, link it
-    if (!batch && hasPartner && partnerId && insertedId) {
-      {
-        const { error: linkErr } = await supabase.from("partner_batches").insert({
-          partner_id: partnerId,
-          batch_id: insertedId,
-          share_percentage: parseFloat(partnerShare) || 0,
-          investment_amount: parseFloat(partnerInvestment) || 0,
-        });
+    // Partner link handling — create on new batch OR upsert on edit
+    const targetBatchId = batch?.id || insertedId;
+    if (hasPartner && partnerId && targetBatchId) {
+      const linkPayload = {
+        partner_id: partnerId,
+        batch_id: targetBatchId,
+        share_percentage: parseFloat(partnerShare) || 0,
+        profit_share_percentage: parseFloat(partnerProfitShare) || 0,
+        investment_amount: parseFloat(partnerInvestment) || 0,
+      };
+      if (existingPartnerLink) {
+        const { error: upErr } = await supabase
+          .from("partner_batches")
+          .update(linkPayload)
+          .eq("id", existingPartnerLink.id);
+        if (upErr) toast.error("Partner link update failed: " + upErr.message);
+        else toast.success("Batch & partner details updated");
+      } else {
+        const { error: linkErr } = await supabase.from("partner_batches").insert(linkPayload);
         if (linkErr) toast.error("Batch saved, but partner link failed: " + linkErr.message);
-        else toast.success("Batch registered and linked to partner");
+        else toast.success("Batch linked to partner");
       }
+    } else if (!hasPartner && existingPartnerLink) {
+      // Toggled off — remove existing link
+      await supabase.from("partner_batches").delete().eq("id", existingPartnerLink.id);
+      toast.success("Partner unlinked");
     } else {
       toast.success(`Livestock batch ${batch ? 'updated' : 'registered'} successfully!`);
     }
@@ -195,11 +232,15 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
     setSource("");
     setCostPerUnit(0);
     setNotes("");
+    setBudget("0");
     setHasPartner(false);
     setPartnerId("");
     setPartnerShare("50");
+    setPartnerProfitShare("50");
     setPartnerInvestment("0");
+    setExistingPartnerLink(null);
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -338,6 +379,21 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
             )}
           </div>
 
+          {/* Budget */}
+          <div className="space-y-2">
+            <Label>Batch Budget (₦)</Label>
+            <Input
+              type="number"
+              min={0}
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+              placeholder="Total budget allocated for this batch"
+            />
+            <p className="text-xs text-muted-foreground">
+              Expenses recorded on this batch will reduce this budget automatically.
+            </p>
+          </div>
+
           {/* Notes */}
           <div className="space-y-2">
             <Label>Notes</Label>
@@ -348,42 +404,50 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
             />
           </div>
 
-          {/* Partner toggle (only on new batches) */}
-          {!batch && (
-            <div className="border rounded-lg p-3 bg-primary/5 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-sm">🤝 Has investment partner?</Label>
-                  <p className="text-xs text-muted-foreground">Link this batch to a partner</p>
-                </div>
-                <Switch checked={hasPartner} onCheckedChange={setHasPartner} />
+          {/* Partner toggle — available on both create and edit */}
+          <div className="border rounded-lg p-3 bg-primary/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm">🤝 Has investment partner?</Label>
+                <p className="text-xs text-muted-foreground">
+                  {existingPartnerLink ? "Edit or remove this batch's partner link" : "Link this batch to a partner"}
+                </p>
               </div>
-              {hasPartner && (
-                <div className="space-y-2">
-                  <Select value={partnerId} onValueChange={setPartnerId}>
-                    <SelectTrigger><SelectValue placeholder="Select partner" /></SelectTrigger>
-                    <SelectContent>
-                      {partners.length === 0 ? (
-                        <div className="px-2 py-3 text-xs text-muted-foreground">No partners yet. Create one in the Partners tab.</div>
-                      ) : partners.map((p: any) => (
-                        <SelectItem key={p.id} value={p.id}>{p.profiles?.name} • {p.profiles?.email}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-xs">Share %</Label>
-                      <Input type="number" value={partnerShare} onChange={e => setPartnerShare(e.target.value)} />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Investment (₦)</Label>
-                      <Input type="number" value={partnerInvestment} onChange={e => setPartnerInvestment(e.target.value)} />
-                    </div>
+              <Switch checked={hasPartner} onCheckedChange={setHasPartner} />
+            </div>
+            {hasPartner && (
+              <div className="space-y-2">
+                <Select value={partnerId} onValueChange={setPartnerId}>
+                  <SelectTrigger><SelectValue placeholder="Select partner" /></SelectTrigger>
+                  <SelectContent>
+                    {partners.length === 0 ? (
+                      <div className="px-2 py-3 text-xs text-muted-foreground">No partners yet. Create one in the Partners tab.</div>
+                    ) : partners.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>{p.profiles?.name} • {p.profiles?.email}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="text-xs">Ownership %</Label>
+                    <Input type="number" value={partnerShare} onChange={e => setPartnerShare(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Profit Share %</Label>
+                    <Input type="number" value={partnerProfitShare} onChange={e => setPartnerProfitShare(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Investment (₦)</Label>
+                    <Input type="number" value={partnerInvestment} onChange={e => setPartnerInvestment(e.target.value)} />
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+                <p className="text-xs text-muted-foreground">
+                  Ownership % = share of animals owned. Profit Share % = share of profits the partner receives.
+                </p>
+              </div>
+            )}
+          </div>
+
 
           <Button type="submit" className="w-full" disabled={loading || !species || !stage || quantity <= 0}>
             {loading ? (batch ? "Updating..." : "Registering...") : (batch ? "Update Batch" : "Register Batch")}
