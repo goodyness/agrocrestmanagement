@@ -295,16 +295,6 @@ const PartnerDashboard = ({ user }: Props) => {
                   </Card>
                 )}
 
-                    <CardContent className="p-4 flex items-center gap-3">
-                      <Package className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="text-sm font-medium">Total Production Recorded</p>
-                        <p className="text-lg font-bold text-primary">{totalProductionAgg.toLocaleString()} units</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
                 <Card className="bg-muted/30">
                   <CardContent className="p-4">
                     <p className="text-sm font-medium mb-1">Recent Batches</p>
