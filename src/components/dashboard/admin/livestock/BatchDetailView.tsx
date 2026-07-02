@@ -373,6 +373,14 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
         </Card>
       )}
 
+      {/* Profit Share Summary (partnered batches only) */}
+      {partnerLink && (
+        <PartnerProfitShareWidget
+          partnerLink={partnerLink}
+          totalRevenue={0}
+          totalCost={totalInvestment}
+        />
+      )}
 
       <Tabs defaultValue="schedule">
         <TabsList className="w-full flex-wrap h-auto">
@@ -380,6 +388,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           <TabsTrigger value="logs" className="text-xs">📝 Care Logs</TabsTrigger>
           <TabsTrigger value="mortality" className="text-xs">💀 Mortality ({totalMortality})</TabsTrigger>
           <TabsTrigger value="expenses" className="text-xs">💰 Expenses</TabsTrigger>
+          <TabsTrigger value="timeline" className="text-xs">🕘 Timeline</TabsTrigger>
           <TabsTrigger value="ai" className="text-xs">✨ AI</TabsTrigger>
           <TabsTrigger value="info" className="text-xs">ℹ️ Details</TabsTrigger>
         </TabsList>
