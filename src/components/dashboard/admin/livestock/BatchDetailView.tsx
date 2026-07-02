@@ -217,8 +217,25 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setAddingMortality(false); return; }
 
+    // Ensure a livestock_category_id is available (DB trigger creates one on batch insert/update,
+    // but stale local state may still be null). Fetch the freshest value first.
+    let categoryId = batchData.livestock_category_id as string | null;
+    if (!categoryId) {
+      const { data: fresh } = await supabase
+        .from("livestock_batches")
+        .select("livestock_category_id")
+        .eq("id", batch.id)
+        .single();
+      categoryId = fresh?.livestock_category_id || null;
+    }
+    if (!categoryId) {
+      toast.error("Could not resolve a livestock category for this batch. Try editing the batch and saving again.");
+      setAddingMortality(false);
+      return;
+    }
+
     const { error } = await supabase.from("mortality_records").insert({
-      livestock_category_id: batchData.livestock_category_id,
+      livestock_category_id: categoryId,
       batch_id: batch.id,
       quantity_dead: qty,
       reason: mortalityReason,
