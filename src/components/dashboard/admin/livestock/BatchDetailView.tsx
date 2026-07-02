@@ -127,6 +127,22 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       .then(({ data }) => setPartnerLink(data));
   }, [batch.id]);
 
+  // Budget threshold alerts (fire once per level per view)
+  const [budgetAlertLevel, setBudgetAlertLevel] = useState<0 | 80 | 100>(0);
+  useEffect(() => {
+    const budget = Number(batchData.budget || 0);
+    if (budget <= 0) return;
+    const spent = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const pct = (spent / budget) * 100;
+    if (pct >= 100 && budgetAlertLevel < 100) {
+      toast.error(`⚠️ Batch is OVER budget (₦${(spent - budget).toLocaleString()} over)`, { duration: 6000 });
+      setBudgetAlertLevel(100);
+    } else if (pct >= 80 && budgetAlertLevel < 80) {
+      toast.warning(`Batch has used ${pct.toFixed(0)}% of budget`, { duration: 5000 });
+      setBudgetAlertLevel(80);
+    }
+  }, [expenses, batchData.budget, budgetAlertLevel]);
+
   const getAiSuggestions = async () => {
     setLoadingAi(true);
     try {
