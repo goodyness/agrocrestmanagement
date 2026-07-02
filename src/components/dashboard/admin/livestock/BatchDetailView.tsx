@@ -207,10 +207,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       toast.error("Please fill in quantity and reason (reason is required)");
       return;
     }
-    if (!batchData.livestock_category_id) {
-      toast.error("This batch has no livestock category assigned. Please assign one first.");
-      return;
-    }
+    // Category is auto-attached by DB trigger; no manual check required.
     const qty = Number(mortalityQuantity);
     if (qty <= 0 || qty > batchData.current_quantity) {
       toast.error(`Quantity must be between 1 and ${batchData.current_quantity}`);
