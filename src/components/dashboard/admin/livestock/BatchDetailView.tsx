@@ -625,6 +625,13 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           )}
         </TabsContent>
 
+        {/* ===== ACTIVITY TIMELINE TAB ===== */}
+        <TabsContent value="timeline" className="space-y-3">
+          <h3 className="font-semibold text-sm">Activity Timeline</h3>
+          <p className="text-xs text-muted-foreground">Every care, mortality and expense entry on this batch — filter by type.</p>
+          <ActivityTimeline careLogs={careLogs} mortalityRecords={mortalityRecords} expenses={expenses} />
+        </TabsContent>
+
         {/* ===== AI TAB ===== */}
         <TabsContent value="ai" className="space-y-3">
           <div className="flex justify-between items-center">
