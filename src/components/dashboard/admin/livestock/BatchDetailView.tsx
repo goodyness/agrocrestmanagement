@@ -19,6 +19,8 @@ import TreatmentCoursesWidget from "./TreatmentCoursesWidget";
 import CareCostAnalytics from "./CareCostAnalytics";
 import WithdrawalWarning from "./WithdrawalWarning";
 import BatchPnLBreakdown from "./BatchPnLBreakdown";
+import PartnerProfitShareWidget from "./PartnerProfitShareWidget";
+import ActivityTimeline from "./ActivityTimeline";
 
 interface Props {
   batch: any;
