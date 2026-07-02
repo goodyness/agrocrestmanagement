@@ -19,6 +19,8 @@ import TreatmentCoursesWidget from "./TreatmentCoursesWidget";
 import CareCostAnalytics from "./CareCostAnalytics";
 import WithdrawalWarning from "./WithdrawalWarning";
 import BatchPnLBreakdown from "./BatchPnLBreakdown";
+import PartnerProfitShareWidget from "./PartnerProfitShareWidget";
+import ActivityTimeline from "./ActivityTimeline";
 
 interface Props {
   batch: any;
@@ -125,6 +127,22 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       .then(({ data }) => setPartnerLink(data));
   }, [batch.id]);
 
+  // Budget threshold alerts (fire once per level per view)
+  const [budgetAlertLevel, setBudgetAlertLevel] = useState<0 | 80 | 100>(0);
+  useEffect(() => {
+    const budget = Number(batchData.budget || 0);
+    if (budget <= 0) return;
+    const spent = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const pct = (spent / budget) * 100;
+    if (pct >= 100 && budgetAlertLevel < 100) {
+      toast.error(`⚠️ Batch is OVER budget (₦${(spent - budget).toLocaleString()} over)`, { duration: 6000 });
+      setBudgetAlertLevel(100);
+    } else if (pct >= 80 && budgetAlertLevel < 80) {
+      toast.warning(`Batch has used ${pct.toFixed(0)}% of budget`, { duration: 5000 });
+      setBudgetAlertLevel(80);
+    }
+  }, [expenses, batchData.budget, budgetAlertLevel]);
+
   const getAiSuggestions = async () => {
     setLoadingAi(true);
     try {
@@ -205,10 +223,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       toast.error("Please fill in quantity and reason (reason is required)");
       return;
     }
-    if (!batchData.livestock_category_id) {
-      toast.error("This batch has no livestock category assigned. Please assign one first.");
-      return;
-    }
+    // Category is auto-attached by DB trigger; no manual check required.
     const qty = Number(mortalityQuantity);
     if (qty <= 0 || qty > batchData.current_quantity) {
       toast.error(`Quantity must be between 1 and ${batchData.current_quantity}`);
@@ -218,8 +233,25 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Not logged in"); setAddingMortality(false); return; }
 
+    // Ensure a livestock_category_id is available (DB trigger creates one on batch insert/update,
+    // but stale local state may still be null). Fetch the freshest value first.
+    let categoryId = batchData.livestock_category_id as string | null;
+    if (!categoryId) {
+      const { data: fresh } = await supabase
+        .from("livestock_batches")
+        .select("livestock_category_id")
+        .eq("id", batch.id)
+        .single();
+      categoryId = fresh?.livestock_category_id || null;
+    }
+    if (!categoryId) {
+      toast.error("Could not resolve a livestock category for this batch. Try editing the batch and saving again.");
+      setAddingMortality(false);
+      return;
+    }
+
     const { error } = await supabase.from("mortality_records").insert({
-      livestock_category_id: batchData.livestock_category_id,
+      livestock_category_id: categoryId,
       batch_id: batch.id,
       quantity_dead: qty,
       reason: mortalityReason,
@@ -341,6 +373,14 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
         </Card>
       )}
 
+      {/* Profit Share Summary (partnered batches only) */}
+      {partnerLink && (
+        <PartnerProfitShareWidget
+          partnerLink={partnerLink}
+          totalRevenue={0}
+          totalCost={totalInvestment}
+        />
+      )}
 
       <Tabs defaultValue="schedule">
         <TabsList className="w-full flex-wrap h-auto">
@@ -348,6 +388,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           <TabsTrigger value="logs" className="text-xs">📝 Care Logs</TabsTrigger>
           <TabsTrigger value="mortality" className="text-xs">💀 Mortality ({totalMortality})</TabsTrigger>
           <TabsTrigger value="expenses" className="text-xs">💰 Expenses</TabsTrigger>
+          <TabsTrigger value="timeline" className="text-xs">🕘 Timeline</TabsTrigger>
           <TabsTrigger value="ai" className="text-xs">✨ AI</TabsTrigger>
           <TabsTrigger value="info" className="text-xs">ℹ️ Details</TabsTrigger>
         </TabsList>
@@ -582,6 +623,13 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* ===== ACTIVITY TIMELINE TAB ===== */}
+        <TabsContent value="timeline" className="space-y-3">
+          <h3 className="font-semibold text-sm">Activity Timeline</h3>
+          <p className="text-xs text-muted-foreground">Every care, mortality and expense entry on this batch — filter by type.</p>
+          <ActivityTimeline careLogs={careLogs} mortalityRecords={mortalityRecords} expenses={expenses} />
         </TabsContent>
 
         {/* ===== AI TAB ===== */}

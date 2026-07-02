@@ -2325,6 +2325,53 @@ export type Database = {
           },
         ]
       }
+      partner_payouts: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          partner_batch_id: string
+          scheduled_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          partner_batch_id: string
+          scheduled_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          partner_batch_id?: string
+          scheduled_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_payouts_partner_batch_id_fkey"
+            columns: ["partner_batch_id"]
+            isOneToOne: false
+            referencedRelation: "partner_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partners: {
         Row: {
           branch_id: string | null

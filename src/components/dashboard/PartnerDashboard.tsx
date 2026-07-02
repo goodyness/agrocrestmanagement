@@ -28,14 +28,14 @@ interface SidebarProps {
 }
 
 const PartnerSidebar = ({ active, onChange }: SidebarProps) => {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { state, isMobile, setOpenMobile } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
   const items: { key: SectionKey; title: string; icon: any }[] = [
     { key: "overview", title: "Overview", icon: LayoutDashboard },
     { key: "batches", title: "My Batches", icon: Sprout },
   ];
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       <SidebarContent>
         <SidebarGroup>
           {!collapsed && <SidebarGroupLabel>Partner Portal</SidebarGroupLabel>}
@@ -47,12 +47,12 @@ const PartnerSidebar = ({ active, onChange }: SidebarProps) => {
                   <SidebarMenuItem key={it.key}>
                     <SidebarMenuButton
                       isActive={active === it.key}
-                      onClick={() => onChange(it.key)}
+                      onClick={() => { onChange(it.key); if (isMobile) setOpenMobile(false); }}
                       tooltip={it.title}
                       className="cursor-pointer"
                     >
                       <Icon className="h-4 w-4" />
-                      {!collapsed && <span>{it.title}</span>}
+                      <span>{it.title}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -235,6 +235,61 @@ const PartnerDashboard = ({ user }: Props) => {
                       <div>
                         <p className="text-sm font-medium">Total Production Recorded</p>
                         <p className="text-lg font-bold text-primary">{totalProductionAgg.toLocaleString()} units</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Species breakdown analytics */}
+                {links.length > 0 && (() => {
+                  const bySpecies: Record<string, { count: number; alive: number; invested: number }> = {};
+                  links.forEach((l: any) => {
+                    const b = l.livestock_batches; if (!b) return;
+                    const key = b.species_type || b.species || "other";
+                    bySpecies[key] = bySpecies[key] || { count: 0, alive: 0, invested: 0 };
+                    bySpecies[key].count += 1;
+                    bySpecies[key].alive += b.current_quantity || 0;
+                    bySpecies[key].invested += Number(l.investment_amount || 0);
+                  });
+                  const rows = Object.entries(bySpecies);
+                  const maxAlive = Math.max(...rows.map(([, v]) => v.alive), 1);
+                  return (
+                    <Card>
+                      <CardContent className="p-4">
+                        <p className="text-sm font-medium mb-3">Portfolio Breakdown</p>
+                        <div className="space-y-2">
+                          {rows.map(([sp, v]) => (
+                            <div key={sp}>
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="capitalize font-medium">{SPECIES_ICONS[sp] || "🐾"} {sp.replace(/_/g, " ")}</span>
+                                <span className="text-muted-foreground">{v.count} batch(es) • {v.alive} alive • ₦{v.invested.toLocaleString()}</span>
+                              </div>
+                              <div className="h-2 bg-muted rounded overflow-hidden">
+                                <div className="h-full bg-primary" style={{ width: `${(v.alive / maxAlive) * 100}%` }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
+                {/* ROI snapshot */}
+                {totalInvestment > 0 && (
+                  <Card className="bg-gradient-to-br from-primary/5 to-transparent border-primary/20">
+                    <CardContent className="p-4 grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Cost / animal</p>
+                        <p className="font-bold">₦{totalAnimals > 0 ? Math.round((totalInvestment + totalExpensesAgg) / totalAnimals).toLocaleString() : 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Loss rate</p>
+                        <p className="font-bold text-destructive">{totalInitial > 0 ? ((mortalityCount / totalInitial) * 100).toFixed(1) : 0}%</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">Prod / animal</p>
+                        <p className="font-bold">{totalAnimals > 0 ? (totalProductionAgg / totalAnimals).toFixed(1) : 0}</p>
                       </div>
                     </CardContent>
                   </Card>
