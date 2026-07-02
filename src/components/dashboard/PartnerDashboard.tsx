@@ -28,14 +28,14 @@ interface SidebarProps {
 }
 
 const PartnerSidebar = ({ active, onChange }: SidebarProps) => {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { state, isMobile, setOpenMobile } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
   const items: { key: SectionKey; title: string; icon: any }[] = [
     { key: "overview", title: "Overview", icon: LayoutDashboard },
     { key: "batches", title: "My Batches", icon: Sprout },
   ];
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       <SidebarContent>
         <SidebarGroup>
           {!collapsed && <SidebarGroupLabel>Partner Portal</SidebarGroupLabel>}
@@ -47,12 +47,12 @@ const PartnerSidebar = ({ active, onChange }: SidebarProps) => {
                   <SidebarMenuItem key={it.key}>
                     <SidebarMenuButton
                       isActive={active === it.key}
-                      onClick={() => onChange(it.key)}
+                      onClick={() => { onChange(it.key); if (isMobile) setOpenMobile(false); }}
                       tooltip={it.title}
                       className="cursor-pointer"
                     >
                       <Icon className="h-4 w-4" />
-                      {!collapsed && <span>{it.title}</span>}
+                      <span>{it.title}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
