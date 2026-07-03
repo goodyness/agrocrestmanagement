@@ -42,7 +42,7 @@ export default function PartnerOnboardingDialog({ open, profileId, onDone }: Pro
     setSaving(true);
     const { error } = await supabase
       .from("partner_bank_details")
-      .insert({ ...parsed.data, profile_id: profileId });
+      .insert([{ ...parsed.data, profile_id: profileId }] as any);
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Welcome! Your details are saved.");
