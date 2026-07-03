@@ -22,7 +22,7 @@ export type AdminTabKey =
   | "production" | "egg-grading" | "cracked-eggs"
   | "feed" | "inventory-plus" | "expected-stock"
   | "sales" | "expenses" | "finance" | "expected-profit" | "salary"
-  | "users" | "partners" | "reviews" | "suppliers" | "customers"
+  | "users" | "partners" | "withdrawals" | "complaints" | "reviews" | "suppliers" | "customers"
   | "cleaning" | "operations" | "balancing"
   | "reports" | "notes" | "ai-advisor" | "analytics"
   | "branches";
