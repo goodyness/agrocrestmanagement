@@ -21,6 +21,10 @@ import WithdrawalWarning from "./WithdrawalWarning";
 import BatchPnLBreakdown from "./BatchPnLBreakdown";
 import PartnerProfitShareWidget from "./PartnerProfitShareWidget";
 import ActivityTimeline from "./ActivityTimeline";
+import BatchFinancialsCard from "./BatchFinancialsCard";
+import BatchSalesTab from "./BatchSalesTab";
+import BatchProjectionCard from "./BatchProjectionCard";
+import BatchAnalyticsCharts from "./BatchAnalyticsCharts";
 
 interface Props {
   batch: any;
