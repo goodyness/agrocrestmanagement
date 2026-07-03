@@ -46,6 +46,8 @@ import ExpectedProfitTab from "./admin/ExpectedProfitTab";
 import InventoryPlusTab from "./admin/InventoryPlusTab";
 import OperationsTab from "./admin/OperationsTab";
 import CrackedEggsTab from "./admin/CrackedEggsTab";
+import PartnerWithdrawalsTab from "./admin/PartnerWithdrawalsTab";
+import PartnerComplaintsTab from "./admin/PartnerComplaintsTab";
 
 interface AdminDashboardProps {
   user: User | null;
