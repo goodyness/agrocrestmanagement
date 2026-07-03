@@ -15,6 +15,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import BatchDetailView from "./admin/livestock/BatchDetailView";
+import PartnerOnboardingDialog from "./partner/PartnerOnboardingDialog";
+import BatchAcceptanceDialog from "./partner/BatchAcceptanceDialog";
+import WalletCard from "./partner/WalletCard";
+import PartnerAnalyticsCharts from "./partner/PartnerAnalyticsCharts";
 
 const SPECIES_ICONS: Record<string, string> = {
   chicken: "🐔", pig: "🐷", goat: "🐐", cattle: "🐄", other: "🐾",
