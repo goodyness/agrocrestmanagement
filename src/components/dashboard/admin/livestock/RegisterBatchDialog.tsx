@@ -157,6 +157,7 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
       total_cost: costPerUnit * quantity,
       notes: notes || null,
       budget: parseFloat(budget) || 0,
+      admin_contribution: parseFloat(adminContribution) || 0,
       has_started_laying: stage === "laying",
       laying_start_date: stage === "laying" ? (batch?.laying_start_date || new Date().toISOString().split("T")[0]) : null,
       registered_by: batch?.registered_by || user.id,
