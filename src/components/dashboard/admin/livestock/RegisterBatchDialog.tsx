@@ -382,19 +382,17 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
           </div>
 
           {/* Budget */}
-          <div className="space-y-2">
-            <Label>Batch Budget (₦)</Label>
-            <Input
-              type="number"
-              min={0}
-              value={budget}
-              onChange={(e) => setBudget(e.target.value)}
-              placeholder="Total budget allocated for this batch"
-            />
-            <p className="text-xs text-muted-foreground">
-              Expenses recorded on this batch will reduce this budget automatically.
-            </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Batch Budget (₦)</Label>
+              <Input type="number" min={0} value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Total budget" />
+            </div>
+            <div className="space-y-2">
+              <Label>Admin Contribution (₦)</Label>
+              <Input type="number" min={0} value={adminContribution} onChange={(e) => setAdminContribution(e.target.value)} placeholder="Amount admin puts in" />
+            </div>
           </div>
+          <p className="text-xs text-muted-foreground">Expenses on this batch reduce the budget. Partner will add their own contribution on acceptance.</p>
 
           {/* Notes */}
           <div className="space-y-2">
