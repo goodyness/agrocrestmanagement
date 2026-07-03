@@ -208,7 +208,16 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
       } else {
         const { error: linkErr } = await supabase.from("partner_batches").insert(linkPayload);
         if (linkErr) toast.error("Batch saved, but partner link failed: " + linkErr.message);
-        else toast.success("Batch linked to partner");
+        else {
+          // Auto-create pending acceptance so partner sees it
+          await supabase.from("batch_acceptances").insert([{
+            batch_id: targetBatchId,
+            partner_id: partnerId,
+            admin_contribution_snapshot: parseFloat(adminContribution) || 0,
+            accepted_budget: parseFloat(budget) || 0,
+          }] as any);
+          toast.success("Batch linked; awaiting partner acceptance");
+        }
       }
     } else if (!hasPartner && existingPartnerLink) {
       // Toggled off — remove existing link
