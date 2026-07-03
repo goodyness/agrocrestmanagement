@@ -150,6 +150,12 @@ const PartnerDashboard = ({ user }: Props) => {
 
   return (
     <SidebarProvider>
+      {user && needsOnboarding && (
+        <PartnerOnboardingDialog open={needsOnboarding} profileId={user.id} onDone={() => { setNeedsOnboarding(false); loadGates(); }} />
+      )}
+      {pendingAcceptance && (
+        <BatchAcceptanceDialog open={!!pendingAcceptance} onOpenChange={() => setPendingAcceptance(null)} acceptance={pendingAcceptance} onDone={() => { setPendingAcceptance(null); loadGates(); load(); }} />
+      )}
       <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/20">
         <PartnerSidebar active={section} onChange={(k) => { setSection(k); setSelectedBatch(null); }} />
 
