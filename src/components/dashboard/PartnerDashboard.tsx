@@ -15,6 +15,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import BatchDetailView from "./admin/livestock/BatchDetailView";
+import PartnerOnboardingDialog from "./partner/PartnerOnboardingDialog";
+import BatchAcceptanceDialog from "./partner/BatchAcceptanceDialog";
+import WalletCard from "./partner/WalletCard";
+import PartnerAnalyticsCharts from "./partner/PartnerAnalyticsCharts";
 
 const SPECIES_ICONS: Record<string, string> = {
   chicken: "🐔", pig: "🐷", goat: "🐐", cattle: "🐄", other: "🐾",
@@ -108,6 +112,30 @@ const PartnerDashboard = ({ user }: Props) => {
 
   useEffect(() => { if (user) load(); }, [user]);
 
+  // Onboarding + acceptance gating
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [pendingAcceptance, setPendingAcceptance] = useState<any | null>(null);
+
+  const loadGates = async () => {
+    if (!user) return;
+    const { data: bank } = await supabase.from("partner_bank_details").select("id").eq("profile_id", user.id).maybeSingle();
+    setNeedsOnboarding(!bank);
+    if (bank) {
+      const { data: partner } = await supabase.from("partners").select("id").eq("profile_id", user.id).maybeSingle();
+      if (partner) {
+        const { data: acc } = await supabase
+          .from("batch_acceptances")
+          .select("*, batch:livestock_batches(*), partner_batch:partner_batches!inner(*)")
+          .eq("partner_id", partner.id)
+          .eq("status", "pending")
+          .limit(1)
+          .maybeSingle();
+        setPendingAcceptance(acc);
+      }
+    }
+  };
+  useEffect(() => { loadGates(); }, [user]);
+
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) toast.error("Error signing out");
@@ -122,6 +150,12 @@ const PartnerDashboard = ({ user }: Props) => {
 
   return (
     <SidebarProvider>
+      {user && needsOnboarding && (
+        <PartnerOnboardingDialog open={needsOnboarding} profileId={user.id} onDone={() => { setNeedsOnboarding(false); loadGates(); }} />
+      )}
+      {pendingAcceptance && (
+        <BatchAcceptanceDialog open={!!pendingAcceptance} onOpenChange={() => setPendingAcceptance(null)} acceptance={pendingAcceptance} onDone={() => { setPendingAcceptance(null); loadGates(); load(); }} />
+      )}
       <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/20">
         <PartnerSidebar active={section} onChange={(k) => { setSection(k); setSelectedBatch(null); }} />
 
@@ -155,6 +189,8 @@ const PartnerDashboard = ({ user }: Props) => {
                   <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
                   <p className="text-sm text-muted-foreground">Your investment summary across all partnered batches.</p>
                 </div>
+                {user && <WalletCard profileId={user.id} />}
+                {links.length > 0 && <PartnerAnalyticsCharts batchIds={links.map((l: any) => l.livestock_batches?.id).filter(Boolean)} />}
 
                 {/* KPI grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

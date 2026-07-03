@@ -83,6 +83,7 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
   const [costPerUnit, setCostPerUnit] = useState(batch?.cost_per_unit || 0);
   const [notes, setNotes] = useState(batch?.notes || "");
   const [budget, setBudget] = useState<string>(batch?.budget?.toString() || "0");
+  const [adminContribution, setAdminContribution] = useState<string>(batch?.admin_contribution?.toString() || "0");
   const [hasPartner, setHasPartner] = useState(false);
   const [partnerId, setPartnerId] = useState("");
   const [partnerShare, setPartnerShare] = useState("50");
@@ -156,6 +157,7 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
       total_cost: costPerUnit * quantity,
       notes: notes || null,
       budget: parseFloat(budget) || 0,
+      admin_contribution: parseFloat(adminContribution) || 0,
       has_started_laying: stage === "laying",
       laying_start_date: stage === "laying" ? (batch?.laying_start_date || new Date().toISOString().split("T")[0]) : null,
       registered_by: batch?.registered_by || user.id,
@@ -206,7 +208,16 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
       } else {
         const { error: linkErr } = await supabase.from("partner_batches").insert(linkPayload);
         if (linkErr) toast.error("Batch saved, but partner link failed: " + linkErr.message);
-        else toast.success("Batch linked to partner");
+        else {
+          // Auto-create pending acceptance so partner sees it
+          await supabase.from("batch_acceptances").insert([{
+            batch_id: targetBatchId,
+            partner_id: partnerId,
+            admin_contribution_snapshot: parseFloat(adminContribution) || 0,
+            accepted_budget: parseFloat(budget) || 0,
+          }] as any);
+          toast.success("Batch linked; awaiting partner acceptance");
+        }
       }
     } else if (!hasPartner && existingPartnerLink) {
       // Toggled off — remove existing link
@@ -380,19 +391,17 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
           </div>
 
           {/* Budget */}
-          <div className="space-y-2">
-            <Label>Batch Budget (₦)</Label>
-            <Input
-              type="number"
-              min={0}
-              value={budget}
-              onChange={(e) => setBudget(e.target.value)}
-              placeholder="Total budget allocated for this batch"
-            />
-            <p className="text-xs text-muted-foreground">
-              Expenses recorded on this batch will reduce this budget automatically.
-            </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Batch Budget (₦)</Label>
+              <Input type="number" min={0} value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Total budget" />
+            </div>
+            <div className="space-y-2">
+              <Label>Admin Contribution (₦)</Label>
+              <Input type="number" min={0} value={adminContribution} onChange={(e) => setAdminContribution(e.target.value)} placeholder="Amount admin puts in" />
+            </div>
           </div>
+          <p className="text-xs text-muted-foreground">Expenses on this batch reduce the budget. Partner will add their own contribution on acceptance.</p>
 
           {/* Notes */}
           <div className="space-y-2">

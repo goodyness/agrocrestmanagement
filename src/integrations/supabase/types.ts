@@ -296,6 +296,238 @@ export type Database = {
           },
         ]
       }
+      batch_acceptances: {
+        Row: {
+          accepted_budget: number | null
+          admin_contribution_snapshot: number
+          batch_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          partner_contribution: number
+          partner_id: string
+          resolved_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_budget?: number | null
+          admin_contribution_snapshot?: number
+          batch_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          partner_contribution?: number
+          partner_id: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_budget?: number | null
+          admin_contribution_snapshot?: number
+          batch_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          partner_contribution?: number
+          partner_id?: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_acceptances_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_acceptances_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batch_complaints: {
+        Row: {
+          acceptance_id: string | null
+          admin_response: string | null
+          batch_id: string
+          created_at: string
+          id: string
+          message: string
+          partner_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          acceptance_id?: string | null
+          admin_response?: string | null
+          batch_id: string
+          created_at?: string
+          id?: string
+          message: string
+          partner_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          acceptance_id?: string | null
+          admin_response?: string | null
+          batch_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          partner_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_complaints_acceptance_id_fkey"
+            columns: ["acceptance_id"]
+            isOneToOne: false
+            referencedRelation: "batch_acceptances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_complaints_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_complaints_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_complaints_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batch_projections: {
+        Row: {
+          batch_id: string
+          created_at: string
+          expected_avg_weight_kg: number | null
+          expected_price_per_bird: number | null
+          expected_price_per_kg: number | null
+          id: string
+          mode: string
+          notes: string | null
+          updated_at: string
+          weeks_to_raise: number | null
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          expected_avg_weight_kg?: number | null
+          expected_price_per_bird?: number | null
+          expected_price_per_kg?: number | null
+          id?: string
+          mode?: string
+          notes?: string | null
+          updated_at?: string
+          weeks_to_raise?: number | null
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          expected_avg_weight_kg?: number | null
+          expected_price_per_bird?: number | null
+          expected_price_per_kg?: number | null
+          id?: string
+          mode?: string
+          notes?: string | null
+          updated_at?: string
+          weeks_to_raise?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_projections_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: true
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batch_sales: {
+        Row: {
+          batch_id: string
+          buyer: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          quantity: number
+          recorded_by: string | null
+          sale_date: string
+          total_amount: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          buyer?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          recorded_by?: string | null
+          sale_date?: string
+          total_amount?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          buyer?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          recorded_by?: string | null
+          sale_date?: string
+          total_amount?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_sales_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_sales_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_weight_records: {
         Row: {
           average_weight_g: number
@@ -1634,6 +1866,7 @@ export type Database = {
       }
       livestock_batches: {
         Row: {
+          admin_contribution: number
           age_weeks: number | null
           branch_id: string | null
           budget: number
@@ -1657,6 +1890,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_contribution?: number
           age_weeks?: number | null
           branch_id?: string | null
           budget?: number
@@ -1680,6 +1914,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_contribution?: number
           age_weeks?: number | null
           branch_id?: string | null
           budget?: number
@@ -2274,6 +2509,53 @@ export type Database = {
           },
         ]
       }
+      partner_bank_details: {
+        Row: {
+          account_name: string
+          account_number: string
+          address: string
+          bank_name: string
+          created_at: string
+          full_name: string
+          id: string
+          phone: string
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          address: string
+          bank_name: string
+          created_at?: string
+          full_name: string
+          id?: string
+          phone: string
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          address?: string
+          bank_name?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          phone?: string
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_bank_details_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_batches: {
         Row: {
           batch_id: string
@@ -2281,6 +2563,7 @@ export type Database = {
           id: string
           investment_amount: number
           notes: string | null
+          partner_contribution: number
           partner_id: string
           profit_share_percentage: number
           share_percentage: number
@@ -2292,6 +2575,7 @@ export type Database = {
           id?: string
           investment_amount?: number
           notes?: string | null
+          partner_contribution?: number
           partner_id: string
           profit_share_percentage?: number
           share_percentage?: number
@@ -2303,6 +2587,7 @@ export type Database = {
           id?: string
           investment_amount?: number
           notes?: string | null
+          partner_contribution?: number
           partner_id?: string
           profit_share_percentage?: number
           share_percentage?: number
@@ -3640,6 +3925,73 @@ export type Database = {
           },
         ]
       }
+      wallet_withdrawals: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          batch_id: string | null
+          created_at: string
+          id: string
+          profile_id: string
+          request_note: string | null
+          requested_at: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount: number
+          batch_id?: string | null
+          created_at?: string
+          id?: string
+          profile_id: string
+          request_note?: string | null
+          requested_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          batch_id?: string | null
+          created_at?: string
+          id?: string
+          profile_id?: string
+          request_note?: string | null
+          requested_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_withdrawals_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_withdrawals_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_withdrawals_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_reviews: {
         Row: {
           balance_debt_amount: number
@@ -3769,6 +4121,27 @@ export type Database = {
     }
     Functions: {
       admin_exists: { Args: never; Returns: boolean }
+      get_batch_financials: {
+        Args: { _batch_id: string }
+        Returns: {
+          admin_contribution: number
+          budget: number
+          gross_profit: number
+          partner_contribution: number
+          remaining_budget: number
+          total_expenses: number
+          total_sales: number
+        }[]
+      }
+      get_partner_wallet: {
+        Args: { _profile_id: string }
+        Returns: {
+          available_balance: number
+          pending_withdrawals: number
+          total_earned: number
+          total_withdrawn: number
+        }[]
+      }
       increment_batch_ages: { Args: never; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
       is_partner: { Args: never; Returns: boolean }
