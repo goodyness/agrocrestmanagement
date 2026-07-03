@@ -83,6 +83,7 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
   const [costPerUnit, setCostPerUnit] = useState(batch?.cost_per_unit || 0);
   const [notes, setNotes] = useState(batch?.notes || "");
   const [budget, setBudget] = useState<string>(batch?.budget?.toString() || "0");
+  const [adminContribution, setAdminContribution] = useState<string>(batch?.admin_contribution?.toString() || "0");
   const [hasPartner, setHasPartner] = useState(false);
   const [partnerId, setPartnerId] = useState("");
   const [partnerShare, setPartnerShare] = useState("50");
