@@ -191,8 +191,6 @@ const PartnerDashboard = ({ user }: Props) => {
                 </div>
                 {user && <WalletCard profileId={user.id} />}
                 {links.length > 0 && <PartnerAnalyticsCharts batchIds={links.map((l: any) => l.livestock_batches?.id).filter(Boolean)} />}
-                <div className="hidden">
-                  <p className="text-sm text-muted-foreground">.</p>
 
                 {/* KPI grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
