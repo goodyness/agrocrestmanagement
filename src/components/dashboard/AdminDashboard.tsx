@@ -105,6 +105,8 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
       case "salary": return <WorkerSalaryTab />;
       case "users": return <><UsersTab /><WorkerBranchAssignment /></>;
       case "partners": return <PartnersTab />;
+      case "withdrawals": return <PartnerWithdrawalsTab />;
+      case "complaints": return <PartnerComplaintsTab />;
       case "reviews": return <WorkerReviewsTab />;
       case "suppliers": return <SuppliersTab />;
       case "customers": return <><CustomersTab /><CustomerOrdersSection /></>;
