@@ -112,6 +112,30 @@ const PartnerDashboard = ({ user }: Props) => {
 
   useEffect(() => { if (user) load(); }, [user]);
 
+  // Onboarding + acceptance gating
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [pendingAcceptance, setPendingAcceptance] = useState<any | null>(null);
+
+  const loadGates = async () => {
+    if (!user) return;
+    const { data: bank } = await supabase.from("partner_bank_details").select("id").eq("profile_id", user.id).maybeSingle();
+    setNeedsOnboarding(!bank);
+    if (bank) {
+      const { data: partner } = await supabase.from("partners").select("id").eq("profile_id", user.id).maybeSingle();
+      if (partner) {
+        const { data: acc } = await supabase
+          .from("batch_acceptances")
+          .select("*, batch:livestock_batches(*), partner_batch:partner_batches!inner(*)")
+          .eq("partner_id", partner.id)
+          .eq("status", "pending")
+          .limit(1)
+          .maybeSingle();
+        setPendingAcceptance(acc);
+      }
+    }
+  };
+  useEffect(() => { loadGates(); }, [user]);
+
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) toast.error("Error signing out");
