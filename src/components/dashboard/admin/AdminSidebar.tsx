@@ -81,6 +81,8 @@ const GROUPS: Group[] = [
     items: [
       { key: "users", title: "Users", icon: UsersIcon },
       { key: "partners", title: "Partners", icon: Handshake },
+      { key: "withdrawals", title: "Withdrawals", icon: Wallet },
+      { key: "complaints", title: "Complaints", icon: AlertTriangle },
       { key: "reviews", title: "Reviews", icon: ClipboardCheck },
       { key: "suppliers", title: "Suppliers", icon: Truck },
       { key: "customers", title: "Customers", icon: Users },
