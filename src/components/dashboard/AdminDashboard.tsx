@@ -57,7 +57,7 @@ const TAB_TITLES: Record<AdminTabKey, string> = {
   production: "Production", "egg-grading": "Egg Grading", "cracked-eggs": "Cracked Eggs",
   feed: "Feed", "inventory-plus": "Inventory+", "expected-stock": "Expected Stock",
   sales: "Sales", expenses: "Expenses", finance: "Finance", "expected-profit": "Expected Profit", salary: "Salary",
-  users: "Users", partners: "Partners", reviews: "Reviews", suppliers: "Suppliers", customers: "Customers",
+  users: "Users", partners: "Partners", withdrawals: "Withdrawals", complaints: "Complaints", reviews: "Reviews", suppliers: "Suppliers", customers: "Customers",
   cleaning: "Cleaning", operations: "Operations", balancing: "Balancing",
   reports: "Reports", notes: "Notes", "ai-advisor": "AI Advisor", analytics: "Cost Analytics",
   branches: "Branches",
