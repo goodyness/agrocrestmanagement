@@ -66,9 +66,10 @@ const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) =>
       finalBranchId = profile?.branch_id || null;
     }
 
-    let photoUrl: string | null = null;
-    if (photoFile) {
-      photoUrl = await uploadEvidencePhoto(photoFile, "mortality");
+    if (photos.length === 0) {
+      toast.error("At least one photo of the dead animal is required.");
+      setLoading(false);
+      return;
     }
 
     const insertData: any = {
@@ -78,7 +79,9 @@ const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) =>
       recorded_by: user.id,
       date: new Date().toISOString().split('T')[0],
       branch_id: finalBranchId,
-      photo_url: photoUrl,
+      photo_url: photos[0].url,
+      photo_urls: photos.map((p) => p.url),
+      photo_hashes: photos.map((p) => p.hash),
     };
 
     if (selectedBatchId) {
