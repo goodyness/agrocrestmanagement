@@ -507,6 +507,59 @@ export function HealthDashboard() {
         </CardContent>
       </Card>
 
+      {/* Mortality Photo Evidence */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            Mortality Photo Evidence
+          </CardTitle>
+          <CardDescription>
+            All uploaded photos of dead animals in the selected period. Each entry must include at least one unique picture of the actual animal.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {(() => {
+            const withPhotos = (mortalityData || []).filter((r: any) =>
+              (r.photo_urls && r.photo_urls.length > 0) || r.photo_url
+            );
+            if (withPhotos.length === 0) {
+              return <p className="text-sm text-muted-foreground">No photo evidence uploaded in this period.</p>;
+            }
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {withPhotos.map((record: any) => {
+                  const urls: string[] = record.photo_urls && record.photo_urls.length
+                    ? record.photo_urls
+                    : record.photo_url ? [record.photo_url] : [];
+                  return (
+                    <div key={record.id} className="border rounded-lg overflow-hidden bg-card">
+                      <div className="grid grid-cols-2 gap-0.5 bg-muted">
+                        {urls.slice(0, 4).map((u, i) => (
+                          <a key={i} href={u} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden">
+                            <img src={u} alt="mortality evidence" className="w-full h-full object-cover hover:scale-105 transition-transform" loading="lazy" />
+                          </a>
+                        ))}
+                      </div>
+                      <div className="p-3 space-y-1 text-sm">
+                        <div className="flex justify-between items-center">
+                          <Badge variant="destructive">{record.quantity_dead} dead</Badge>
+                          <span className="text-xs text-muted-foreground">{format(new Date(record.date), "MMM dd, yyyy")}</span>
+                        </div>
+                        <p><span className="text-muted-foreground">Category:</span> {(record.livestock_categories as any)?.name || "—"}</p>
+                        <p><span className="text-muted-foreground">Reason:</span> {record.reason || "—"}</p>
+                        <p className="text-xs text-muted-foreground">Recorded by {(record.profiles as any)?.name || "Unknown"} · {urls.length} photo{urls.length > 1 ? "s" : ""}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </CardContent>
+      </Card>
+
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
