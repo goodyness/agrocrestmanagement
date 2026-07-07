@@ -103,8 +103,7 @@ const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) =>
       toast.success("Mortality recorded successfully");
       setOpen(false);
       setSelectedBatchId("");
-      setPhotoFile(null);
-      setPhotoPreview(null);
+      setPhotos([]);
       onSuccess();
     }
     setLoading(false);
