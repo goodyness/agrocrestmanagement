@@ -184,6 +184,11 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
                   className="h-16"
                 />
               </div>
+              <MortalityPhotoPicker
+                value={entry.photos}
+                onChange={(photos) => updateEntry(entry.id, "photos", photos)}
+                idSuffix={`bulk-${entry.id}`}
+              />
             </div>
           ))}
           
