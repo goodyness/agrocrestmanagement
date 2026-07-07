@@ -269,6 +269,9 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       date: mortalityDate,
       recorded_by: user.id,
       branch_id: batch.branch_id,
+      photo_url: mortalityPhotos[0].url,
+      photo_urls: mortalityPhotos.map((p) => p.url),
+      photo_hashes: mortalityPhotos.map((p) => p.hash),
     });
 
     if (error) { toast.error("Failed to record mortality: " + error.message); }
@@ -277,6 +280,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       setShowAddMortality(false);
       setMortalityQuantity("");
       setMortalityReason("");
+      setMortalityPhotos([]);
       fetchMortality();
       refreshBatch();
     }
