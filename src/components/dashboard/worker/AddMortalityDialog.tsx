@@ -5,8 +5,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, Camera } from "lucide-react";
-import { uploadEvidencePhoto } from "@/lib/photoUpload";
+import { AlertCircle } from "lucide-react";
+import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
+import { UploadedMortalityPhoto } from "@/lib/photoUpload";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
 import { useBranch } from "@/contexts/BranchContext";
