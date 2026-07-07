@@ -8,12 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBranch } from "@/contexts/BranchContext";
+import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
+import { UploadedMortalityPhoto } from "@/lib/photoUpload";
 
 interface MortalityEntry {
   id: string;
   categoryId: string;
   quantity: number;
   reason: string;
+  photos: UploadedMortalityPhoto[];
 }
 
 interface BulkMortalityDialogProps {
