@@ -66,9 +66,16 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
     setLoading(true);
 
     const validEntries = entries.filter(e => e.categoryId && e.quantity > 0);
-    
+
     if (validEntries.length === 0) {
       toast.error("Please add at least one valid entry");
+      setLoading(false);
+      return;
+    }
+
+    const missingPhoto = validEntries.find(e => e.photos.length === 0);
+    if (missingPhoto) {
+      toast.error("Each mortality entry must include at least one photo of the dead animal.");
       setLoading(false);
       return;
     }
@@ -99,6 +106,9 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
       recorded_by: user.id,
       date: new Date().toISOString().split('T')[0],
       branch_id: branchId,
+      photo_url: entry.photos[0].url,
+      photo_urls: entry.photos.map(p => p.url),
+      photo_hashes: entry.photos.map(p => p.hash),
     }));
 
     const { error } = await supabase.from("mortality_records").insert(records);
@@ -108,7 +118,7 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
     } else {
       toast.success(`${validEntries.length} mortality records added`);
       setOpen(false);
-      setEntries([{ id: crypto.randomUUID(), categoryId: "", quantity: 0, reason: "" }]);
+      setEntries([{ id: crypto.randomUUID(), categoryId: "", quantity: 0, reason: "", photos: [] }]);
       onSuccess();
     }
 
