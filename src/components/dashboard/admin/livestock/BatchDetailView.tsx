@@ -852,9 +852,10 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
               <Label>Date</Label>
               <Input type="date" value={mortalityDate} onChange={(e) => setMortalityDate(e.target.value)} />
             </div>
+            <MortalityPhotoPicker value={mortalityPhotos} onChange={setMortalityPhotos} idSuffix="batch" />
             <Button
               onClick={handleAddMortality}
-              disabled={addingMortality || !mortalityQuantity || !mortalityReason}
+              disabled={addingMortality || !mortalityQuantity || !mortalityReason || mortalityPhotos.length === 0}
               variant="destructive"
               className="w-full"
             >
