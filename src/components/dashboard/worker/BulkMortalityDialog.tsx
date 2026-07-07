@@ -29,7 +29,7 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
   const [categories, setCategories] = useState<any[]>([]);
   const { currentBranchId } = useBranch();
   const [entries, setEntries] = useState<MortalityEntry[]>([
-    { id: crypto.randomUUID(), categoryId: "", quantity: 0, reason: "" }
+    { id: crypto.randomUUID(), categoryId: "", quantity: 0, reason: "", photos: [] }
   ]);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
   };
 
   const addEntry = () => {
-    setEntries([...entries, { id: crypto.randomUUID(), categoryId: "", quantity: 0, reason: "" }]);
+    setEntries([...entries, { id: crypto.randomUUID(), categoryId: "", quantity: 0, reason: "", photos: [] }]);
   };
 
   const removeEntry = (id: string) => {
@@ -57,7 +57,7 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
     }
   };
 
-  const updateEntry = (id: string, field: keyof MortalityEntry, value: string | number) => {
+  const updateEntry = <K extends keyof MortalityEntry>(id: string, field: K, value: MortalityEntry[K]) => {
     setEntries(entries.map(e => e.id === id ? { ...e, [field]: value } : e));
   };
 
