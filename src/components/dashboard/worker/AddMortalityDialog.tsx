@@ -23,8 +23,7 @@ const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) =>
   const [categories, setCategories] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState("");
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<UploadedMortalityPhoto[]>([]);
   const { currentBranchId: contextBranchId } = useBranch();
   const effectiveBranchId = branchId !== undefined ? branchId : contextBranchId;
 
