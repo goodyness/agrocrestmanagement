@@ -25,6 +25,8 @@ import BatchFinancialsCard from "./BatchFinancialsCard";
 import BatchSalesTab from "./BatchSalesTab";
 import BatchProjectionCard from "./BatchProjectionCard";
 import BatchAnalyticsCharts from "./BatchAnalyticsCharts";
+import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
+import { UploadedMortalityPhoto } from "@/lib/photoUpload";
 
 interface Props {
   batch: any;
@@ -66,6 +68,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const [mortalityQuantity, setMortalityQuantity] = useState("");
   const [mortalityReason, setMortalityReason] = useState("");
   const [mortalityDate, setMortalityDate] = useState(new Date().toISOString().split("T")[0]);
+  const [mortalityPhotos, setMortalityPhotos] = useState<UploadedMortalityPhoto[]>([]);
   const [addingMortality, setAddingMortality] = useState(false);
 
   const fetchCareLogs = async () => {
