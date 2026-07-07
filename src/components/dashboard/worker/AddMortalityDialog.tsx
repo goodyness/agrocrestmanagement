@@ -154,34 +154,8 @@ const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) =>
             <Label htmlFor="reason">Reason (Optional)</Label>
             <Textarea id="reason" name="reason" placeholder="Cause of death or observations..." />
           </div>
-          <div className="space-y-2">
-            <Label>Photo Evidence (Optional)</Label>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById("mortality-photo")?.click()}>
-                <Camera className="h-4 w-4 mr-2" />
-                {photoFile ? "Change Photo" : "Attach Photo"}
-              </Button>
-              {photoFile && <span className="text-xs text-muted-foreground truncate">{photoFile.name}</span>}
-            </div>
-            <input
-              id="mortality-photo"
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  setPhotoFile(file);
-                  setPhotoPreview(URL.createObjectURL(file));
-                }
-              }}
-            />
-            {photoPreview && (
-              <img src={photoPreview} alt="Preview" className="w-full max-h-32 object-cover rounded-md" />
-            )}
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
+          <MortalityPhotoPicker value={photos} onChange={setPhotos} idSuffix="worker" />
+          <Button type="submit" className="w-full" disabled={loading || photos.length === 0}>
             {loading ? "Recording..." : "Record Mortality"}
           </Button>
         </form>
