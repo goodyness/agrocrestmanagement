@@ -8,12 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBranch } from "@/contexts/BranchContext";
+import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
+import { UploadedMortalityPhoto } from "@/lib/photoUpload";
 
 interface MortalityEntry {
   id: string;
   categoryId: string;
   quantity: number;
   reason: string;
+  photos: UploadedMortalityPhoto[];
 }
 
 interface BulkMortalityDialogProps {
@@ -26,7 +29,7 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
   const [categories, setCategories] = useState<any[]>([]);
   const { currentBranchId } = useBranch();
   const [entries, setEntries] = useState<MortalityEntry[]>([
-    { id: crypto.randomUUID(), categoryId: "", quantity: 0, reason: "" }
+    { id: crypto.randomUUID(), categoryId: "", quantity: 0, reason: "", photos: [] }
   ]);
 
   useEffect(() => {
@@ -45,7 +48,7 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
   };
 
   const addEntry = () => {
-    setEntries([...entries, { id: crypto.randomUUID(), categoryId: "", quantity: 0, reason: "" }]);
+    setEntries([...entries, { id: crypto.randomUUID(), categoryId: "", quantity: 0, reason: "", photos: [] }]);
   };
 
   const removeEntry = (id: string) => {
@@ -54,7 +57,7 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
     }
   };
 
-  const updateEntry = (id: string, field: keyof MortalityEntry, value: string | number) => {
+  const updateEntry = <K extends keyof MortalityEntry>(id: string, field: K, value: MortalityEntry[K]) => {
     setEntries(entries.map(e => e.id === id ? { ...e, [field]: value } : e));
   };
 
@@ -63,9 +66,16 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
     setLoading(true);
 
     const validEntries = entries.filter(e => e.categoryId && e.quantity > 0);
-    
+
     if (validEntries.length === 0) {
       toast.error("Please add at least one valid entry");
+      setLoading(false);
+      return;
+    }
+
+    const missingPhoto = validEntries.find(e => e.photos.length === 0);
+    if (missingPhoto) {
+      toast.error("Each mortality entry must include at least one photo of the dead animal.");
       setLoading(false);
       return;
     }
@@ -96,6 +106,9 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
       recorded_by: user.id,
       date: new Date().toISOString().split('T')[0],
       branch_id: branchId,
+      photo_url: entry.photos[0].url,
+      photo_urls: entry.photos.map(p => p.url),
+      photo_hashes: entry.photos.map(p => p.hash),
     }));
 
     const { error } = await supabase.from("mortality_records").insert(records);
@@ -105,7 +118,7 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
     } else {
       toast.success(`${validEntries.length} mortality records added`);
       setOpen(false);
-      setEntries([{ id: crypto.randomUUID(), categoryId: "", quantity: 0, reason: "" }]);
+      setEntries([{ id: crypto.randomUUID(), categoryId: "", quantity: 0, reason: "", photos: [] }]);
       onSuccess();
     }
 
@@ -171,6 +184,11 @@ const BulkMortalityDialog = ({ onSuccess }: BulkMortalityDialogProps) => {
                   className="h-16"
                 />
               </div>
+              <MortalityPhotoPicker
+                value={entry.photos}
+                onChange={(photos) => updateEntry(entry.id, "photos", photos)}
+                idSuffix={`bulk-${entry.id}`}
+              />
             </div>
           ))}
           

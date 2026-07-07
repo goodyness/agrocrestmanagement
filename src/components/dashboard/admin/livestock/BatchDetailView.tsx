@@ -25,6 +25,8 @@ import BatchFinancialsCard from "./BatchFinancialsCard";
 import BatchSalesTab from "./BatchSalesTab";
 import BatchProjectionCard from "./BatchProjectionCard";
 import BatchAnalyticsCharts from "./BatchAnalyticsCharts";
+import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
+import { UploadedMortalityPhoto } from "@/lib/photoUpload";
 
 interface Props {
   batch: any;
@@ -66,6 +68,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const [mortalityQuantity, setMortalityQuantity] = useState("");
   const [mortalityReason, setMortalityReason] = useState("");
   const [mortalityDate, setMortalityDate] = useState(new Date().toISOString().split("T")[0]);
+  const [mortalityPhotos, setMortalityPhotos] = useState<UploadedMortalityPhoto[]>([]);
   const [addingMortality, setAddingMortality] = useState(false);
 
   const fetchCareLogs = async () => {
@@ -227,6 +230,10 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       toast.error("Please fill in quantity and reason (reason is required)");
       return;
     }
+    if (mortalityPhotos.length === 0) {
+      toast.error("At least one photo of the dead animal is required.");
+      return;
+    }
     // Category is auto-attached by DB trigger; no manual check required.
     const qty = Number(mortalityQuantity);
     if (qty <= 0 || qty > batchData.current_quantity) {
@@ -262,6 +269,9 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       date: mortalityDate,
       recorded_by: user.id,
       branch_id: batch.branch_id,
+      photo_url: mortalityPhotos[0].url,
+      photo_urls: mortalityPhotos.map((p) => p.url),
+      photo_hashes: mortalityPhotos.map((p) => p.hash),
     });
 
     if (error) { toast.error("Failed to record mortality: " + error.message); }
@@ -270,6 +280,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       setShowAddMortality(false);
       setMortalityQuantity("");
       setMortalityReason("");
+      setMortalityPhotos([]);
       fetchMortality();
       refreshBatch();
     }
@@ -841,9 +852,10 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
               <Label>Date</Label>
               <Input type="date" value={mortalityDate} onChange={(e) => setMortalityDate(e.target.value)} />
             </div>
+            <MortalityPhotoPicker value={mortalityPhotos} onChange={setMortalityPhotos} idSuffix="batch" />
             <Button
               onClick={handleAddMortality}
-              disabled={addingMortality || !mortalityQuantity || !mortalityReason}
+              disabled={addingMortality || !mortalityQuantity || !mortalityReason || mortalityPhotos.length === 0}
               variant="destructive"
               className="w-full"
             >

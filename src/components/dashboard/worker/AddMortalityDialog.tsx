@@ -5,8 +5,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, Camera } from "lucide-react";
-import { uploadEvidencePhoto } from "@/lib/photoUpload";
+import { AlertCircle } from "lucide-react";
+import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
+import { UploadedMortalityPhoto } from "@/lib/photoUpload";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
 import { useBranch } from "@/contexts/BranchContext";
@@ -22,8 +23,7 @@ const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) =>
   const [categories, setCategories] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState("");
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<UploadedMortalityPhoto[]>([]);
   const { currentBranchId: contextBranchId } = useBranch();
   const effectiveBranchId = branchId !== undefined ? branchId : contextBranchId;
 
@@ -66,9 +66,10 @@ const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) =>
       finalBranchId = profile?.branch_id || null;
     }
 
-    let photoUrl: string | null = null;
-    if (photoFile) {
-      photoUrl = await uploadEvidencePhoto(photoFile, "mortality");
+    if (photos.length === 0) {
+      toast.error("At least one photo of the dead animal is required.");
+      setLoading(false);
+      return;
     }
 
     const insertData: any = {
@@ -78,7 +79,9 @@ const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) =>
       recorded_by: user.id,
       date: new Date().toISOString().split('T')[0],
       branch_id: finalBranchId,
-      photo_url: photoUrl,
+      photo_url: photos[0].url,
+      photo_urls: photos.map((p) => p.url),
+      photo_hashes: photos.map((p) => p.hash),
     };
 
     if (selectedBatchId) {
@@ -100,8 +103,7 @@ const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) =>
       toast.success("Mortality recorded successfully");
       setOpen(false);
       setSelectedBatchId("");
-      setPhotoFile(null);
-      setPhotoPreview(null);
+      setPhotos([]);
       onSuccess();
     }
     setLoading(false);
@@ -152,34 +154,8 @@ const AddMortalityDialog = ({ onSuccess, branchId }: AddMortalityDialogProps) =>
             <Label htmlFor="reason">Reason (Optional)</Label>
             <Textarea id="reason" name="reason" placeholder="Cause of death or observations..." />
           </div>
-          <div className="space-y-2">
-            <Label>Photo Evidence (Optional)</Label>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById("mortality-photo")?.click()}>
-                <Camera className="h-4 w-4 mr-2" />
-                {photoFile ? "Change Photo" : "Attach Photo"}
-              </Button>
-              {photoFile && <span className="text-xs text-muted-foreground truncate">{photoFile.name}</span>}
-            </div>
-            <input
-              id="mortality-photo"
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  setPhotoFile(file);
-                  setPhotoPreview(URL.createObjectURL(file));
-                }
-              }}
-            />
-            {photoPreview && (
-              <img src={photoPreview} alt="Preview" className="w-full max-h-32 object-cover rounded-md" />
-            )}
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
+          <MortalityPhotoPicker value={photos} onChange={setPhotos} idSuffix="worker" />
+          <Button type="submit" className="w-full" disabled={loading || photos.length === 0}>
             {loading ? "Recording..." : "Record Mortality"}
           </Button>
         </form>

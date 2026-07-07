@@ -2449,7 +2449,9 @@ export type Database = {
           date: string
           id: string
           livestock_category_id: string
+          photo_hashes: string[]
           photo_url: string | null
+          photo_urls: string[]
           quantity_dead: number
           reason: string | null
           recorded_by: string | null
@@ -2461,7 +2463,9 @@ export type Database = {
           date?: string
           id?: string
           livestock_category_id: string
+          photo_hashes?: string[]
           photo_url?: string | null
+          photo_urls?: string[]
           quantity_dead: number
           reason?: string | null
           recorded_by?: string | null
@@ -2473,7 +2477,9 @@ export type Database = {
           date?: string
           id?: string
           livestock_category_id?: string
+          photo_hashes?: string[]
           photo_url?: string | null
+          photo_urls?: string[]
           quantity_dead?: number
           reason?: string | null
           recorded_by?: string | null
