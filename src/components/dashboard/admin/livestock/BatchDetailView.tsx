@@ -230,6 +230,10 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       toast.error("Please fill in quantity and reason (reason is required)");
       return;
     }
+    if (mortalityPhotos.length === 0) {
+      toast.error("At least one photo of the dead animal is required.");
+      return;
+    }
     // Category is auto-attached by DB trigger; no manual check required.
     const qty = Number(mortalityQuantity);
     if (qty <= 0 || qty > batchData.current_quantity) {
