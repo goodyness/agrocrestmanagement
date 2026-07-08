@@ -317,6 +317,43 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
         )}
       </div>
 
+      {batchData.availability_status === "pending" && (
+        <Card className="border-amber-500/50 bg-amber-500/5">
+          <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-400">Stock Pending</Badge>
+                <p className="font-semibold text-sm">Awaiting stock arrival</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Age is frozen at 0 until you confirm the stock is on hand.
+                {batchData.expected_source && <> Expected from <b>{batchData.expected_source}</b>.</>}
+                {batchData.expected_arrival_date && <> Due <b>{new Date(batchData.expected_arrival_date).toLocaleDateString()}</b>.</>}
+                {batchData.expected_cost_per_unit && <> Est. ₦{Number(batchData.expected_cost_per_unit).toLocaleString()}/unit.</>}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={async () => {
+                const { data: { user } } = await supabase.auth.getUser();
+                await updateBatch({
+                  availability_status: "available",
+                  date_acquired: new Date().toISOString().split("T")[0],
+                  age_weeks: 0,
+                  availability_confirmed_at: new Date().toISOString(),
+                  availability_confirmed_by: user?.id || null,
+                  ...(batchData.expected_cost_per_unit && !batchData.cost_per_unit ? { cost_per_unit: Number(batchData.expected_cost_per_unit), total_cost: Number(batchData.expected_cost_per_unit) * (batchData.quantity || 0) } : {}),
+                  ...(batchData.expected_source && !batchData.source ? { source: batchData.expected_source } : {}),
+                });
+                toast.success("Stock marked as available — age counting has started");
+              }}
+            >
+              ✅ Mark Stock Available
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <WithdrawalWarning logs={careLogs} />
 
       {/* Summary cards */}
