@@ -1,5 +1,10 @@
-import { createClient } from "npm:@supabase/supabase-js@2.45.0";
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -12,7 +17,6 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller is admin
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -32,9 +36,7 @@ Deno.serve(async (req) => {
     if (!user_id || typeof user_id !== "string") throw new Error("user_id required");
     if (user_id === caller.id) throw new Error("Cannot delete yourself");
 
-    // Delete auth user — profile row cascades via profiles_id_fkey ON DELETE CASCADE.
-    // Historical records (mortality, expenses, care logs, etc.) survive because
-    // their recorded_by/created_by/administered_by FKs are SET NULL.
+    // Historical records survive via SET NULL on recorded_by/created_by FKs.
     const { error: delErr } = await admin.auth.admin.deleteUser(user_id);
     if (delErr) throw delErr;
 
