@@ -1868,12 +1868,18 @@ export type Database = {
         Row: {
           admin_contribution: number
           age_weeks: number | null
+          availability_confirmed_at: string | null
+          availability_confirmed_by: string | null
+          availability_status: string
           branch_id: string | null
           budget: number
           cost_per_unit: number | null
           created_at: string
           current_quantity: number
           date_acquired: string
+          expected_arrival_date: string | null
+          expected_cost_per_unit: number | null
+          expected_source: string | null
           has_started_laying: boolean
           id: string
           is_active: boolean
@@ -1892,12 +1898,18 @@ export type Database = {
         Insert: {
           admin_contribution?: number
           age_weeks?: number | null
+          availability_confirmed_at?: string | null
+          availability_confirmed_by?: string | null
+          availability_status?: string
           branch_id?: string | null
           budget?: number
           cost_per_unit?: number | null
           created_at?: string
           current_quantity?: number
           date_acquired?: string
+          expected_arrival_date?: string | null
+          expected_cost_per_unit?: number | null
+          expected_source?: string | null
           has_started_laying?: boolean
           id?: string
           is_active?: boolean
@@ -1916,12 +1928,18 @@ export type Database = {
         Update: {
           admin_contribution?: number
           age_weeks?: number | null
+          availability_confirmed_at?: string | null
+          availability_confirmed_by?: string | null
+          availability_status?: string
           branch_id?: string | null
           budget?: number
           cost_per_unit?: number | null
           created_at?: string
           current_quantity?: number
           date_acquired?: string
+          expected_arrival_date?: string | null
+          expected_cost_per_unit?: number | null
+          expected_source?: string | null
           has_started_laying?: boolean
           id?: string
           is_active?: boolean

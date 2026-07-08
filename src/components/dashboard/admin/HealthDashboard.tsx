@@ -16,11 +16,13 @@ import {
 import { Activity, AlertTriangle, Calendar, TrendingDown, Syringe, Utensils, FileDown, ShieldAlert, ThermometerSun, HeartPulse, Filter } from "lucide-react";
 import { generateHealthReportPdf } from "@/lib/healthReportPdf";
 import { toast } from "sonner";
+import PhotoLightbox from "@/components/dashboard/shared/PhotoLightbox";
 
 export function HealthDashboard() {
   const { currentBranchId, currentBranch } = useBranch();
   const [mortalityFromDate, setMortalityFromDate] = useState(subDays(new Date(), 60).toISOString().split("T")[0]);
   const [mortalityToDate, setMortalityToDate] = useState(new Date().toISOString().split("T")[0]);
+  const [lightbox, setLightbox] = useState<{ urls: string[]; index: number; record: any } | null>(null);
 
   const { data: mortalityData } = useQuery({
     queryKey: ["mortality-trends", currentBranchId, mortalityFromDate, mortalityToDate],
@@ -536,9 +538,14 @@ export function HealthDashboard() {
                     <div key={record.id} className="border rounded-lg overflow-hidden bg-card">
                       <div className="grid grid-cols-2 gap-0.5 bg-muted">
                         {urls.slice(0, 4).map((u, i) => (
-                          <a key={i} href={u} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden">
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => setLightbox({ urls, index: i, record })}
+                            className="block aspect-square overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary"
+                          >
                             <img src={u} alt="mortality evidence" className="w-full h-full object-cover hover:scale-105 transition-transform" loading="lazy" />
-                          </a>
+                          </button>
                         ))}
                       </div>
                       <div className="p-3 space-y-1 text-sm">
@@ -558,6 +565,21 @@ export function HealthDashboard() {
           })()}
         </CardContent>
       </Card>
+
+      <PhotoLightbox
+        open={!!lightbox}
+        onOpenChange={(o) => { if (!o) setLightbox(null); }}
+        urls={lightbox?.urls || []}
+        startIndex={lightbox?.index || 0}
+        meta={lightbox ? {
+          quantityDead: lightbox.record.quantity_dead,
+          category: (lightbox.record.livestock_categories as any)?.name,
+          reason: lightbox.record.reason,
+          date: lightbox.record.date,
+          recordedBy: (lightbox.record.profiles as any)?.name || "Unknown",
+          notes: lightbox.record.notes,
+        } : undefined}
+      />
 
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

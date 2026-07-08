@@ -84,6 +84,12 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
   const [notes, setNotes] = useState(batch?.notes || "");
   const [budget, setBudget] = useState<string>(batch?.budget?.toString() || "0");
   const [adminContribution, setAdminContribution] = useState<string>(batch?.admin_contribution?.toString() || "0");
+  const [availabilityStatus, setAvailabilityStatus] = useState<"available" | "pending">(
+    (batch?.availability_status as any) || "available"
+  );
+  const [expectedSource, setExpectedSource] = useState(batch?.expected_source || "");
+  const [expectedCost, setExpectedCost] = useState<string>(batch?.expected_cost_per_unit?.toString() || "");
+  const [expectedArrival, setExpectedArrival] = useState<string>(batch?.expected_arrival_date || "");
   const [hasPartner, setHasPartner] = useState(false);
   const [partnerId, setPartnerId] = useState("");
   const [partnerShare, setPartnerShare] = useState("50");
@@ -143,24 +149,32 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
           : stage === "weaner" ? 4
             : ageWeeks;
 
+    const isPending = availabilityStatus === "pending";
+
     const batchData: any = {
       branch_id: branchId,
       species,
       species_type: speciesType || null,
       stage,
-      age_weeks: needsAge ? ageWeeks : defaultAge,
+      age_weeks: isPending ? 0 : (needsAge ? ageWeeks : defaultAge),
       quantity,
       current_quantity: batch ? (currentQuantity || quantity) : quantity,
-      date_acquired: batch?.date_acquired || new Date().toISOString().split("T")[0],
+      date_acquired: isPending
+        ? (batch?.date_acquired || new Date().toISOString().split("T")[0])
+        : (batch?.date_acquired || new Date().toISOString().split("T")[0]),
       source: source || null,
       cost_per_unit: costPerUnit,
       total_cost: costPerUnit * quantity,
       notes: notes || null,
       budget: parseFloat(budget) || 0,
       admin_contribution: parseFloat(adminContribution) || 0,
-      has_started_laying: stage === "laying",
-      laying_start_date: stage === "laying" ? (batch?.laying_start_date || new Date().toISOString().split("T")[0]) : null,
+      has_started_laying: !isPending && stage === "laying",
+      laying_start_date: !isPending && stage === "laying" ? (batch?.laying_start_date || new Date().toISOString().split("T")[0]) : null,
       registered_by: batch?.registered_by || user.id,
+      availability_status: availabilityStatus,
+      expected_source: isPending ? (expectedSource || null) : (expectedSource || null),
+      expected_cost_per_unit: expectedCost ? parseFloat(expectedCost) : null,
+      expected_arrival_date: expectedArrival || null,
     };
 
 
@@ -260,6 +274,41 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
           <DialogTitle>{batch ? "Edit Livestock Batch" : "Register New Livestock Batch"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Stock availability */}
+          <div className="border rounded-lg p-3 bg-muted/40 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-sm">📦 Is the stock already on-hand?</Label>
+                <p className="text-xs text-muted-foreground">
+                  Turn off if stock hasn't arrived yet — age won't count until you confirm arrival.
+                </p>
+              </div>
+              <Switch
+                checked={availabilityStatus === "available"}
+                onCheckedChange={(v) => setAvailabilityStatus(v ? "available" : "pending")}
+              />
+            </div>
+            {availabilityStatus === "pending" && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                <div>
+                  <Label className="text-xs">Expected Source</Label>
+                  <Input value={expectedSource} onChange={(e) => setExpectedSource(e.target.value)} placeholder="Supplier / farm" />
+                </div>
+                <div>
+                  <Label className="text-xs">Expected Cost / Unit (₦)</Label>
+                  <Input type="number" min={0} value={expectedCost} onChange={(e) => setExpectedCost(e.target.value)} placeholder="0" />
+                </div>
+                <div>
+                  <Label className="text-xs">Expected Arrival</Label>
+                  <Input type="date" value={expectedArrival} onChange={(e) => setExpectedArrival(e.target.value)} />
+                </div>
+                <p className="col-span-full text-xs text-muted-foreground">
+                  Batch will be marked <Badge variant="secondary" className="mx-1">Pending</Badge> until you or the partner toggle it available. Fields can be updated later.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Species */}
           <div className="space-y-2">
             <Label>Species *</Label>
