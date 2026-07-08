@@ -16,11 +16,13 @@ import {
 import { Activity, AlertTriangle, Calendar, TrendingDown, Syringe, Utensils, FileDown, ShieldAlert, ThermometerSun, HeartPulse, Filter } from "lucide-react";
 import { generateHealthReportPdf } from "@/lib/healthReportPdf";
 import { toast } from "sonner";
+import PhotoLightbox from "@/components/dashboard/shared/PhotoLightbox";
 
 export function HealthDashboard() {
   const { currentBranchId, currentBranch } = useBranch();
   const [mortalityFromDate, setMortalityFromDate] = useState(subDays(new Date(), 60).toISOString().split("T")[0]);
   const [mortalityToDate, setMortalityToDate] = useState(new Date().toISOString().split("T")[0]);
+  const [lightbox, setLightbox] = useState<{ urls: string[]; index: number; record: any } | null>(null);
 
   const { data: mortalityData } = useQuery({
     queryKey: ["mortality-trends", currentBranchId, mortalityFromDate, mortalityToDate],
