@@ -274,6 +274,41 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
           <DialogTitle>{batch ? "Edit Livestock Batch" : "Register New Livestock Batch"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Stock availability */}
+          <div className="border rounded-lg p-3 bg-muted/40 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-sm">📦 Is the stock already on-hand?</Label>
+                <p className="text-xs text-muted-foreground">
+                  Turn off if stock hasn't arrived yet — age won't count until you confirm arrival.
+                </p>
+              </div>
+              <Switch
+                checked={availabilityStatus === "available"}
+                onCheckedChange={(v) => setAvailabilityStatus(v ? "available" : "pending")}
+              />
+            </div>
+            {availabilityStatus === "pending" && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                <div>
+                  <Label className="text-xs">Expected Source</Label>
+                  <Input value={expectedSource} onChange={(e) => setExpectedSource(e.target.value)} placeholder="Supplier / farm" />
+                </div>
+                <div>
+                  <Label className="text-xs">Expected Cost / Unit (₦)</Label>
+                  <Input type="number" min={0} value={expectedCost} onChange={(e) => setExpectedCost(e.target.value)} placeholder="0" />
+                </div>
+                <div>
+                  <Label className="text-xs">Expected Arrival</Label>
+                  <Input type="date" value={expectedArrival} onChange={(e) => setExpectedArrival(e.target.value)} />
+                </div>
+                <p className="col-span-full text-xs text-muted-foreground">
+                  Batch will be marked <Badge variant="secondary" className="mx-1">Pending</Badge> until you or the partner toggle it available. Fields can be updated later.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Species */}
           <div className="space-y-2">
             <Label>Species *</Label>
