@@ -353,6 +353,53 @@ export type Database = {
           },
         ]
       }
+      batch_availability_events: {
+        Row: {
+          batch_id: string
+          changed_by: string | null
+          changed_by_role: string | null
+          created_at: string
+          event_type: string
+          from_status: string | null
+          id: string
+          metadata: Json | null
+          notes: string | null
+          to_status: string | null
+        }
+        Insert: {
+          batch_id: string
+          changed_by?: string | null
+          changed_by_role?: string | null
+          created_at?: string
+          event_type: string
+          from_status?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          to_status?: string | null
+        }
+        Update: {
+          batch_id?: string
+          changed_by?: string | null
+          changed_by_role?: string | null
+          created_at?: string
+          event_type?: string
+          from_status?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_availability_events_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_complaints: {
         Row: {
           acceptance_id: string | null
@@ -1883,6 +1930,7 @@ export type Database = {
           has_started_laying: boolean
           id: string
           is_active: boolean
+          last_overdue_notified_at: string | null
           laying_start_date: string | null
           livestock_category_id: string | null
           notes: string | null
@@ -1913,6 +1961,7 @@ export type Database = {
           has_started_laying?: boolean
           id?: string
           is_active?: boolean
+          last_overdue_notified_at?: string | null
           laying_start_date?: string | null
           livestock_category_id?: string | null
           notes?: string | null
@@ -1943,6 +1992,7 @@ export type Database = {
           has_started_laying?: boolean
           id?: string
           is_active?: boolean
+          last_overdue_notified_at?: string | null
           laying_start_date?: string | null
           livestock_category_id?: string | null
           notes?: string | null
@@ -4145,6 +4195,10 @@ export type Database = {
     }
     Functions: {
       admin_exists: { Args: never; Returns: boolean }
+      confirm_stock_available: {
+        Args: { _batch_id: string }
+        Returns: undefined
+      }
       get_batch_financials: {
         Args: { _batch_id: string }
         Returns: {
