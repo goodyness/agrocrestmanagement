@@ -2,24 +2,26 @@ import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Heart, Skull, DollarSign, ListFilter } from "lucide-react";
+import { Heart, Skull, DollarSign, ListFilter, PackageCheck } from "lucide-react";
 
 interface Props {
   careLogs: any[];
   mortalityRecords: any[];
   expenses: any[];
+  availabilityEvents?: any[];
 }
 
-type Filter = "all" | "care" | "mortality" | "expense";
+type Filter = "all" | "care" | "mortality" | "expense" | "availability";
 
-const ICONS: Record<string, any> = { care: Heart, mortality: Skull, expense: DollarSign };
+const ICONS: Record<string, any> = { care: Heart, mortality: Skull, expense: DollarSign, availability: PackageCheck };
 const COLORS: Record<string, string> = {
   care: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
   mortality: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",
   expense: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+  availability: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
 };
 
-const ActivityTimeline = ({ careLogs, mortalityRecords, expenses }: Props) => {
+const ActivityTimeline = ({ careLogs, mortalityRecords, expenses, availabilityEvents = [] }: Props) => {
   const [filter, setFilter] = useState<Filter>("all");
 
   const events = useMemo(() => {
@@ -43,8 +45,23 @@ const ActivityTimeline = ({ careLogs, mortalityRecords, expenses }: Props) => {
       title: `${e.expense_type}: ₦${Number(e.amount).toLocaleString()}`,
       meta: e.description, user: e.profiles?.name,
     }));
+    availabilityEvents.forEach((a: any) => {
+      const t = a.event_type as string;
+      const title =
+        t === "marked_available" ? "Stock marked available — age counting started"
+        : t === "overdue_notified" ? "Overdue notification sent"
+        : t === "expected_updated" ? "Expected stock details updated"
+        : `Availability: ${t.replace(/_/g, " ")}`;
+      arr.push({
+        type: "availability", id: `a-${a.id}`,
+        date: a.created_at,
+        title,
+        meta: a.notes || null,
+        user: a.profiles?.name || (a.changed_by_role ? a.changed_by_role : null),
+      });
+    });
     return arr.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [careLogs, mortalityRecords, expenses]);
+  }, [careLogs, mortalityRecords, expenses, availabilityEvents]);
 
   const filtered = filter === "all" ? events : events.filter(e => e.type === filter);
 
@@ -52,7 +69,7 @@ const ActivityTimeline = ({ careLogs, mortalityRecords, expenses }: Props) => {
     <div className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
         <ListFilter className="h-4 w-4 text-muted-foreground" />
-        {(["all", "care", "mortality", "expense"] as Filter[]).map(f => (
+        {(["all", "care", "mortality", "expense", "availability"] as Filter[]).map(f => (
           <Button key={f} size="sm" variant={filter === f ? "default" : "outline"}
             onClick={() => setFilter(f)} className="capitalize h-7 px-3 text-xs">
             {f}

@@ -373,9 +373,9 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            {/* Quantity */}
+            {/* Quantity — Initial (or Expected when pending) */}
             <div className="space-y-2">
-              <Label>Initial Quantity *</Label>
+              <Label>{availabilityStatus === "pending" ? "Expected Quantity *" : "Initial Quantity *"}</Label>
               <Input
                 type="number"
                 min={1}
@@ -386,8 +386,8 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
               />
             </div>
 
-            {/* Current Quantity */}
-            {batch && (
+            {/* Current Quantity — only when available */}
+            {batch && availabilityStatus === "available" && (
               <div className="space-y-2">
                 <Label>Current Quantity *</Label>
                 <Input
@@ -402,55 +402,62 @@ const RegisterBatchDialog = ({ open, onOpenChange, onSuccess, branchId, batch }:
             )}
           </div>
 
-          {/* Source */}
-          <div className="space-y-2">
-            <Label>Source *</Label>
-            {species !== "chicken" && species ? (
-              <Select value={source} onValueChange={setSource}>
-                <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bought">🏪 Bought from Outside</SelectItem>
-                  <SelectItem value="born_on_farm">🐣 Gave Birth To (On Farm)</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                placeholder="Where acquired from"
-              />
-            )}
-          </div>
+          {/* Source / Cost / Budget — HIDDEN when pending (expected fields already captured above) */}
+          {availabilityStatus === "available" ? (
+            <>
+              <div className="space-y-2">
+                <Label>Source *</Label>
+                {species !== "chicken" && species ? (
+                  <Select value={source} onValueChange={setSource}>
+                    <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bought">🏪 Bought from Outside</SelectItem>
+                      <SelectItem value="born_on_farm">🐣 Gave Birth To (On Farm)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="Where acquired from" />
+                )}
+              </div>
 
-          {/* Cost */}
-          <div className="space-y-2">
-            <Label>Cost per Unit (₦)</Label>
-            <Input
-              type="number"
-              min={0}
-              value={costPerUnit || ""}
-              onChange={(e) => setCostPerUnit(parseFloat(e.target.value) || 0)}
-              placeholder="0"
-            />
-            {quantity > 0 && costPerUnit > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Total: ₦{(quantity * costPerUnit).toLocaleString()}
-              </p>
-            )}
-          </div>
+              <div className="space-y-2">
+                <Label>Cost per Unit (₦)</Label>
+                <Input type="number" min={0} value={costPerUnit || ""} onChange={(e) => setCostPerUnit(parseFloat(e.target.value) || 0)} placeholder="0" />
+                {quantity > 0 && costPerUnit > 0 && (
+                  <p className="text-xs text-muted-foreground">Total: ₦{(quantity * costPerUnit).toLocaleString()}</p>
+                )}
+              </div>
 
-          {/* Budget */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Batch Budget (₦)</Label>
-              <Input type="number" min={0} value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Total budget" />
-            </div>
-            <div className="space-y-2">
-              <Label>Admin Contribution (₦)</Label>
-              <Input type="number" min={0} value={adminContribution} onChange={(e) => setAdminContribution(e.target.value)} placeholder="Amount admin puts in" />
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">Expenses on this batch reduce the budget. Partner will add their own contribution on acceptance.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Batch Budget (₦)</Label>
+                  <Input type="number" min={0} value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Total budget" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Admin Contribution (₦)</Label>
+                  <Input type="number" min={0} value={adminContribution} onChange={(e) => setAdminContribution(e.target.value)} placeholder="Amount admin puts in" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Expenses on this batch reduce the budget. Partner will add their own contribution on acceptance.</p>
+            </>
+          ) : (
+            <>
+              {/* Projected budget & admin contribution still captured while pending */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Projected Budget (₦)</Label>
+                  <Input type="number" min={0} value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Estimated total budget" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Admin Contribution (₦)</Label>
+                  <Input type="number" min={0} value={adminContribution} onChange={(e) => setAdminContribution(e.target.value)} placeholder="Amount admin will put in" />
+                </div>
+              </div>
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-xs text-amber-800 dark:text-amber-300">
+                Source, actual cost/unit and current quantity are hidden until stock arrives. When you (or the partner) mark this batch as available, we'll prefill those from the expected values — you can confirm or adjust then.
+              </div>
+            </>
+          )}
 
           {/* Notes */}
           <div className="space-y-2">

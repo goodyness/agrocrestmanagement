@@ -21,7 +21,6 @@ const ManagePartnerBatchesDialog = ({ open, onOpenChange, partner, onChanged }: 
   const [links, setLinks] = useState<any[]>([]);
   const [batchId, setBatchId] = useState("");
   const [share, setShare] = useState("50");
-  const [investment, setInvestment] = useState("0");
 
   const load = async () => {
     if (!partner) return;
@@ -37,15 +36,16 @@ const ManagePartnerBatchesDialog = ({ open, onOpenChange, partner, onChanged }: 
 
   const addLink = async () => {
     if (!batchId) return toast.error("Select a batch");
+    const pct = parseFloat(share) || 0;
     const { error } = await supabase.from("partner_batches").insert({
       partner_id: partner.id,
       batch_id: batchId,
-      share_percentage: parseFloat(share) || 0,
-      investment_amount: parseFloat(investment) || 0,
+      share_percentage: pct,
+      profit_share_percentage: pct,
     });
     if (error) return toast.error(error.message);
     toast.success("Batch linked to partner");
-    setBatchId(""); setShare("50"); setInvestment("0");
+    setBatchId(""); setShare("50");
     load();
     onChanged?.();
   };
@@ -71,7 +71,7 @@ const ManagePartnerBatchesDialog = ({ open, onOpenChange, partner, onChanged }: 
         <div className="space-y-4">
           <div className="border rounded-lg p-3 bg-muted/30 space-y-3">
             <p className="text-sm font-semibold">Link a new batch</p>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               <div className="md:col-span-2">
                 <Label className="text-xs">Batch</Label>
                 <Select value={batchId} onValueChange={setBatchId}>
@@ -86,14 +86,11 @@ const ManagePartnerBatchesDialog = ({ open, onOpenChange, partner, onChanged }: 
                 </Select>
               </div>
               <div>
-                <Label className="text-xs">Share %</Label>
-                <Input type="number" value={share} onChange={e => setShare(e.target.value)} />
-              </div>
-              <div>
-                <Label className="text-xs">Investment (₦)</Label>
-                <Input type="number" value={investment} onChange={e => setInvestment(e.target.value)} />
+                <Label className="text-xs">Ownership / Profit Share %</Label>
+                <Input type="number" min={0} max={100} value={share} onChange={e => setShare(e.target.value)} />
               </div>
             </div>
+            <p className="text-xs text-muted-foreground">The percentage represents both ownership and profit share. Budget & contributions are set on the batch itself.</p>
             <Button size="sm" onClick={addLink} disabled={!batchId}>
               <Plus className="h-4 w-4 mr-1" /> Link Batch
             </Button>
@@ -112,8 +109,8 @@ const ManagePartnerBatchesDialog = ({ open, onOpenChange, partner, onChanged }: 
                         {l.livestock_batches?.species_type || l.livestock_batches?.species} • {l.livestock_batches?.current_quantity} animals
                       </p>
                       <div className="flex gap-2 mt-1">
-                        <Badge variant="secondary" className="text-xs">{l.share_percentage}% share</Badge>
-                        <Badge variant="outline" className="text-xs">₦{Number(l.investment_amount).toLocaleString()}</Badge>
+                        <Badge variant="secondary" className="text-xs">{l.share_percentage}% ownership</Badge>
+                        <Badge variant="outline" className="text-xs">{l.profit_share_percentage ?? l.share_percentage}% profit</Badge>
                       </div>
                     </div>
                     <Button size="icon" variant="ghost" className="text-destructive" onClick={() => removeLink(l.id)}>

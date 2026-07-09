@@ -52,6 +52,9 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const [showAddCare, setShowAddCare] = useState(false);
   const [batchData, setBatchData] = useState(batch);
   const [partnerLink, setPartnerLink] = useState<any | null>(null);
+  const [availabilityEvents, setAvailabilityEvents] = useState<any[]>([]);
+  const [showConfirmAvailable, setShowConfirmAvailable] = useState(false);
+  const [confirmingAvailable, setConfirmingAvailable] = useState(false);
 
   // Expenses state
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -121,14 +124,24 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
     if (data) setBatchData(data);
   };
 
+  const fetchAvailabilityEvents = async () => {
+    const { data } = await supabase
+      .from("batch_availability_events" as any)
+      .select("*, profiles:changed_by(name)")
+      .eq("batch_id", batch.id)
+      .order("created_at", { ascending: false });
+    setAvailabilityEvents((data as any[]) || []);
+  };
+
   useEffect(() => {
     fetchCareLogs();
     fetchTemplates();
     fetchExpenses();
     fetchMortality();
+    fetchAvailabilityEvents();
     supabase
       .from("partner_batches")
-      .select("*, partners(id, phone, notes, profiles!partners_profile_id_fkey(name, email))")
+      .select("*, partners(id, phone, notes, profile_id, profiles!partners_profile_id_fkey(name, email))")
       .eq("batch_id", batch.id)
       .maybeSingle()
       .then(({ data }) => setPartnerLink(data));
@@ -317,42 +330,89 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
         )}
       </div>
 
-      {batchData.availability_status === "pending" && (
-        <Card className="border-amber-500/50 bg-amber-500/5">
-          <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-400">Stock Pending</Badge>
-                <p className="font-semibold text-sm">Awaiting stock arrival</p>
+      {batchData.availability_status === "pending" && (() => {
+        const overdue = batchData.expected_arrival_date && new Date(batchData.expected_arrival_date) < new Date(new Date().toDateString());
+        const daysLate = overdue
+          ? Math.floor((Date.now() - new Date(batchData.expected_arrival_date).getTime()) / 864e5)
+          : 0;
+        return (
+          <Card className={overdue ? "border-destructive/60 bg-destructive/5" : "border-amber-500/50 bg-amber-500/5"}>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <Badge variant="outline" className={overdue ? "border-destructive text-destructive" : "border-amber-500 text-amber-700 dark:text-amber-400"}>
+                      {overdue ? `⏰ Overdue ${daysLate}d` : "Stock Pending"}
+                    </Badge>
+                    <p className="font-semibold text-sm">
+                      {overdue ? "Expected stock has not arrived yet" : "Awaiting stock arrival"}
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Age is frozen at 0 until you confirm the stock is on hand.
+                    {batchData.expected_source && <> Expected from <b>{batchData.expected_source}</b>.</>}
+                    {batchData.expected_arrival_date && <> Due <b>{new Date(batchData.expected_arrival_date).toLocaleDateString()}</b>.</>}
+                    {batchData.expected_cost_per_unit && <> Est. ₦{Number(batchData.expected_cost_per_unit).toLocaleString()}/unit.</>}
+                  </p>
+                </div>
+                <Button size="sm" onClick={() => setShowConfirmAvailable(true)}>
+                  ✅ Mark Stock Available
+                </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Age is frozen at 0 until you confirm the stock is on hand.
-                {batchData.expected_source && <> Expected from <b>{batchData.expected_source}</b>.</>}
-                {batchData.expected_arrival_date && <> Due <b>{new Date(batchData.expected_arrival_date).toLocaleDateString()}</b>.</>}
-                {batchData.expected_cost_per_unit && <> Est. ₦{Number(batchData.expected_cost_per_unit).toLocaleString()}/unit.</>}
-              </p>
+              <div className="rounded-md border bg-background/60 p-2 text-[11px] text-muted-foreground leading-relaxed">
+                <b>How to use:</b> when the animals physically arrive on the farm, click <b>Mark Stock Available</b>.
+                We'll copy the expected source and cost as the batch's actual values, set the acquisition date to today,
+                and start counting age. This action is audit-logged.
+                {partnerLink ? " Both admins and the linked partner can confirm arrival." : ""}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* Confirm-available dialog */}
+      <Dialog open={showConfirmAvailable} onOpenChange={setShowConfirmAvailable}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm stock arrival</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              You're confirming that the animals for this batch have physically arrived. We'll apply these values:
+            </p>
+            <div className="rounded-md border p-3 space-y-1 bg-muted/40">
+              <div className="flex justify-between"><span className="text-muted-foreground">Expected quantity</span><b>{batchData.quantity}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Source</span><b>{batchData.expected_source || batchData.source || "—"}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Cost / unit</span><b>{(batchData.expected_cost_per_unit || batchData.cost_per_unit) ? "₦" + Number(batchData.expected_cost_per_unit || batchData.cost_per_unit).toLocaleString() : "—"}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Acquisition date</span><b>{new Date().toLocaleDateString()}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Age reset to</span><b>0 weeks</b></div>
             </div>
+            <p className="text-xs text-muted-foreground">
+              After confirming, an admin can still edit exact figures from the batch edit dialog if the actuals differ from the expected values.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmAvailable(false)} disabled={confirmingAvailable}>Cancel</Button>
             <Button
-              size="sm"
+              disabled={confirmingAvailable}
               onClick={async () => {
-                const { data: { user } } = await supabase.auth.getUser();
-                await updateBatch({
-                  availability_status: "available",
-                  date_acquired: new Date().toISOString().split("T")[0],
-                  age_weeks: 0,
-                  availability_confirmed_at: new Date().toISOString(),
-                  availability_confirmed_by: user?.id || null,
-                  ...(batchData.expected_cost_per_unit && !batchData.cost_per_unit ? { cost_per_unit: Number(batchData.expected_cost_per_unit), total_cost: Number(batchData.expected_cost_per_unit) * (batchData.quantity || 0) } : {}),
-                  ...(batchData.expected_source && !batchData.source ? { source: batchData.expected_source } : {}),
-                });
-                toast.success("Stock marked as available — age counting has started");
+                setConfirmingAvailable(true);
+                const { error } = await (supabase as any).rpc("confirm_stock_available", { _batch_id: batch.id });
+                if (error) toast.error(error.message || "Failed to confirm");
+                else {
+                  toast.success("Stock marked available — age counting started");
+                  setShowConfirmAvailable(false);
+                  refreshBatch();
+                  fetchAvailabilityEvents();
+                }
+                setConfirmingAvailable(false);
               }}
             >
-              ✅ Mark Stock Available
+              {confirmingAvailable ? "Confirming..." : "Yes, stock has arrived"}
             </Button>
-          </CardContent>
-        </Card>
-      )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <WithdrawalWarning logs={careLogs} />
 
@@ -688,7 +748,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
         <TabsContent value="timeline" className="space-y-3">
           <h3 className="font-semibold text-sm">Activity Timeline</h3>
           <p className="text-xs text-muted-foreground">Every care, mortality and expense entry on this batch — filter by type.</p>
-          <ActivityTimeline careLogs={careLogs} mortalityRecords={mortalityRecords} expenses={expenses} />
+          <ActivityTimeline careLogs={careLogs} mortalityRecords={mortalityRecords} expenses={expenses} availabilityEvents={availabilityEvents} />
         </TabsContent>
 
         {/* ===== AI TAB ===== */}

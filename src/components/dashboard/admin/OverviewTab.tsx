@@ -14,6 +14,7 @@ import SeasonalTrendAnalysis from "./SeasonalTrendAnalysis";
 import InventoryExpiryTracker from "./InventoryExpiryTracker";
 import InvoiceGenerator from "./InvoiceGenerator";
 import VetVisitLog from "./VetVisitLog";
+import AdminAnalyticsCharts from "./AdminAnalyticsCharts";
 import { useBranch } from "@/contexts/BranchContext";
 import { Separator } from "@/components/ui/separator";
 
@@ -282,6 +283,11 @@ const OverviewTab = () => {
       <div className="mt-6">
         <h3 className="text-lg font-semibold mb-4">Feed Analytics</h3>
         <FeedAnalyticsWidget />
+      </div>
+
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-4">Advanced Analytics</h3>
+        <AdminAnalyticsCharts />
       </div>
     </div>
   );

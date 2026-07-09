@@ -17,6 +17,21 @@ function genPassword(len = 12) {
   return out + "!2";
 }
 
+async function sendMail(to: string, subject: string, html: string, text: string) {
+  try {
+    const gmailUser = Deno.env.get("GMAIL_USER");
+    const gmailPass = Deno.env.get("GMAIL_APP_PASSWORD");
+    if (!gmailUser || !gmailPass) return;
+    const smtp = new SMTPClient({
+      connection: { hostname: "smtp.gmail.com", port: 465, tls: true, auth: { username: gmailUser, password: gmailPass } },
+    });
+    await smtp.send({ from: gmailUser, to, subject, content: text, html });
+    await smtp.close();
+  } catch (e) {
+    console.error("Email send failed:", e);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -25,7 +40,6 @@ serve(async (req) => {
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // Verify caller is admin
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userErr } = await admin.auth.getUser(token);
@@ -37,48 +51,88 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Forbidden — admins only" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const body = await req.json();
-    const { name, email, phone, notes, branch_id } = body || {};
+    const { name, email, phone, notes, branch_id } = await req.json() ?? {};
     if (!name || !email) {
       return new Response(JSON.stringify({ error: "Name and email are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const password = genPassword(10);
+    const appUrl = req.headers.get("origin") || "https://agrocrestmanagement.lovable.app";
+    let targetUserId: string | null = null;
+    let generatedPassword: string | null = null;
+    let existedBefore = false;
 
-    // Create auth user
-    const { data: created, error: createErr } = await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { name, role: "partner" },
-    });
-    if (createErr || !created.user) {
-      return new Response(JSON.stringify({ error: createErr?.message || "Failed to create user" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Try to look up an existing user by email
+    const { data: existingProfile } = await admin
+      .from("profiles").select("id, role").eq("email", email.toLowerCase()).maybeSingle();
+
+    if (existingProfile) {
+      existedBefore = true;
+      targetUserId = existingProfile.id;
+    } else {
+      // Try to create user; if already registered in auth (no profile row), look them up via listUsers
+      generatedPassword = genPassword(10);
+      const { data: created, error: createErr } = await admin.auth.admin.createUser({
+        email,
+        password: generatedPassword,
+        email_confirm: true,
+        user_metadata: { name, role: "partner" },
+      });
+      if (createErr || !created?.user) {
+        // If email is duplicate, hunt for the auth user id
+        const { data: list } = await admin.auth.admin.listUsers();
+        const found = list?.users?.find((u: any) => (u.email || "").toLowerCase() === email.toLowerCase());
+        if (!found) {
+          return new Response(JSON.stringify({ error: createErr?.message || "Failed to create user" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        existedBefore = true;
+        targetUserId = found.id;
+        generatedPassword = null;
+      } else {
+        targetUserId = created.user.id;
+      }
     }
 
-    // Ensure profile row is partner role + name (+ branch)
-    await admin.from("profiles").upsert({ id: created.user.id, name, role: "partner", email, branch_id: branch_id || null });
+    if (!targetUserId) {
+      return new Response(JSON.stringify({ error: "Could not resolve user" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
-    // Insert partner row
+    // Check for pre-existing partner row
+    const { data: existingPartner } = await admin
+      .from("partners").select("id").eq("profile_id", targetUserId).maybeSingle();
+    if (existingPartner) {
+      return new Response(JSON.stringify({ error: "This user is already registered as a partner." }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Upsert profile as partner
+    await admin.from("profiles").upsert({
+      id: targetUserId, name, role: "partner", email: email.toLowerCase(), branch_id: branch_id || null,
+    });
+
     const { data: partnerRow, error: pErr } = await admin
       .from("partners")
-      .insert({ profile_id: created.user.id, phone: phone || null, notes: notes || null, branch_id: branch_id || null, created_by: userData.user.id })
-      .select()
-      .single();
+      .insert({ profile_id: targetUserId, phone: phone || null, notes: notes || null, branch_id: branch_id || null, created_by: userData.user.id })
+      .select().single();
     if (pErr) {
-      return new Response(JSON.stringify({ error: pErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: pErr.message }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Send styled welcome email via Gmail SMTP
-    try {
-      const gmailUser = Deno.env.get("GMAIL_USER")!;
-      const gmailPass = Deno.env.get("GMAIL_APP_PASSWORD")!;
-      const smtp = new SMTPClient({
-        connection: { hostname: "smtp.gmail.com", port: 465, tls: true, auth: { username: gmailUser, password: gmailPass } },
-      });
+    // Email — new users get password; existing users get a "you've been added" notice
+    const credBlock = generatedPassword
+      ? `<div style="margin:22px 0;padding:18px 20px;background:#f3f7ee;border:1px solid #d7e3c9;border-radius:10px;">
+          <p style="margin:0 0 6px;font-size:12px;color:#5d6b50;text-transform:uppercase;letter-spacing:0.5px;">Your login details</p>
+          <p style="margin:4px 0;font-size:14px;"><strong>Email:</strong> ${email}</p>
+          <p style="margin:4px 0;font-size:14px;"><strong>Temporary password:</strong> <code style="background:#fff;padding:3px 8px;border-radius:5px;border:1px solid #d7e3c9;">${generatedPassword}</code></p>
+        </div>
+        <p style="font-size:13px;color:#5d6b50;line-height:1.6;">For your security, please log in and reset your password right away using the "Forgot password" option on the sign-in page.</p>`
+      : `<div style="margin:22px 0;padding:16px 20px;background:#f3f7ee;border:1px solid #d7e3c9;border-radius:10px;">
+          <p style="margin:0;font-size:14px;">Sign in with your existing account at <strong>${email}</strong>. If you've forgotten your password, use "Forgot password".</p>
+        </div>`;
 
-      const appUrl = req.headers.get("origin") || "https://agrocrestmanagement.lovable.app";
-      const html = `
+    const html = `
 <!DOCTYPE html><html><body style="margin:0;padding:0;background:#f4f6f3;font-family:Arial,Helvetica,sans-serif;color:#1f2a1c;">
   <div style="max-width:560px;margin:32px auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
     <div style="background:linear-gradient(135deg,#3f6f3a,#86a96b);padding:28px 32px;color:#fff;">
@@ -90,14 +144,7 @@ serve(async (req) => {
       <p style="font-size:14px;line-height:1.6;color:#3b4a35;">
         An admin has registered you as a partner on Agrocrest Farm Management. You now have access to track the livestock batches you've invested in — production, vaccinations, mortality, feed, and care logs.
       </p>
-      <div style="margin:22px 0;padding:18px 20px;background:#f3f7ee;border:1px solid #d7e3c9;border-radius:10px;">
-        <p style="margin:0 0 6px;font-size:12px;color:#5d6b50;text-transform:uppercase;letter-spacing:0.5px;">Your login details</p>
-        <p style="margin:4px 0;font-size:14px;"><strong>Email:</strong> ${email}</p>
-        <p style="margin:4px 0;font-size:14px;"><strong>Temporary password:</strong> <code style="background:#fff;padding:3px 8px;border-radius:5px;border:1px solid #d7e3c9;">${password}</code></p>
-      </div>
-      <p style="font-size:13px;color:#5d6b50;line-height:1.6;">
-        For your security, please log in and reset your password right away using the "Forgot password" option on the sign-in page.
-      </p>
+      ${credBlock}
       <div style="text-align:center;margin:26px 0 10px;">
         <a href="${appUrl}/auth" style="display:inline-block;background:#3f6f3a;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">Sign in to dashboard</a>
       </div>
@@ -107,26 +154,17 @@ serve(async (req) => {
   </div>
 </body></html>`;
 
-      await smtp.send({
-        from: gmailUser,
-        to: email,
-        subject: "🌾 Welcome to Agrocrest — Your Partner Account",
-        content: `Welcome ${name}. Email: ${email}  Temporary password: ${password}`,
-        html,
-      });
-      await smtp.close();
-    } catch (e) {
-      console.error("Email send failed:", e);
-      // continue — account is still created
-    }
+    await sendMail(email, "🌾 Welcome to Agrocrest — Your Partner Account",
+      html,
+      generatedPassword
+        ? `Welcome ${name}. Email: ${email}  Temporary password: ${generatedPassword}`
+        : `Welcome ${name}. You've been added as a partner — sign in with your existing password at ${email}.`);
 
-    return new Response(JSON.stringify({ success: true, partner: partnerRow, user_id: created.user.id }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
+    return new Response(JSON.stringify({ success: true, partner: partnerRow, user_id: targetUserId, linked_existing: existedBefore }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200,
     });
   } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message || "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ error: e.message || "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
