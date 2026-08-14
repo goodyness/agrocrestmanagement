@@ -471,6 +471,95 @@ export type Database = {
           },
         ]
       }
+      batch_fcr_records: {
+        Row: {
+          animal_type: string
+          avg_weight_g: number
+          batch_id: string
+          branch_id: string | null
+          created_at: string
+          fcr: number | null
+          feed_consumed_kg: number
+          feed_type_id: string | null
+          id: string
+          live_count: number | null
+          observation: string | null
+          record_date: string
+          recorded_by: string | null
+          sample_size: number
+          updated_at: string
+          week_number: number | null
+          weight_gain_kg: number | null
+        }
+        Insert: {
+          animal_type: string
+          avg_weight_g: number
+          batch_id: string
+          branch_id?: string | null
+          created_at?: string
+          fcr?: number | null
+          feed_consumed_kg: number
+          feed_type_id?: string | null
+          id?: string
+          live_count?: number | null
+          observation?: string | null
+          record_date?: string
+          recorded_by?: string | null
+          sample_size: number
+          updated_at?: string
+          week_number?: number | null
+          weight_gain_kg?: number | null
+        }
+        Update: {
+          animal_type?: string
+          avg_weight_g?: number
+          batch_id?: string
+          branch_id?: string | null
+          created_at?: string
+          fcr?: number | null
+          feed_consumed_kg?: number
+          feed_type_id?: string | null
+          id?: string
+          live_count?: number | null
+          observation?: string | null
+          record_date?: string
+          recorded_by?: string | null
+          sample_size?: number
+          updated_at?: string
+          week_number?: number | null
+          weight_gain_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_fcr_records_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_fcr_records_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_fcr_records_feed_type_id_fkey"
+            columns: ["feed_type_id"]
+            isOneToOne: false
+            referencedRelation: "feed_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_fcr_records_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_projections: {
         Row: {
           batch_id: string
@@ -520,41 +609,59 @@ export type Database = {
       }
       batch_sales: {
         Row: {
+          amount_paid: number
           batch_id: string
           buyer: string | null
           created_at: string
+          customer_id: string | null
           id: string
           notes: string | null
+          payment_status: string
+          product_name: string | null
           quantity: number
           recorded_by: string | null
           sale_date: string
+          sales_record_id: string | null
           total_amount: number
+          unit: string | null
           unit_price: number
           updated_at: string
         }
         Insert: {
+          amount_paid?: number
           batch_id: string
           buyer?: string | null
           created_at?: string
+          customer_id?: string | null
           id?: string
           notes?: string | null
+          payment_status?: string
+          product_name?: string | null
           quantity?: number
           recorded_by?: string | null
           sale_date?: string
+          sales_record_id?: string | null
           total_amount?: number
+          unit?: string | null
           unit_price?: number
           updated_at?: string
         }
         Update: {
+          amount_paid?: number
           batch_id?: string
           buyer?: string | null
           created_at?: string
+          customer_id?: string | null
           id?: string
           notes?: string | null
+          payment_status?: string
+          product_name?: string | null
           quantity?: number
           recorded_by?: string | null
           sale_date?: string
+          sales_record_id?: string | null
           total_amount?: number
+          unit?: string | null
           unit_price?: number
           updated_at?: string
         }
@@ -567,10 +674,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "batch_sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "batch_sales_recorded_by_fkey"
             columns: ["recorded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_sales_sales_record_id_fkey"
+            columns: ["sales_record_id"]
+            isOneToOne: false
+            referencedRelation: "sales_records"
             referencedColumns: ["id"]
           },
         ]
@@ -3147,6 +3268,7 @@ export type Database = {
       sales_records: {
         Row: {
           amount_paid: number
+          batch_id: string | null
           branch_id: string | null
           buyer_name: string | null
           created_at: string | null
@@ -3165,6 +3287,7 @@ export type Database = {
         }
         Insert: {
           amount_paid?: number
+          batch_id?: string | null
           branch_id?: string | null
           buyer_name?: string | null
           created_at?: string | null
@@ -3183,6 +3306,7 @@ export type Database = {
         }
         Update: {
           amount_paid?: number
+          batch_id?: string | null
           branch_id?: string | null
           buyer_name?: string | null
           created_at?: string | null
@@ -3200,6 +3324,13 @@ export type Database = {
           unit?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sales_records_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sales_records_branch_id_fkey"
             columns: ["branch_id"]
@@ -4224,6 +4355,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_partner: { Args: never; Returns: boolean }
       partner_has_batch: { Args: { _batch_id: string }; Returns: boolean }
+      recalc_batch_quantity: { Args: { _batch_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "worker" | "partner"
