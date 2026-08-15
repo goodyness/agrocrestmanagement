@@ -504,13 +504,20 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           <TabsTrigger value="mortality" className="text-xs">💀 Mortality ({totalMortality})</TabsTrigger>
           <TabsTrigger value="expenses" className="text-xs">💰 Expenses</TabsTrigger>
           <TabsTrigger value="sales" className="text-xs">💵 Sales</TabsTrigger>
+          <TabsTrigger value="fcr" className="text-xs">⚖️ FCR & Feeding</TabsTrigger>
           <TabsTrigger value="analytics" className="text-xs">📊 Analytics</TabsTrigger>
           <TabsTrigger value="timeline" className="text-xs">🕘 Timeline</TabsTrigger>
           <TabsTrigger value="ai" className="text-xs">✨ AI</TabsTrigger>
           <TabsTrigger value="info" className="text-xs">ℹ️ Details</TabsTrigger>
         </TabsList>
-        <TabsContent value="sales" className="space-y-3"><BatchSalesTab batchId={batch.id} /></TabsContent>
+        <TabsContent value="sales" className="space-y-3">
+          <BatchSalesTab batch={batchData} onChange={refreshBatch} />
+        </TabsContent>
+        <TabsContent value="fcr" className="space-y-3">
+          <BatchFcrTab batch={batchData} onSaved={refreshBatch} />
+        </TabsContent>
         <TabsContent value="analytics" className="space-y-3"><BatchAnalyticsCharts batchId={batch.id} /></TabsContent>
+
 
         {/* ===== CARE SCHEDULE TAB ===== */}
         <TabsContent value="schedule" className="space-y-3">
