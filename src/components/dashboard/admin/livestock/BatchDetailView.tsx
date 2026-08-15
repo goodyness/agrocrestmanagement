@@ -521,7 +521,21 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       <BatchFinancialsCard batchId={batch.id} />
       <BatchProjectionCard batchId={batch.id} batch={batchData} isAdmin={true} />
 
-      <Tabs defaultValue="schedule">
+      {fcrDue && activeTab !== "fcr" && (
+        <Card className="border-amber-500/40 bg-amber-500/5">
+          <CardContent className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <p className="text-xs">
+              <b>Weekly feeding check due.</b>{" "}
+              {fcrLastDate ? `Last FCR entry was ${fcrLastDate}.` : "No FCR entry recorded for this batch yet."}{" "}
+              Record sample weights and feed used to keep FCR tracking accurate.
+            </p>
+            <Button size="sm" onClick={() => setActiveTab("fcr")}>Record FCR now</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+
         <TabsList className="w-full flex-wrap h-auto">
           <TabsTrigger value="schedule" className="text-xs">📋 Schedule</TabsTrigger>
           <TabsTrigger value="logs" className="text-xs">📝 Care Logs</TabsTrigger>
