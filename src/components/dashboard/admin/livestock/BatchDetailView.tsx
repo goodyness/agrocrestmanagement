@@ -23,6 +23,7 @@ import PartnerProfitShareWidget from "./PartnerProfitShareWidget";
 import ActivityTimeline from "./ActivityTimeline";
 import BatchFinancialsCard from "./BatchFinancialsCard";
 import BatchSalesTab from "./BatchSalesTab";
+import BatchFcrTab from "./BatchFcrTab";
 import BatchProjectionCard from "./BatchProjectionCard";
 import BatchAnalyticsCharts from "./BatchAnalyticsCharts";
 import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
