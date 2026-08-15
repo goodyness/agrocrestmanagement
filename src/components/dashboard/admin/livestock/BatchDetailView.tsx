@@ -552,7 +552,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           <BatchSalesTab batch={batchData} onChange={refreshBatch} />
         </TabsContent>
         <TabsContent value="fcr" className="space-y-3">
-          <BatchFcrTab batch={batchData} onSaved={refreshBatch} />
+          <BatchFcrTab batch={batchData} onSaved={() => { refreshBatch(); checkFcrDue(); }} />
         </TabsContent>
         <TabsContent value="analytics" className="space-y-3"><BatchAnalyticsCharts batchId={batch.id} /></TabsContent>
 
