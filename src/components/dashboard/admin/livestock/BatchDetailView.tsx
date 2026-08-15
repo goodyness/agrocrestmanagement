@@ -164,6 +164,29 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
     }
   }, [expenses, batchData.budget, budgetAlertLevel]);
 
+  // Weekly FCR reminder — prompt whenever the last feeding check is 7+ days old
+  const [activeTab, setActiveTab] = useState("schedule");
+  const [fcrDue, setFcrDue] = useState(false);
+  const [fcrLastDate, setFcrLastDate] = useState<string | null>(null);
+  const checkFcrDue = async () => {
+    const { data } = await supabase
+      .from("batch_fcr_records" as any)
+      .select("record_date")
+      .eq("batch_id", batch.id)
+      .order("record_date", { ascending: false })
+      .limit(1);
+    const lastDate = (data as any[])?.[0]?.record_date || null;
+    setFcrLastDate(lastDate);
+    if (!lastDate) {
+      setFcrDue(Boolean(batchData.is_active) && (batchData.age_weeks || 0) >= 1);
+    } else {
+      const days = Math.floor((Date.now() - new Date(lastDate).getTime()) / 86400000);
+      setFcrDue(Boolean(batchData.is_active) && days >= 7);
+    }
+  };
+  useEffect(() => { checkFcrDue(); }, [batch.id, batchData.age_weeks, batchData.is_active]);
+
+
   const getAiSuggestions = async () => {
     setLoadingAi(true);
     try {
