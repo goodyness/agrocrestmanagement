@@ -23,6 +23,7 @@ import PartnerProfitShareWidget from "./PartnerProfitShareWidget";
 import ActivityTimeline from "./ActivityTimeline";
 import BatchFinancialsCard from "./BatchFinancialsCard";
 import BatchSalesTab from "./BatchSalesTab";
+import BatchFcrTab from "./BatchFcrTab";
 import BatchProjectionCard from "./BatchProjectionCard";
 import BatchAnalyticsCharts from "./BatchAnalyticsCharts";
 import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
@@ -162,6 +163,29 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       setBudgetAlertLevel(80);
     }
   }, [expenses, batchData.budget, budgetAlertLevel]);
+
+  // Weekly FCR reminder — prompt whenever the last feeding check is 7+ days old
+  const [activeTab, setActiveTab] = useState("schedule");
+  const [fcrDue, setFcrDue] = useState(false);
+  const [fcrLastDate, setFcrLastDate] = useState<string | null>(null);
+  const checkFcrDue = async () => {
+    const { data } = await supabase
+      .from("batch_fcr_records" as any)
+      .select("record_date")
+      .eq("batch_id", batch.id)
+      .order("record_date", { ascending: false })
+      .limit(1);
+    const lastDate = (data as any[])?.[0]?.record_date || null;
+    setFcrLastDate(lastDate);
+    if (!lastDate) {
+      setFcrDue(Boolean(batchData.is_active) && (batchData.age_weeks || 0) >= 1);
+    } else {
+      const days = Math.floor((Date.now() - new Date(lastDate).getTime()) / 86400000);
+      setFcrDue(Boolean(batchData.is_active) && days >= 7);
+    }
+  };
+  useEffect(() => { checkFcrDue(); }, [batch.id, batchData.age_weeks, batchData.is_active]);
+
 
   const getAiSuggestions = async () => {
     setLoadingAi(true);
@@ -497,20 +521,41 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       <BatchFinancialsCard batchId={batch.id} />
       <BatchProjectionCard batchId={batch.id} batch={batchData} isAdmin={true} />
 
-      <Tabs defaultValue="schedule">
+      {fcrDue && activeTab !== "fcr" && (
+        <Card className="border-amber-500/40 bg-amber-500/5">
+          <CardContent className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <p className="text-xs">
+              <b>Weekly feeding check due.</b>{" "}
+              {fcrLastDate ? `Last FCR entry was ${fcrLastDate}.` : "No FCR entry recorded for this batch yet."}{" "}
+              Record sample weights and feed used to keep FCR tracking accurate.
+            </p>
+            <Button size="sm" onClick={() => setActiveTab("fcr")}>Record FCR now</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+
         <TabsList className="w-full flex-wrap h-auto">
           <TabsTrigger value="schedule" className="text-xs">📋 Schedule</TabsTrigger>
           <TabsTrigger value="logs" className="text-xs">📝 Care Logs</TabsTrigger>
           <TabsTrigger value="mortality" className="text-xs">💀 Mortality ({totalMortality})</TabsTrigger>
           <TabsTrigger value="expenses" className="text-xs">💰 Expenses</TabsTrigger>
           <TabsTrigger value="sales" className="text-xs">💵 Sales</TabsTrigger>
+          <TabsTrigger value="fcr" className="text-xs">⚖️ FCR & Feeding</TabsTrigger>
           <TabsTrigger value="analytics" className="text-xs">📊 Analytics</TabsTrigger>
           <TabsTrigger value="timeline" className="text-xs">🕘 Timeline</TabsTrigger>
           <TabsTrigger value="ai" className="text-xs">✨ AI</TabsTrigger>
           <TabsTrigger value="info" className="text-xs">ℹ️ Details</TabsTrigger>
         </TabsList>
-        <TabsContent value="sales" className="space-y-3"><BatchSalesTab batchId={batch.id} /></TabsContent>
+        <TabsContent value="sales" className="space-y-3">
+          <BatchSalesTab batch={batchData} onChange={refreshBatch} />
+        </TabsContent>
+        <TabsContent value="fcr" className="space-y-3">
+          <BatchFcrTab batch={batchData} onSaved={() => { refreshBatch(); checkFcrDue(); }} />
+        </TabsContent>
         <TabsContent value="analytics" className="space-y-3"><BatchAnalyticsCharts batchId={batch.id} /></TabsContent>
+
 
         {/* ===== CARE SCHEDULE TAB ===== */}
         <TabsContent value="schedule" className="space-y-3">
