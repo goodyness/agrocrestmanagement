@@ -560,6 +560,54 @@ export type Database = {
           },
         ]
       }
+      batch_feed_recipes: {
+        Row: {
+          assigned_by: string | null
+          batch_id: string
+          created_at: string
+          end_date: string | null
+          id: string
+          notes: string | null
+          recipe_id: string
+          start_date: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          batch_id: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          recipe_id: string
+          start_date?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          batch_id?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          recipe_id?: string
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_feed_recipes_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_feed_recipes_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "feed_recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_projections: {
         Row: {
           batch_id: string
@@ -1856,6 +1904,88 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_recipe_ingredients: {
+        Row: {
+          cost_per_kg: number
+          created_at: string
+          id: string
+          ingredient_name: string
+          quantity_kg: number
+          recipe_id: string
+        }
+        Insert: {
+          cost_per_kg?: number
+          created_at?: string
+          id?: string
+          ingredient_name: string
+          quantity_kg?: number
+          recipe_id: string
+        }
+        Update: {
+          cost_per_kg?: number
+          created_at?: string
+          id?: string
+          ingredient_name?: string
+          quantity_kg?: number
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_recipe_ingredients_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "feed_recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_recipes: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          stage: string | null
+          target_species: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          stage?: string | null
+          target_species?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          stage?: string | null
+          target_species?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_recipes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
             referencedColumns: ["id"]
           },
         ]
