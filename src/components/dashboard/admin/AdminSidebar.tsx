@@ -13,7 +13,7 @@ import {
   BarChart3, Activity, Sprout, PawPrint, Syringe, Heart, Stethoscope, Egg, AlertTriangle,
   TrendingUp, Package, Boxes, DollarSign, Landmark, Wallet, Users as UsersIcon, Handshake,
   ClipboardCheck, Truck, Users, Brush, Wrench, Scale, FileText, StickyNote, Bot, Calculator,
-  Building2,
+  Building2, GitCompareArrows, Skull, ChefHat,
 } from "lucide-react";
 
 export type AdminTabKey =
@@ -24,7 +24,7 @@ export type AdminTabKey =
   | "sales" | "expenses" | "finance" | "expected-profit" | "salary"
   | "users" | "partners" | "withdrawals" | "complaints" | "reviews" | "suppliers" | "customers"
   | "cleaning" | "operations" | "balancing"
-  | "reports" | "notes" | "ai-advisor" | "analytics"
+  | "reports" | "notes" | "ai-advisor" | "analytics" | "batch-compare" | "mortality-analytics" | "feed-recipes"
   | "branches";
 
 interface Group {
@@ -64,6 +64,7 @@ const GROUPS: Group[] = [
       { key: "feed", title: "Feed", icon: Package },
       { key: "inventory-plus", title: "Inventory+", icon: Boxes },
       { key: "expected-stock", title: "Expected Stock", icon: Boxes },
+      { key: "feed-recipes", title: "Feed Recipes", icon: ChefHat },
     ],
   },
   {
@@ -103,6 +104,8 @@ const GROUPS: Group[] = [
       { key: "notes", title: "Notes", icon: StickyNote },
       { key: "ai-advisor", title: "AI Advisor", icon: Bot },
       { key: "analytics", title: "Cost Analytics", icon: Calculator },
+      { key: "batch-compare", title: "Batch Compare", icon: GitCompareArrows },
+      { key: "mortality-analytics", title: "Mortality Causes", icon: Skull },
     ],
   },
   {
