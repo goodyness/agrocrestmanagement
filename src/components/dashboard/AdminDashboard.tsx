@@ -48,6 +48,9 @@ import OperationsTab from "./admin/OperationsTab";
 import CrackedEggsTab from "./admin/CrackedEggsTab";
 import PartnerWithdrawalsTab from "./admin/PartnerWithdrawalsTab";
 import PartnerComplaintsTab from "./admin/PartnerComplaintsTab";
+import BatchComparisonTab from "./admin/BatchComparisonTab";
+import MortalityCauseAnalytics from "./admin/MortalityCauseAnalytics";
+import FeedRecipesTab from "./admin/FeedRecipesTab";
 
 interface AdminDashboardProps {
   user: User | null;
@@ -61,7 +64,7 @@ const TAB_TITLES: Record<AdminTabKey, string> = {
   sales: "Sales", expenses: "Expenses", finance: "Finance", "expected-profit": "Expected Profit", salary: "Salary",
   users: "Users", partners: "Partners", withdrawals: "Withdrawals", complaints: "Complaints", reviews: "Reviews", suppliers: "Suppliers", customers: "Customers",
   cleaning: "Cleaning", operations: "Operations", balancing: "Balancing",
-  reports: "Reports", notes: "Notes", "ai-advisor": "AI Advisor", analytics: "Cost Analytics",
+  reports: "Reports", notes: "Notes", "ai-advisor": "AI Advisor", analytics: "Cost Analytics", "batch-compare": "Batch Comparison", "mortality-analytics": "Mortality Cause Analytics", "feed-recipes": "Feed Recipes",
   branches: "Branches",
 };
 
@@ -119,6 +122,9 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
       case "notes": return <NotesTab />;
       case "ai-advisor": return <AiFarmAdvisorTab />;
       case "analytics": return <CostPerBirdAnalytics />;
+      case "batch-compare": return <BatchComparisonTab />;
+      case "mortality-analytics": return <MortalityCauseAnalytics />;
+      case "feed-recipes": return <FeedRecipesTab />;
       case "branches": return <BranchManagementTab />;
       default: return null;
     }
