@@ -71,7 +71,7 @@ export function computeExpectedEggStock(
   const baselinePieces = toPieces(baseline.crates, baseline.pieces);
 
   let produced = 0;
-  production.filter(inBranch).forEach((p) => {
+  production.filter(inBranch).filter(isGoodEgg).forEach((p) => {
     const t = new Date(p.created_at || p.date).getTime();
     if (t >= baselineTime && t <= asOfTime) produced += toPieces(p.crates || 0, p.pieces || 0);
   });
@@ -111,7 +111,7 @@ export function useEggStock(branchId: string | null | undefined) {
       setLoading(true);
       const [b, p, s] = await Promise.all([
         supabase.from("stock_baselines").select("id, branch_id, item_type, crates, pieces, baseline_at").eq("item_type", "eggs"),
-        supabase.from("daily_production").select("date, crates, pieces, branch_id, created_at"),
+        supabase.from("daily_production").select("date, crates, pieces, branch_id, created_at, egg_type"),
         supabase.from("sales_records").select("date, product_type, quantity, unit, branch_id, created_at"),
       ]);
       if (cancelled) return;

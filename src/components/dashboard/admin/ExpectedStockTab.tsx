@@ -152,7 +152,7 @@ export default function ExpectedStockTab() {
         supabase.from("stock_baselines").select("*").order("baseline_at", { ascending: false }),
         supabase.from("stock_recounts").select("*").order("recount_at", { ascending: false }),
         supabase.from("livestock_batches").select("id, species, species_type, current_quantity, branch_id, date_acquired").eq("is_active", true),
-        supabase.from("daily_production").select("date, crates, pieces, branch_id, created_at"),
+        supabase.from("daily_production").select("date, crates, pieces, branch_id, created_at, egg_type"),
         supabase.from("sales_records").select("date, product_type, quantity, unit, branch_id, created_at"),
         supabase.from("mortality_records").select("date, batch_id, quantity_dead, branch_id, created_at"),
       ]);
@@ -186,7 +186,7 @@ export default function ExpectedStockTab() {
     if (!eggBaseline) return null;
     const baselineTime = new Date(eggBaseline.baseline_at).getTime();
     let total = toPieces(eggBaseline.crates, eggBaseline.pieces);
-    production.filter(branchFilter).forEach((p) => {
+    production.filter(branchFilter).filter(isGoodEgg).forEach((p) => {
       const t = new Date(p.created_at || p.date).getTime();
       if (t >= baselineTime) total += toPieces(p.crates || 0, p.pieces || 0);
     });
@@ -248,7 +248,7 @@ export default function ExpectedStockTab() {
     const days = Math.min(60, Math.max(1, Math.ceil((now - startDay.getTime()) / dayMs) + 1));
 
     const moves: { t: number; delta: number }[] = [];
-    production.filter(branchFilter).forEach((p) => {
+    production.filter(branchFilter).filter(isGoodEgg).forEach((p) => {
       const t = new Date(p.created_at || p.date).getTime();
       if (t >= baselineTime) moves.push({ t, delta: toPieces(p.crates || 0, p.pieces || 0) });
     });
