@@ -24,7 +24,11 @@ interface Baseline {
   pieces: number;
   baseline_at: string;
 }
-interface ProductionRow { date: string; crates: number; pieces: number; branch_id: string | null; created_at?: string; }
+interface ProductionRow { date: string; crates: number; pieces: number; branch_id: string | null; created_at?: string; egg_type?: string | null; }
+
+/** Cracked eggs are damage, not sellable stock — they never count toward expected stock. */
+export const isGoodEgg = (row: { egg_type?: string | null }) =>
+  (row.egg_type || "good").toLowerCase() !== "cracked";
 interface SalesRow { date: string; product_type: string; quantity: number; unit: string; branch_id: string | null; created_at?: string; }
 
 interface EggStockBreakdown {
