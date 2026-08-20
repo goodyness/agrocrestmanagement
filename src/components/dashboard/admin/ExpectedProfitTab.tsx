@@ -31,7 +31,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { logActivity } from "@/lib/activityLogger";
-import { computeExpectedEggStock, PIECES_PER_CRATE } from "@/hooks/useEggStock";
+import { computeExpectedEggStock, PIECES_PER_CRATE, isGoodEgg } from "@/hooks/useEggStock";
 
 interface Batch {
   id: string;
@@ -115,8 +115,8 @@ export default function ExpectedProfitTab() {
       supabase.from("profit_monitors").select("*").order("created_at", { ascending: false }),
       supabase.from("livestock_batches").select("id, species, species_type, stage, current_quantity, branch_id, livestock_category_id, total_cost, date_acquired").eq("is_active", true),
       supabase.from("livestock_categories").select("id, name, branch_id"),
-      supabase.from("daily_production").select("date, crates, pieces, branch_id"),
-      supabase.from("sales_records").select("date, product_type, quantity, unit, total_amount, price_per_unit, branch_id"),
+      supabase.from("daily_production").select("date, crates, pieces, branch_id, created_at, egg_type"),
+      supabase.from("sales_records").select("date, product_type, quantity, unit, total_amount, price_per_unit, branch_id, created_at"),
       supabase.from("miscellaneous_expenses").select("date, amount, branch_id, batch_id, expense_type"),
       supabase.from("stock_baselines").select("baseline_at, crates, pieces, branch_id, item_type").eq("item_type", "eggs"),
       supabase.from("stock_recounts").select("recount_at, actual_crates, actual_pieces, branch_id, item_type").eq("item_type", "eggs"),
@@ -533,6 +533,7 @@ function MonitorCard({
     const today2 = new Date();
     for (const p of production) {
       if (!inBranch(p.branch_id)) continue;
+      if (!isGoodEgg(p)) continue;
       const dt = parseISO(p.date);
       if (dt < anchorDate || dt > today2) continue;
       const pcs = (p.crates || 0) * PIECES_PER_CRATE + (p.pieces || 0);
@@ -641,6 +642,7 @@ function MonitorCard({
     const prodByDay = new Map<string, number>();
     for (const p of production) {
       if (!inBranch(p.branch_id)) continue;
+      if (!isGoodEgg(p)) continue;
       const key = p.date;
       prodByDay.set(key, (prodByDay.get(key) || 0) + (p.crates || 0) * PIECES_PER_CRATE + (p.pieces || 0));
     }

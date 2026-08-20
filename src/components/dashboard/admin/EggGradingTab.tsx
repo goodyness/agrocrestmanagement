@@ -41,10 +41,24 @@ const EggGradingTab = () => {
   }, [currentBranchId]);
 
   const fetchRecords = async () => {
-    let q = supabase.from("egg_grading_records").select("*, profiles:recorded_by(name), livestock_batches:batch_id(species, species_type)").order("date", { ascending: false });
+    let q = supabase
+      .from("egg_grading_records")
+      .select("*, livestock_batches:batch_id(species, species_type)")
+      .order("date", { ascending: false });
     if (currentBranchId) q = q.eq("branch_id", currentBranchId);
-    const { data } = await q;
-    setRecords(data || []);
+    const { data, error } = await q;
+    if (error) {
+      toast.error("Failed to load grading records");
+      return;
+    }
+    const rows = data || [];
+    const ids = [...new Set(rows.map((r: any) => r.recorded_by).filter(Boolean))];
+    let nameMap: Record<string, string> = {};
+    if (ids.length) {
+      const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
+      nameMap = Object.fromEntries((profs || []).map((p: any) => [p.id, p.name]));
+    }
+    setRecords(rows.map((r: any) => ({ ...r, recorder_name: nameMap[r.recorded_by] || "Unknown" })));
   };
 
   const fetchBatches = async () => {
@@ -234,7 +248,7 @@ const EggGradingTab = () => {
                   <TableCell>{r.extra_large_count}</TableCell>
                   <TableCell className={r.cracked_count > 0 ? "text-destructive font-medium" : ""}>{r.cracked_count}</TableCell>
                   <TableCell className="font-medium">{r.total_eggs}</TableCell>
-                  <TableCell>{r.profiles?.name || "Unknown"}</TableCell>
+                  <TableCell>{r.recorder_name}</TableCell>
                 </TableRow>
               ))}
               {paginatedRecords.length === 0 && (
