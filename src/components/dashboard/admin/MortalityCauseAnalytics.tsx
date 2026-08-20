@@ -99,7 +99,6 @@ const MortalityCauseAnalytics = () => {
   };
 
   const byCause = useMemo(() => group("cause"), [enriched]);
-  const bySupplier = useMemo(() => group("supplier"), [enriched]);
   const byBreed = useMemo(() => group("breed"), [enriched]);
 
   const causeByAge = useMemo(() => {

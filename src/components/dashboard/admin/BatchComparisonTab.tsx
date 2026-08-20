@@ -130,17 +130,14 @@ const BatchComparisonTab = () => {
 
   const chartData = useMemo(() => {
     if (!left || !right) return [];
-    const A = left.batch.species, B = right.batch.species;
     return [
-      { metric: "Mortality %", [`${A} A`]: +left.mortalityRate.toFixed(2), [`${B} B`]: +right.mortalityRate.toFixed(2) },
-      { metric: "FCR", [`${A} A`]: left.fcr ?? 0, [`${B} B`]: right.fcr ?? 0 },
-      { metric: "Cost/bird (₦100s)", [`${A} A`]: +(left.costPerBird / 100).toFixed(1), [`${B} B`]: +(right.costPerBird / 100).toFixed(1) },
-      { metric: "Profit/bird (₦100s)", [`${A} A`]: +(left.profitPerBird / 100).toFixed(1), [`${B} B`]: +(right.profitPerBird / 100).toFixed(1) },
+      { metric: "Mortality %", "Batch A": +left.mortalityRate.toFixed(2), "Batch B": +right.mortalityRate.toFixed(2) },
+      { metric: "FCR", "Batch A": left.fcr ?? 0, "Batch B": right.fcr ?? 0 },
+      { metric: "Cost/bird (₦100s)", "Batch A": +(left.costPerBird / 100).toFixed(1), "Batch B": +(right.costPerBird / 100).toFixed(1) },
+      { metric: "Profit/bird (₦100s)", "Batch A": +(left.profitPerBird / 100).toFixed(1), "Batch B": +(right.profitPerBird / 100).toFixed(1) },
     ];
   }, [left, right]);
 
-  const keyA = left ? `${left.batch.species} A` : "A";
-  const keyB = right ? `${right.batch.species} B` : "B";
 
   const label = (b: any) =>
     `${b.species}${b.stage ? ` (${b.stage})` : ""} • ${b.quantity} • ${b.date_acquired}`;
@@ -231,8 +228,8 @@ const BatchComparisonTab = () => {
                   <YAxis fontSize={10} />
                   <Tooltip contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }} />
                   <Legend />
-                  <Bar dataKey={keyA} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey={keyB} fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Batch A" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Batch B" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
