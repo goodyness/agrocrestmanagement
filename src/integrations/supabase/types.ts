@@ -471,6 +471,66 @@ export type Database = {
           },
         ]
       }
+      batch_egg_production: {
+        Row: {
+          batch_id: string
+          birds_at_record: number | null
+          branch_id: string | null
+          cracked_pieces: number
+          crates: number
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          pieces: number
+          recorded_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          birds_at_record?: number | null
+          branch_id?: string | null
+          cracked_pieces?: number
+          crates?: number
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          pieces?: number
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          birds_at_record?: number | null
+          branch_id?: string | null
+          cracked_pieces?: number
+          crates?: number
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          pieces?: number
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_egg_production_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_egg_production_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_fcr_records: {
         Row: {
           animal_type: string
@@ -2169,6 +2229,8 @@ export type Database = {
           availability_confirmed_at: string | null
           availability_confirmed_by: string | null
           availability_status: string
+          bird_count_confirmed_at: string | null
+          bird_count_confirmed_by: string | null
           branch_id: string | null
           budget: number
           cost_per_unit: number | null
@@ -2200,6 +2262,8 @@ export type Database = {
           availability_confirmed_at?: string | null
           availability_confirmed_by?: string | null
           availability_status?: string
+          bird_count_confirmed_at?: string | null
+          bird_count_confirmed_by?: string | null
           branch_id?: string | null
           budget?: number
           cost_per_unit?: number | null
@@ -2231,6 +2295,8 @@ export type Database = {
           availability_confirmed_at?: string | null
           availability_confirmed_by?: string | null
           availability_status?: string
+          bird_count_confirmed_at?: string | null
+          bird_count_confirmed_by?: string | null
           branch_id?: string | null
           budget?: number
           cost_per_unit?: number | null
