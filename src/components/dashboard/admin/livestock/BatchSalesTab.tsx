@@ -129,11 +129,10 @@ export default function BatchSalesTab({ batch, onChange }: Props) {
 
   const submit = async () => {
     if (qty <= 0 || price <= 0) return toast.error("Enter quantity and unit price");
-    if (!f.product_name.trim()) return toast.error("Enter what was sold");
     const paid = f.payment_status === "paid" ? lineTotal : parseFloat(f.amount_paid) || 0;
     if (paid > lineTotal) return toast.error("Amount paid cannot exceed total");
-    const deductable = f.deduct && ["live_bird", "dressed_bird", "livestock"].includes(f.product_type) && f.unit === "bird";
-    if (deductable && qty > Number(batch.current_quantity || 0)) {
+    const deductCount = selected.isAnimal && f.deduct ? animalsToDeduct : 0;
+    if (deductCount > Number(batch.current_quantity || 0)) {
       return toast.error(`Only ${batch.current_quantity} animals left in this batch`);
     }
 
