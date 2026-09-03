@@ -559,6 +559,11 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           <BatchFcrTab batch={batchData} onSaved={() => { refreshBatch(); checkFcrDue(); }} />
         </TabsContent>
         <TabsContent value="analytics" className="space-y-3"><BatchAnalyticsCharts batchId={batch.id} /></TabsContent>
+        {batchData.species === "chicken" && batchData.species_type === "layer" && (
+          <TabsContent value="eggs" className="space-y-3">
+            <BatchEggProductionTab batch={batchData} onBatchUpdated={refreshBatch} />
+          </TabsContent>
+        )}
 
 
         {/* ===== CARE SCHEDULE TAB ===== */}
