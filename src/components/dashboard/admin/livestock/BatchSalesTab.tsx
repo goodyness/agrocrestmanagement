@@ -67,12 +67,14 @@ export default function BatchSalesTab({ batch, onChange }: Props) {
   const [saving, setSaving] = useState(false);
   const [costs, setCosts] = useState({ expenses: 0, purchase: 0 });
 
+  const productOptions = getProductOptions(batch?.species, batch?.species_type);
+  const firstOption = productOptions[0];
+
   const defaultForm = {
     sale_date: new Date().toISOString().slice(0, 10),
-    product_name: `${batch?.species_type || batch?.species || "Livestock"} sale`,
-    product_type: "live_bird",
+    product_type: firstOption.value,
     quantity: "",
-    unit: "bird",
+    unit: firstOption.units[0],
     unit_price: "",
     customer_id: "",
     buyer: "",
@@ -80,8 +82,17 @@ export default function BatchSalesTab({ batch, onChange }: Props) {
     amount_paid: "",
     notes: "",
     deduct: true,
+    animals_sold: "",
   };
   const [f, setF] = useState<any>(defaultForm);
+
+  const selected = productOptions.find((p) => p.value === f.product_type) || firstOption;
+  const productName = selected.name;
+
+  const changeProduct = (v: string) => {
+    const opt = productOptions.find((p) => p.value === v) || firstOption;
+    setF((prev: any) => ({ ...prev, product_type: v, unit: opt.units[0], animals_sold: "" }));
+  };
 
   const load = async () => {
     const { data } = await supabase
