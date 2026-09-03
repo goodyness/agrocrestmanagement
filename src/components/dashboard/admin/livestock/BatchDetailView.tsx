@@ -27,6 +27,7 @@ import BatchFcrTab from "./BatchFcrTab";
 import BatchProjectionCard from "./BatchProjectionCard";
 import BatchAnalyticsCharts from "./BatchAnalyticsCharts";
 import BatchEggProductionTab from "./BatchEggProductionTab";
+import AdjustBirdCountDialog from "./AdjustBirdCountDialog";
 import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
 import { UploadedMortalityPhoto } from "@/lib/photoUpload";
 
