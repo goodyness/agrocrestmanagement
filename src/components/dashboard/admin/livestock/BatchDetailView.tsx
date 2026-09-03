@@ -168,6 +168,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
 
   // Weekly FCR reminder — prompt whenever the last feeding check is 7+ days old
   const [activeTab, setActiveTab] = useState("schedule");
+  const [showAdjustCount, setShowAdjustCount] = useState(false);
   const [fcrDue, setFcrDue] = useState(false);
   const [fcrLastDate, setFcrLastDate] = useState<string | null>(null);
   const checkFcrDue = async () => {
