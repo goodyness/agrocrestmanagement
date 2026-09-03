@@ -27,6 +27,7 @@ import BatchFcrTab from "./BatchFcrTab";
 import BatchProjectionCard from "./BatchProjectionCard";
 import BatchAnalyticsCharts from "./BatchAnalyticsCharts";
 import BatchEggProductionTab from "./BatchEggProductionTab";
+import AdjustBirdCountDialog from "./AdjustBirdCountDialog";
 import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
 import { UploadedMortalityPhoto } from "@/lib/photoUpload";
 
@@ -167,6 +168,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
 
   // Weekly FCR reminder — prompt whenever the last feeding check is 7+ days old
   const [activeTab, setActiveTab] = useState("schedule");
+  const [showAdjustCount, setShowAdjustCount] = useState(false);
   const [fcrDue, setFcrDue] = useState(false);
   const [fcrLastDate, setFcrLastDate] = useState<string | null>(null);
   const checkFcrDue = async () => {
@@ -348,12 +350,26 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
             {batchData.current_quantity} animals • {batchData.age_weeks} weeks old • Stage: {batchData.stage?.replace(/_/g, " ")}
           </p>
         </div>
-        {batchData.species === "chicken" && batchData.species_type === "layer" && !batchData.has_started_laying && (
-          <Button size="sm" variant="outline" onClick={markAsLaying}>
-            🥚 Mark as Laying
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowAdjustCount(true)}>
+            Adjust {batchData.species === "chicken" ? "bird" : "animal"} count
           </Button>
-        )}
+          {batchData.species === "chicken" && batchData.species_type === "layer" && !batchData.has_started_laying && (
+            <Button size="sm" variant="outline" onClick={markAsLaying}>
+              🥚 Mark as Laying
+            </Button>
+          )}
+        </div>
       </div>
+
+      <AdjustBirdCountDialog
+        open={showAdjustCount}
+        onOpenChange={setShowAdjustCount}
+        batch={batchData}
+        noun={batchData.species === "chicken" ? "birds" : "animals"}
+        onSaved={refreshBatch}
+      />
+
 
       {batchData.availability_status === "pending" && (() => {
         const overdue = batchData.expected_arrival_date && new Date(batchData.expected_arrival_date) < new Date(new Date().toDateString());

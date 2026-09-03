@@ -15,16 +15,49 @@ import { Plus, TrendingUp } from "lucide-react";
 
 interface Props { batch: any; onChange?: () => void }
 
-const PRODUCT_TYPES = [
-  { value: "live_bird", label: "Live Bird" },
-  { value: "dressed_bird", label: "Dressed Bird" },
-  { value: "livestock", label: "Livestock (other)" },
-  { value: "egg", label: "Eggs" },
-  { value: "manure", label: "Manure" },
-  { value: "other", label: "Other" },
+type ProductOption = { value: string; label: string; units: string[]; name: string; isAnimal: boolean };
+
+const GENERIC_OPTIONS: ProductOption[] = [
+  { value: "live_animal", label: "Live Animal", units: ["animal", "kg"], name: "Live Animal", isAnimal: true },
+  { value: "deceased_animal", label: "Deceased Animal", units: ["animal", "kg"], name: "Deceased Animal", isAnimal: true },
+  { value: "manure", label: "Manure", units: ["bag"], name: "Manure", isAnimal: false },
+  { value: "other", label: "Other", units: ["piece", "kg", "bag"], name: "Other product", isAnimal: false },
 ];
 
-const UNITS = ["bird", "kg", "crate", "bag", "piece"];
+// Smart product/unit matrix per livestock category
+const getProductOptions = (species?: string, speciesType?: string): ProductOption[] => {
+  const s = (species || "").toLowerCase();
+  const t = (speciesType || "").toLowerCase();
+
+  if (s === "chicken" && t === "layer") {
+    return [
+      { value: "live_bird", label: "Live Bird", units: ["bird", "kg"], name: "Live Bird (Layer)", isAnimal: true },
+      { value: "deceased_bird", label: "Deceased Bird", units: ["bird", "kg"], name: "Deceased Bird (Layer)", isAnimal: true },
+      { value: "egg", label: "Eggs", units: ["crate"], name: "Eggs", isAnimal: false },
+    ];
+  }
+
+  if (s === "chicken" && (t === "broiler" || t === "noiler")) {
+    const label = t.charAt(0).toUpperCase() + t.slice(1);
+    return [
+      { value: "live_bird", label: "Live Bird", units: ["bird", "kg"], name: `Live Bird (${label})`, isAnimal: true },
+      { value: "deceased_bird", label: "Deceased Bird", units: ["bird", "kg"], name: `Deceased Bird (${label})`, isAnimal: true },
+      { value: "frozen_bird", label: "Frozen Bird", units: ["bird", "kg"], name: `Frozen Bird (${label})`, isAnimal: true },
+    ];
+  }
+
+  if (s === "chicken") {
+    return [
+      { value: "live_bird", label: "Live Bird", units: ["bird", "kg"], name: "Live Bird", isAnimal: true },
+      { value: "deceased_bird", label: "Deceased Bird", units: ["bird", "kg"], name: "Deceased Bird", isAnimal: true },
+      { value: "frozen_bird", label: "Frozen Bird", units: ["bird", "kg"], name: "Frozen Bird", isAnimal: true },
+      { value: "egg", label: "Eggs", units: ["crate"], name: "Eggs", isAnimal: false },
+    ];
+  }
+
+  return GENERIC_OPTIONS;
+};
+
 
 export default function BatchSalesTab({ batch, onChange }: Props) {
   const batchId = batch?.id;
@@ -34,12 +67,14 @@ export default function BatchSalesTab({ batch, onChange }: Props) {
   const [saving, setSaving] = useState(false);
   const [costs, setCosts] = useState({ expenses: 0, purchase: 0 });
 
+  const productOptions = getProductOptions(batch?.species, batch?.species_type);
+  const firstOption = productOptions[0];
+
   const defaultForm = {
     sale_date: new Date().toISOString().slice(0, 10),
-    product_name: `${batch?.species_type || batch?.species || "Livestock"} sale`,
-    product_type: "live_bird",
+    product_type: firstOption.value,
     quantity: "",
-    unit: "bird",
+    unit: firstOption.units[0],
     unit_price: "",
     customer_id: "",
     buyer: "",
@@ -47,8 +82,17 @@ export default function BatchSalesTab({ batch, onChange }: Props) {
     amount_paid: "",
     notes: "",
     deduct: true,
+    animals_sold: "",
   };
   const [f, setF] = useState<any>(defaultForm);
+
+  const selected = productOptions.find((p) => p.value === f.product_type) || firstOption;
+  const productName = selected.name;
+
+  const changeProduct = (v: string) => {
+    const opt = productOptions.find((p) => p.value === v) || firstOption;
+    setF((prev: any) => ({ ...prev, product_type: v, unit: opt.units[0], animals_sold: "" }));
+  };
 
   const load = async () => {
     const { data } = await supabase
@@ -82,14 +126,16 @@ export default function BatchSalesTab({ batch, onChange }: Props) {
   const qty = parseFloat(f.quantity) || 0;
   const price = parseFloat(f.unit_price) || 0;
   const lineTotal = qty * price;
+  const animalsToDeduct = selected.isAnimal
+    ? (f.unit === "bird" || f.unit === "animal" ? Math.round(qty) : Math.round(parseFloat(f.animals_sold) || 0))
+    : 0;
 
   const submit = async () => {
     if (qty <= 0 || price <= 0) return toast.error("Enter quantity and unit price");
-    if (!f.product_name.trim()) return toast.error("Enter what was sold");
     const paid = f.payment_status === "paid" ? lineTotal : parseFloat(f.amount_paid) || 0;
     if (paid > lineTotal) return toast.error("Amount paid cannot exceed total");
-    const deductable = f.deduct && ["live_bird", "dressed_bird", "livestock"].includes(f.product_type) && f.unit === "bird";
-    if (deductable && qty > Number(batch.current_quantity || 0)) {
+    const deductCount = selected.isAnimal && f.deduct ? animalsToDeduct : 0;
+    if (deductCount > Number(batch.current_quantity || 0)) {
       return toast.error(`Only ${batch.current_quantity} animals left in this batch`);
     }
 
@@ -100,7 +146,7 @@ export default function BatchSalesTab({ batch, onChange }: Props) {
     const { data: sale, error: saleErr } = await supabase
       .from("sales_records")
       .insert({
-        product_name: f.product_name.slice(0, 200),
+        product_name: productName,
         product_type: f.product_type,
         quantity: qty,
         unit: f.unit,
@@ -125,7 +171,7 @@ export default function BatchSalesTab({ batch, onChange }: Props) {
       batch_id: batchId,
       sales_record_id: sale?.id || null,
       customer_id: f.customer_id || null,
-      product_name: f.product_name.slice(0, 200),
+      product_name: productName,
       unit: f.unit,
       sale_date: f.sale_date,
       quantity: qty,
@@ -140,10 +186,10 @@ export default function BatchSalesTab({ batch, onChange }: Props) {
 
     if (error) { setSaving(false); return toast.error(error.message); }
 
-    if (deductable) {
+    if (deductCount > 0) {
       await supabase
         .from("livestock_batches")
-        .update({ current_quantity: Math.max(0, Number(batch.current_quantity || 0) - qty) })
+        .update({ current_quantity: Math.max(0, Number(batch.current_quantity || 0) - deductCount) })
         .eq("id", batchId);
     }
 
@@ -232,25 +278,25 @@ export default function BatchSalesTab({ batch, onChange }: Props) {
               <div className="space-y-1"><Label>Date</Label><Input type="date" value={f.sale_date} onChange={(e) => setF({ ...f, sale_date: e.target.value })} /></div>
               <div className="space-y-1">
                 <Label>Product type</Label>
-                <Select value={f.product_type} onValueChange={(v) => setF({ ...f, product_type: v })}>
+                <Select value={f.product_type} onValueChange={changeProduct}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{PRODUCT_TYPES.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+                  <SelectContent>{productOptions.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Label>What was sold</Label>
-              <Input value={f.product_name} onChange={(e) => setF({ ...f, product_name: e.target.value })} maxLength={200} />
+            <div className="rounded-md border bg-muted/40 p-2 text-xs">
+              Selling: <b>{productName}</b>
+              {selected.units.length === 1 && <> — priced per <b>{selected.units[0]}</b></>}
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1"><Label>Quantity</Label><Input type="number" min={0} value={f.quantity} onChange={(e) => setF({ ...f, quantity: e.target.value })} /></div>
               <div className="space-y-1">
                 <Label>Unit</Label>
-                <Select value={f.unit} onValueChange={(v) => setF({ ...f, unit: v })}>
+                <Select value={f.unit} onValueChange={(v) => setF({ ...f, unit: v })} disabled={selected.units.length === 1}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+                  <SelectContent>{selected.units.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-1"><Label>Price / unit (₦)</Label><Input type="number" min={0} value={f.unit_price} onChange={(e) => setF({ ...f, unit_price: e.target.value })} /></div>
@@ -292,10 +338,20 @@ export default function BatchSalesTab({ batch, onChange }: Props) {
 
             <div className="space-y-1"><Label>Notes</Label><Textarea rows={2} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} maxLength={500} /></div>
 
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Checkbox checked={f.deduct} onCheckedChange={(v) => setF({ ...f, deduct: !!v })} />
-              Deduct sold animals from batch count ({batch?.current_quantity} left)
-            </label>
+            {selected.isAnimal && (
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Checkbox checked={f.deduct} onCheckedChange={(v) => setF({ ...f, deduct: !!v })} />
+                  Deduct sold animals from batch count ({batch?.current_quantity} left)
+                </label>
+                {f.deduct && f.unit === "kg" && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Number of animals sold (for deduction)</Label>
+                    <Input type="number" min={0} value={f.animals_sold} onChange={(e) => setF({ ...f, animals_sold: e.target.value })} placeholder="e.g. 10" />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="text-sm text-muted-foreground">Total: <b>₦{lineTotal.toLocaleString()}</b></div>
             <Button className="w-full" onClick={submit} disabled={saving}>{saving ? "Saving..." : "Save Sale"}</Button>
