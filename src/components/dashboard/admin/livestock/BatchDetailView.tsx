@@ -544,6 +544,9 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           <TabsTrigger value="expenses" className="text-xs">💰 Expenses</TabsTrigger>
           <TabsTrigger value="sales" className="text-xs">💵 Sales</TabsTrigger>
           <TabsTrigger value="fcr" className="text-xs">⚖️ FCR & Feeding</TabsTrigger>
+          {batchData.species === "chicken" && batchData.species_type === "layer" && (
+            <TabsTrigger value="eggs" className="text-xs">🥚 Egg Production</TabsTrigger>
+          )}
           <TabsTrigger value="analytics" className="text-xs">📊 Analytics</TabsTrigger>
           <TabsTrigger value="timeline" className="text-xs">🕘 Timeline</TabsTrigger>
           <TabsTrigger value="ai" className="text-xs">✨ AI</TabsTrigger>
