@@ -26,6 +26,7 @@ import BatchSalesTab from "./BatchSalesTab";
 import BatchFcrTab from "./BatchFcrTab";
 import BatchProjectionCard from "./BatchProjectionCard";
 import BatchAnalyticsCharts from "./BatchAnalyticsCharts";
+import BatchEggProductionTab from "./BatchEggProductionTab";
 import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
 import { UploadedMortalityPhoto } from "@/lib/photoUpload";
 
@@ -543,6 +544,9 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           <TabsTrigger value="expenses" className="text-xs">💰 Expenses</TabsTrigger>
           <TabsTrigger value="sales" className="text-xs">💵 Sales</TabsTrigger>
           <TabsTrigger value="fcr" className="text-xs">⚖️ FCR & Feeding</TabsTrigger>
+          {batchData.species === "chicken" && batchData.species_type === "layer" && (
+            <TabsTrigger value="eggs" className="text-xs">🥚 Egg Production</TabsTrigger>
+          )}
           <TabsTrigger value="analytics" className="text-xs">📊 Analytics</TabsTrigger>
           <TabsTrigger value="timeline" className="text-xs">🕘 Timeline</TabsTrigger>
           <TabsTrigger value="ai" className="text-xs">✨ AI</TabsTrigger>
@@ -555,6 +559,11 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           <BatchFcrTab batch={batchData} onSaved={() => { refreshBatch(); checkFcrDue(); }} />
         </TabsContent>
         <TabsContent value="analytics" className="space-y-3"><BatchAnalyticsCharts batchId={batch.id} /></TabsContent>
+        {batchData.species === "chicken" && batchData.species_type === "layer" && (
+          <TabsContent value="eggs" className="space-y-3">
+            <BatchEggProductionTab batch={batchData} onBatchUpdated={refreshBatch} />
+          </TabsContent>
+        )}
 
 
         {/* ===== CARE SCHEDULE TAB ===== */}
