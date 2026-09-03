@@ -15,16 +15,49 @@ import { Plus, TrendingUp } from "lucide-react";
 
 interface Props { batch: any; onChange?: () => void }
 
-const PRODUCT_TYPES = [
-  { value: "live_bird", label: "Live Bird" },
-  { value: "dressed_bird", label: "Dressed Bird" },
-  { value: "livestock", label: "Livestock (other)" },
-  { value: "egg", label: "Eggs" },
-  { value: "manure", label: "Manure" },
-  { value: "other", label: "Other" },
+type ProductOption = { value: string; label: string; units: string[]; name: string; isAnimal: boolean };
+
+const GENERIC_OPTIONS: ProductOption[] = [
+  { value: "live_animal", label: "Live Animal", units: ["animal", "kg"], name: "Live Animal", isAnimal: true },
+  { value: "deceased_animal", label: "Deceased Animal", units: ["animal", "kg"], name: "Deceased Animal", isAnimal: true },
+  { value: "manure", label: "Manure", units: ["bag"], name: "Manure", isAnimal: false },
+  { value: "other", label: "Other", units: ["piece", "kg", "bag"], name: "Other product", isAnimal: false },
 ];
 
-const UNITS = ["bird", "kg", "crate", "bag", "piece"];
+// Smart product/unit matrix per livestock category
+const getProductOptions = (species?: string, speciesType?: string): ProductOption[] => {
+  const s = (species || "").toLowerCase();
+  const t = (speciesType || "").toLowerCase();
+
+  if (s === "chicken" && t === "layer") {
+    return [
+      { value: "live_bird", label: "Live Bird", units: ["bird", "kg"], name: "Live Bird (Layer)", isAnimal: true },
+      { value: "deceased_bird", label: "Deceased Bird", units: ["bird", "kg"], name: "Deceased Bird (Layer)", isAnimal: true },
+      { value: "egg", label: "Eggs", units: ["crate"], name: "Eggs", isAnimal: false },
+    ];
+  }
+
+  if (s === "chicken" && (t === "broiler" || t === "noiler")) {
+    const label = t.charAt(0).toUpperCase() + t.slice(1);
+    return [
+      { value: "live_bird", label: "Live Bird", units: ["bird", "kg"], name: `Live Bird (${label})`, isAnimal: true },
+      { value: "deceased_bird", label: "Deceased Bird", units: ["bird", "kg"], name: `Deceased Bird (${label})`, isAnimal: true },
+      { value: "frozen_bird", label: "Frozen Bird", units: ["bird", "kg"], name: `Frozen Bird (${label})`, isAnimal: true },
+    ];
+  }
+
+  if (s === "chicken") {
+    return [
+      { value: "live_bird", label: "Live Bird", units: ["bird", "kg"], name: "Live Bird", isAnimal: true },
+      { value: "deceased_bird", label: "Deceased Bird", units: ["bird", "kg"], name: "Deceased Bird", isAnimal: true },
+      { value: "frozen_bird", label: "Frozen Bird", units: ["bird", "kg"], name: "Frozen Bird", isAnimal: true },
+      { value: "egg", label: "Eggs", units: ["crate"], name: "Eggs", isAnimal: false },
+    ];
+  }
+
+  return GENERIC_OPTIONS;
+};
+
 
 export default function BatchSalesTab({ batch, onChange }: Props) {
   const batchId = batch?.id;
