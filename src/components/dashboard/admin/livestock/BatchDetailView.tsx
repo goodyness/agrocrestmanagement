@@ -20,6 +20,8 @@ import CareCostAnalytics from "./CareCostAnalytics";
 import WithdrawalWarning from "./WithdrawalWarning";
 import BatchPnLBreakdown from "./BatchPnLBreakdown";
 import PartnerProfitShareWidget from "./PartnerProfitShareWidget";
+import PartnerExpenseBreakdown from "./PartnerExpenseBreakdown";
+
 import ActivityTimeline from "./ActivityTimeline";
 import BatchFinancialsCard from "./BatchFinancialsCard";
 import BatchSalesTab from "./BatchSalesTab";
