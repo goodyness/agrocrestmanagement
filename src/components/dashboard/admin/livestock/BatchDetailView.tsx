@@ -55,6 +55,8 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const [showAddCare, setShowAddCare] = useState(false);
   const [batchData, setBatchData] = useState(batch);
   const [partnerLink, setPartnerLink] = useState<any | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
   const [availabilityEvents, setAvailabilityEvents] = useState<any[]>([]);
   const [showConfirmAvailable, setShowConfirmAvailable] = useState(false);
   const [confirmingAvailable, setConfirmingAvailable] = useState(false);
