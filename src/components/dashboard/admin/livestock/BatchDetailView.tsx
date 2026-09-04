@@ -148,7 +148,14 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       .eq("batch_id", batch.id)
       .maybeSingle()
       .then(({ data }) => setPartnerLink(data));
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return setIsAdmin(false);
+      const { data } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+      setIsAdmin(data?.role === "admin");
+    })();
   }, [batch.id]);
+
 
   // Budget threshold alerts (fire once per level per view)
   const [budgetAlertLevel, setBudgetAlertLevel] = useState<0 | 80 | 100>(0);
