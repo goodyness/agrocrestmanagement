@@ -783,6 +783,9 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
             </Card>
           )}
 
+          {isAdmin && partnerLink && <PartnerExpenseBreakdown expenses={expenses} />}
+
+
           {expenses.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
