@@ -20,6 +20,8 @@ import CareCostAnalytics from "./CareCostAnalytics";
 import WithdrawalWarning from "./WithdrawalWarning";
 import BatchPnLBreakdown from "./BatchPnLBreakdown";
 import PartnerProfitShareWidget from "./PartnerProfitShareWidget";
+import PartnerExpenseBreakdown from "./PartnerExpenseBreakdown";
+
 import ActivityTimeline from "./ActivityTimeline";
 import BatchFinancialsCard from "./BatchFinancialsCard";
 import BatchSalesTab from "./BatchSalesTab";
@@ -55,6 +57,8 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const [showAddCare, setShowAddCare] = useState(false);
   const [batchData, setBatchData] = useState(batch);
   const [partnerLink, setPartnerLink] = useState<any | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
   const [availabilityEvents, setAvailabilityEvents] = useState<any[]>([]);
   const [showConfirmAvailable, setShowConfirmAvailable] = useState(false);
   const [confirmingAvailable, setConfirmingAvailable] = useState(false);
@@ -148,7 +152,14 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       .eq("batch_id", batch.id)
       .maybeSingle()
       .then(({ data }) => setPartnerLink(data));
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return setIsAdmin(false);
+      const { data } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+      setIsAdmin(data?.role === "admin");
+    })();
   }, [batch.id]);
+
 
   // Budget threshold alerts (fire once per level per view)
   const [budgetAlertLevel, setBudgetAlertLevel] = useState<0 | 80 | 100>(0);
@@ -773,6 +784,9 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
               </CardContent>
             </Card>
           )}
+
+          {isAdmin && partnerLink && <PartnerExpenseBreakdown expenses={expenses} />}
+
 
           {expenses.length === 0 ? (
             <Card>
