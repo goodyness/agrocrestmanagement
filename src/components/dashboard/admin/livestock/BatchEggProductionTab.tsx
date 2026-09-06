@@ -101,8 +101,46 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
 
   useEffect(() => {
     fetchRows();
+    fetchPrices();
     refreshBatch();
   }, [batch.id]);
+
+  useEffect(() => {
+    fetchSpend();
+  }, [batch.id, (batchData as any)?.total_cost]);
+
+  const savePrice = async () => {
+    const p = Number(priceForm.price);
+    if (!Number.isFinite(p) || p <= 0) { toast.error("Enter a valid price per crate"); return; }
+    setSavingPrice(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("batch_egg_prices" as any).insert({
+      batch_id: batch.id,
+      price_per_crate: p,
+      effective_from: today(),
+      note: priceForm.note || null,
+      created_by: user?.id ?? null,
+    } as any);
+    if (error) { setSavingPrice(false); toast.error("Could not save price"); return; }
+
+    // Value any production days that were never priced (first price set covers
+    // everything recorded so far). Already-valued days keep their old price.
+    const unpriced = rows.filter((r) => r.price_per_crate === null || r.price_per_crate === undefined);
+    for (const r of unpriced) {
+      const totalPieces = Number(r.crates || 0) * PIECES_PER_CRATE + Number(r.pieces || 0);
+      await supabase.from("batch_egg_production" as any)
+        .update({ price_per_crate: p, egg_value: (totalPieces / PIECES_PER_CRATE) * p } as any)
+        .eq("id", r.id);
+    }
+
+    setSavingPrice(false);
+    toast.success(`Price set to ₦${p.toLocaleString()} per crate`);
+    setShowPrice(false);
+    setPriceForm({ price: "", note: "" });
+    fetchPrices();
+    fetchRows();
+  };
+
 
   const confirmBirdCount = async () => {
     const n = parseInt(countInput);
