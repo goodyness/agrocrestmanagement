@@ -267,6 +267,50 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
     return { n, totalEggs, totalCracked, avgDaily, avgRate, last7Avg, prev7Avg, change, currentRate };
   }, [chartData, birds]);
 
+  // ---- valuation (independent of the Sales tab) ----
+  const money = (n: number) =>
+    `₦${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+
+  const valuation = useMemo(() => {
+    const totalPieces = rows.reduce((s, r) => s + Number(r.crates || 0) * PIECES_PER_CRATE + Number(r.pieces || 0), 0);
+    const cracked = rows.reduce((s, r) => s + Number(r.cracked_pieces || 0), 0);
+    const valued = rows.filter((r) => r.price_per_crate != null);
+    const unvalued = rows.length - valued.length;
+    const totalValue = rows.reduce((s, r) => s + Number(r.egg_value || 0), 0);
+    const totalCost = Number(spend.expenses || 0) + Number(spend.purchase || 0);
+    const recovery = totalCost > 0 ? Math.min((totalValue / totalCost) * 100, 100) : totalValue > 0 ? 100 : 0;
+    return {
+      totalPieces,
+      crates: Math.floor(totalPieces / PIECES_PER_CRATE),
+      looseEggs: totalPieces % PIECES_PER_CRATE,
+      cracked,
+      good: Math.max(totalPieces - cracked, 0),
+      valuedDays: valued.length,
+      unvalued,
+      totalValue,
+      totalCost,
+      balance: totalValue - totalCost,
+      recovery,
+    };
+  }, [rows, spend]);
+
+  const priceHistory = useMemo(
+    () => [...prices].reverse().map((p) => ({
+      label: new Date(p.effective_from || p.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
+      price: Number(p.price_per_crate),
+    })),
+    [prices]
+  );
+
+  const valueChart = useMemo(
+    () => rows.filter((r) => Number(r.egg_value || 0) > 0).map((r) => ({
+      label: new Date(r.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
+      value: Number(r.egg_value || 0),
+    })),
+    [rows]
+  );
+
+
   const weeklyData = useMemo(() => {
     const map = new Map<string, { week: string; eggs: number; days: number }>();
     chartData.forEach((r) => {
