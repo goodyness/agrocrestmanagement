@@ -12,7 +12,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from "recharts";
 import { toast } from "sonner";
-import { Egg, Plus, Layers, Sparkles, Loader2, TrendingDown, TrendingUp, AlertTriangle, Trash2 } from "lucide-react";
+import { Egg, Plus, Layers, Sparkles, Loader2, TrendingDown, TrendingUp, AlertTriangle, Trash2, Coins, History } from "lucide-react";
 
 const PIECES_PER_CRATE = 30;
 
