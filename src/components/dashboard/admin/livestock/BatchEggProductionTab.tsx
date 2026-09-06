@@ -185,9 +185,12 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
       cracked_pieces: cracked,
       birds_at_record: birds,
       notes: form.notes || null,
+      price_per_crate: currentPrice || null,
+      egg_value: currentPrice ? ((crates * PIECES_PER_CRATE + pieces) / PIECES_PER_CRATE) * currentPrice : null,
       recorded_by: user?.id ?? null,
       branch_id: batchData?.branch_id ?? null,
     } as any, { onConflict: "batch_id,date" });
+
     setSaving(false);
     if (error) { toast.error("Failed to save record"); return; }
     toast.success("Egg production recorded");
