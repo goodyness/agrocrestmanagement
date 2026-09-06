@@ -471,6 +471,47 @@ export type Database = {
           },
         ]
       }
+      batch_egg_prices: {
+        Row: {
+          batch_id: string
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          id: string
+          note: string | null
+          price_per_crate: number
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          note?: string | null
+          price_per_crate: number
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          note?: string | null
+          price_per_crate?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_egg_prices_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_egg_production: {
         Row: {
           batch_id: string
@@ -480,9 +521,11 @@ export type Database = {
           crates: number
           created_at: string
           date: string
+          egg_value: number | null
           id: string
           notes: string | null
           pieces: number
+          price_per_crate: number | null
           recorded_by: string | null
           updated_at: string
         }
@@ -494,9 +537,11 @@ export type Database = {
           crates?: number
           created_at?: string
           date?: string
+          egg_value?: number | null
           id?: string
           notes?: string | null
           pieces?: number
+          price_per_crate?: number | null
           recorded_by?: string | null
           updated_at?: string
         }
@@ -508,9 +553,11 @@ export type Database = {
           crates?: number
           created_at?: string
           date?: string
+          egg_value?: number | null
           id?: string
           notes?: string | null
           pieces?: number
+          price_per_crate?: number | null
           recorded_by?: string | null
           updated_at?: string
         }
