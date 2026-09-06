@@ -436,6 +436,10 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={() => setShowAdd(true)}><Plus className="h-4 w-4 mr-1" /> Record production</Button>
         <Button size="sm" variant="outline" onClick={() => setShowBulk(true)}><Layers className="h-4 w-4 mr-1" /> Bulk entry</Button>
+        <Button size="sm" variant="outline" onClick={() => { setPriceForm({ price: currentPrice ? String(currentPrice) : "", note: "" }); setShowPrice(true); }}>
+          <Coins className="h-4 w-4 mr-1" /> {currentPrice ? "Update crate price" : "Set crate price"}
+        </Button>
+
         {batchData?.bird_count_confirmed_at && (
           <Button size="sm" variant="ghost" onClick={() => { setCountInput(String(birds)); setAskCount(true); }}>
             Adjust bird count
