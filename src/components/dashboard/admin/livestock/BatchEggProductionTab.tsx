@@ -48,7 +48,16 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiQuestion, setAiQuestion] = useState("");
 
+  // pricing
+  const [prices, setPrices] = useState<any[]>([]);
+  const [showPrice, setShowPrice] = useState(false);
+  const [priceForm, setPriceForm] = useState({ price: "", note: "" });
+  const [savingPrice, setSavingPrice] = useState(false);
+  const [spend, setSpend] = useState({ expenses: 0, purchase: 0 });
+
   const birds = Number(batchData?.current_quantity || 0);
+
+  const currentPrice = prices.length ? Number(prices[0].price_per_crate) : 0;
 
   const fetchRows = async () => {
     const { data } = await supabase
@@ -59,6 +68,25 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
     setRows((data as any[]) || []);
     setLoading(false);
   };
+
+  const fetchPrices = async () => {
+    const { data } = await supabase
+      .from("batch_egg_prices" as any)
+      .select("*")
+      .eq("batch_id", batch.id)
+      .order("created_at", { ascending: false });
+    setPrices((data as any[]) || []);
+  };
+
+  const fetchSpend = async () => {
+    const { data: exp } = await supabase
+      .from("miscellaneous_expenses")
+      .select("amount")
+      .eq("batch_id", batch.id);
+    const expenses = (exp || []).reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
+    setSpend({ expenses, purchase: Number((batchData as any)?.total_cost || 0) });
+  };
+
 
   const refreshBatch = async () => {
     const { data } = await supabase.from("livestock_batches").select("*").eq("id", batch.id).maybeSingle();
