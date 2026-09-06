@@ -206,16 +206,23 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
     if (dates.size !== valid.length) { toast.error("Duplicate dates in the list — one entry per date"); return; }
     setSavingBulk(true);
     const { data: { user } } = await supabase.auth.getUser();
-    const payload = valid.map((r) => ({
-      batch_id: batch.id,
-      date: r.date,
-      crates: parseInt(r.crates) || 0,
-      pieces: parseInt(r.pieces) || 0,
-      cracked_pieces: parseInt(r.cracked) || 0,
-      birds_at_record: birds,
-      recorded_by: user?.id ?? null,
-      branch_id: batchData?.branch_id ?? null,
-    }));
+    const payload = valid.map((r) => {
+      const crates = parseInt(r.crates) || 0;
+      const pieces = parseInt(r.pieces) || 0;
+      return {
+        batch_id: batch.id,
+        date: r.date,
+        crates,
+        pieces,
+        cracked_pieces: parseInt(r.cracked) || 0,
+        birds_at_record: birds,
+        price_per_crate: currentPrice || null,
+        egg_value: currentPrice ? ((crates * PIECES_PER_CRATE + pieces) / PIECES_PER_CRATE) * currentPrice : null,
+        recorded_by: user?.id ?? null,
+        branch_id: batchData?.branch_id ?? null,
+      };
+    });
+
     const { error } = await supabase.from("batch_egg_production" as any).upsert(payload as any, { onConflict: "batch_id,date" });
     setSavingBulk(false);
     if (error) { toast.error("Failed to save records"); return; }
