@@ -535,6 +535,146 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
         </CardContent>
       </Card>
 
+      {/* total eggs produced so far */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2"><Egg className="h-4 w-4" /> All eggs produced so far</CardTitle>
+          <CardDescription>Everything recorded for this batch since day one.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="text-center"><p className="text-lg font-bold">{valuation.totalPieces.toLocaleString()}</p><p className="text-xs text-muted-foreground">Total eggs</p></div>
+          <div className="text-center"><p className="text-lg font-bold">{valuation.crates.toLocaleString()}</p><p className="text-xs text-muted-foreground">Crates ({valuation.looseEggs} loose)</p></div>
+          <div className="text-center"><p className="text-lg font-bold text-success">{valuation.good.toLocaleString()}</p><p className="text-xs text-muted-foreground">Good eggs</p></div>
+          <div className="text-center"><p className="text-lg font-bold text-destructive">{valuation.cracked.toLocaleString()}</p><p className="text-xs text-muted-foreground">Cracked</p></div>
+          <div className="text-center"><p className="text-lg font-bold text-primary">{money(valuation.totalValue)}</p><p className="text-xs text-muted-foreground">Value of eggs</p></div>
+        </CardContent>
+      </Card>
+
+      {/* cost recovery */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2"><Coins className="h-4 w-4" /> Cost recovery on eggs</CardTitle>
+          <CardDescription>
+            Egg value at the prices set here versus what this batch has cost. This is separate from the Sales tab records.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="text-center"><p className="text-lg font-bold">{currentPrice ? money(currentPrice) : "—"}</p><p className="text-xs text-muted-foreground">Current price / crate</p></div>
+            <div className="text-center"><p className="text-lg font-bold">{money(valuation.totalCost)}</p><p className="text-xs text-muted-foreground">Total cost (purchase + expenses)</p></div>
+            <div className="text-center"><p className="text-lg font-bold text-primary">{money(valuation.totalValue)}</p><p className="text-xs text-muted-foreground">Egg value recorded</p></div>
+            <div className="text-center">
+              <p className={`text-lg font-bold ${valuation.balance >= 0 ? "text-success" : "text-destructive"}`}>
+                {valuation.balance >= 0 ? `+${money(valuation.balance)}` : `-${money(Math.abs(valuation.balance))}`}
+              </p>
+              <p className="text-xs text-muted-foreground">{valuation.balance >= 0 ? "In profit" : "Still recovering"}</p>
+            </div>
+          </div>
+          <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+            <div className={`h-full ${valuation.balance >= 0 ? "bg-success" : "bg-primary"}`} style={{ width: `${valuation.recovery}%` }} />
+          </div>
+          <p className="text-xs text-muted-foreground">{valuation.recovery.toFixed(1)}% of batch cost recovered from eggs.</p>
+          {valuation.unvalued > 0 && (
+            <p className="text-xs text-amber-600">
+              {valuation.unvalued} recorded day(s) have no price yet — set a crate price and they will be valued.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* price history */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2"><History className="h-4 w-4" /> Crate price history</CardTitle>
+          <CardDescription>Changing the price only affects days recorded after the change.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {prices.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No price set yet for this batch.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={priceHistory}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis dataKey="label" fontSize={11} />
+                      <YAxis fontSize={11} />
+                      <Tooltip />
+                      <Line type="stepAfter" dataKey="price" name="Price / crate" stroke="hsl(var(--primary))" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={valueChart}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis dataKey="label" fontSize={11} />
+                      <YAxis fontSize={11} />
+                      <Tooltip />
+                      <Bar dataKey="value" name="Egg value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Effective from</TableHead>
+                      <TableHead>Price / crate</TableHead>
+                      <TableHead>Note</TableHead>
+                      <TableHead>Set on</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {prices.map((p, i) => (
+                      <TableRow key={p.id}>
+                        <TableCell>
+                          {new Date(p.effective_from || p.created_at).toLocaleDateString("en-GB")}
+                          {i === 0 && <Badge className="ml-2 text-[10px]">current</Badge>}
+                        </TableCell>
+                        <TableCell className="font-medium">{money(p.price_per_crate)}</TableCell>
+                        <TableCell className="text-muted-foreground">{p.note || "—"}</TableCell>
+                        <TableCell className="text-muted-foreground">{new Date(p.created_at).toLocaleString("en-GB")}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* set price dialog */}
+      <Dialog open={showPrice} onOpenChange={setShowPrice}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{currentPrice ? "Update crate price" : "Set crate price"}</DialogTitle>
+            <DialogDescription>
+              Days already valued keep their old price. The first price you set also values every day recorded so far.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Price per crate (₦)</Label>
+              <Input type="number" min="0" value={priceForm.price} onChange={(e) => setPriceForm({ ...priceForm, price: e.target.value })} placeholder="e.g. 4500" />
+            </div>
+            <div className="space-y-1">
+              <Label>Reason / note (optional)</Label>
+              <Textarea value={priceForm.note} onChange={(e) => setPriceForm({ ...priceForm, note: e.target.value })} className="h-16" placeholder="e.g. market price increase" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={savePrice} disabled={savingPrice} className="w-full">
+              {savingPrice ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Save price
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       {/* records table */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Egg className="h-4 w-4" /> Production records</CardTitle></CardHeader>
