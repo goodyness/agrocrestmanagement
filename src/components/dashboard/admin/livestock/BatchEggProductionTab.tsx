@@ -712,6 +712,9 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
                         <TableCell className="font-medium">{total}</TableCell>
                         <TableCell>{r.cracked_pieces || 0}</TableCell>
                         <TableCell>{b > 0 ? `${((total / b) * 100).toFixed(1)}%` : "—"}</TableCell>
+                        <TableCell>{r.price_per_crate != null ? money(r.price_per_crate) : "—"}</TableCell>
+                        <TableCell className="font-medium">{r.egg_value != null ? money(r.egg_value) : "—"}</TableCell>
+
                         <TableCell className="text-right">
                           <Button size="icon" variant="ghost" onClick={() => deleteRow(r.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
