@@ -694,6 +694,9 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
                     <TableHead>Total eggs</TableHead>
                     <TableHead>Cracked</TableHead>
                     <TableHead>Lay rate</TableHead>
+                    <TableHead>Price/crate</TableHead>
+                    <TableHead>Value</TableHead>
+
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
