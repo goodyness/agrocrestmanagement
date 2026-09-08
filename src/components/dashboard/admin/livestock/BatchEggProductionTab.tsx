@@ -13,6 +13,8 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { Egg, Plus, Layers, Sparkles, Loader2, TrendingDown, TrendingUp, AlertTriangle, Trash2, Coins, History } from "lucide-react";
+import PaginationControls from "@/components/PaginationControls";
+import { usePagination } from "@/hooks/usePagination";
 
 const PIECES_PER_CRATE = 30;
 
@@ -27,6 +29,12 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
   const [rows, setRows] = useState<any[]>([]);
   const [batchData, setBatchData] = useState<any>(batch);
   const [loading, setLoading] = useState(true);
+  const orderedRows = useMemo(() => [...rows].reverse(), [rows]);
+  const { currentPage, totalPages, paginatedRange, goToPage, getPageNumbers } = usePagination({
+    totalItems: orderedRows.length,
+    itemsPerPage: 15,
+  });
+  const pagedRows = orderedRows.slice(paginatedRange.startIndex, paginatedRange.endIndex);
 
   // one-time bird count confirmation
   const [askCount, setAskCount] = useState(false);
