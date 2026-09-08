@@ -701,7 +701,7 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {[...rows].reverse().map((r) => {
+                  {pagedRows.map((r) => {
                     const total = Number(r.crates || 0) * PIECES_PER_CRATE + Number(r.pieces || 0);
                     const b = Number(r.birds_at_record || birds) || 0;
                     return (
@@ -725,6 +725,12 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
                   })}
                 </TableBody>
               </Table>
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={goToPage}
+                getPageNumbers={getPageNumbers}
+              />
             </div>
           )}
         </CardContent>
