@@ -400,6 +400,71 @@ export type Database = {
           },
         ]
       }
+      batch_closures: {
+        Row: {
+          batch_id: string
+          created_at: string
+          expense_note: string | null
+          expenses_snapshot: Json
+          id: string
+          initial_birds: number
+          other_cost: number
+          purchase_cost: number
+          report_note: string | null
+          sale_lines: Json
+          sales_snapshot: Json
+          submitted_at: string
+          submitted_by: string | null
+          survived_birds: number
+          totals: Json
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          expense_note?: string | null
+          expenses_snapshot?: Json
+          id?: string
+          initial_birds?: number
+          other_cost?: number
+          purchase_cost?: number
+          report_note?: string | null
+          sale_lines?: Json
+          sales_snapshot?: Json
+          submitted_at?: string
+          submitted_by?: string | null
+          survived_birds?: number
+          totals?: Json
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          expense_note?: string | null
+          expenses_snapshot?: Json
+          id?: string
+          initial_birds?: number
+          other_cost?: number
+          purchase_cost?: number
+          report_note?: string | null
+          sale_lines?: Json
+          sales_snapshot?: Json
+          submitted_at?: string
+          submitted_by?: string | null
+          survived_birds?: number
+          totals?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_closures_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: true
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_complaints: {
         Row: {
           acceptance_id: string | null
@@ -2294,6 +2359,8 @@ export type Database = {
           laying_start_date: string | null
           livestock_category_id: string | null
           notes: string | null
+          production_closed_at: string | null
+          production_closed_by: string | null
           quantity: number
           registered_by: string
           source: string | null
@@ -2327,6 +2394,8 @@ export type Database = {
           laying_start_date?: string | null
           livestock_category_id?: string | null
           notes?: string | null
+          production_closed_at?: string | null
+          production_closed_by?: string | null
           quantity?: number
           registered_by: string
           source?: string | null
@@ -2360,6 +2429,8 @@ export type Database = {
           laying_start_date?: string | null
           livestock_category_id?: string | null
           notes?: string | null
+          production_closed_at?: string | null
+          production_closed_by?: string | null
           quantity?: number
           registered_by?: string
           source?: string | null
