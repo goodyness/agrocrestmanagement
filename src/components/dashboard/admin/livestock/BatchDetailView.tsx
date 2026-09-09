@@ -347,8 +347,36 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const completedTemplates = templates.filter((t) => t.week_number < (batchData.age_weeks || 0));
   const currentWeekTemplates = templates.filter((t) => t.week_number === (batchData.age_weeks || 0));
 
+  if (showClosure) {
+    return (
+      <BatchClosureWizard
+        batch={batchData}
+        onBack={() => setShowClosure(false)}
+        onClosed={() => { setClosure({} as any); refreshBatch(); }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {/* Overdue cycle reminder */}
+      <Dialog open={showCycleReminder} onOpenChange={setShowCycleReminder}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark this production cycle closed</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This batch has passed the {weeksToRaise} weeks it was planned to be raised for
+            (currently {batchData.age_weeks} weeks old). Close the cycle to review expenses,
+            record the final sales and generate the closing report.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCycleReminder(false)}>Cancel</Button>
+            <Button onClick={() => { setShowCycleReminder(false); setShowClosure(true); }}>Close production</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
@@ -362,6 +390,13 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant={closure ? "outline" : cycleOverdue ? "destructive" : "secondary"}
+            onClick={() => setShowClosure(true)}
+          >
+            {closure ? "View closure report" : "Close production"}
+          </Button>
           <Button size="sm" variant="outline" onClick={() => setShowAdjustCount(true)}>
             Adjust {batchData.species === "chicken" ? "bird" : "animal"} count
           </Button>
