@@ -30,6 +30,7 @@ import BatchProjectionCard from "./BatchProjectionCard";
 import BatchAnalyticsCharts from "./BatchAnalyticsCharts";
 import BatchEggProductionTab from "./BatchEggProductionTab";
 import AdjustBirdCountDialog from "./AdjustBirdCountDialog";
+import BatchClosureWizard from "./BatchClosureWizard";
 import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
 import { UploadedMortalityPhoto } from "@/lib/photoUpload";
 
@@ -58,6 +59,29 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const [batchData, setBatchData] = useState(batch);
   const [partnerLink, setPartnerLink] = useState<any | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // Production cycle closure
+  const [showClosure, setShowClosure] = useState(false);
+  const [closure, setClosure] = useState<any | null>(null);
+  const [weeksToRaise, setWeeksToRaise] = useState<number | null>(null);
+  const [showCycleReminder, setShowCycleReminder] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const [{ data: c }, { data: proj }] = await Promise.all([
+        supabase.from("batch_closures").select("id, submitted_at").eq("batch_id", batch.id).maybeSingle(),
+        supabase.from("batch_projections").select("weeks_to_raise").eq("batch_id", batch.id).maybeSingle(),
+      ]);
+      setClosure(c || null);
+      const wks = proj?.weeks_to_raise ? Number(proj.weeks_to_raise) : null;
+      setWeeksToRaise(wks);
+      const closed = !!c || !!(batch as any).production_closed_at;
+      if (!closed && wks && Number(batch.age_weeks || 0) >= wks) setShowCycleReminder(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batch.id]);
+
+  const cycleOverdue = !closure && !!weeksToRaise && Number(batchData?.age_weeks || 0) >= weeksToRaise;
 
   const [availabilityEvents, setAvailabilityEvents] = useState<any[]>([]);
   const [showConfirmAvailable, setShowConfirmAvailable] = useState(false);
@@ -347,8 +371,36 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const completedTemplates = templates.filter((t) => t.week_number < (batchData.age_weeks || 0));
   const currentWeekTemplates = templates.filter((t) => t.week_number === (batchData.age_weeks || 0));
 
+  if (showClosure) {
+    return (
+      <BatchClosureWizard
+        batch={batchData}
+        onBack={() => setShowClosure(false)}
+        onClosed={() => { setClosure({} as any); refreshBatch(); }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {/* Overdue cycle reminder */}
+      <Dialog open={showCycleReminder} onOpenChange={setShowCycleReminder}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark this production cycle closed</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This batch has passed the {weeksToRaise} weeks it was planned to be raised for
+            (currently {batchData.age_weeks} weeks old). Close the cycle to review expenses,
+            record the final sales and generate the closing report.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCycleReminder(false)}>Cancel</Button>
+            <Button onClick={() => { setShowCycleReminder(false); setShowClosure(true); }}>Close production</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
@@ -362,6 +414,13 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant={closure ? "outline" : cycleOverdue ? "destructive" : "secondary"}
+            onClick={() => setShowClosure(true)}
+          >
+            {closure ? "View closure report" : "Close production"}
+          </Button>
           <Button size="sm" variant="outline" onClick={() => setShowAdjustCount(true)}>
             Adjust {batchData.species === "chicken" ? "bird" : "animal"} count
           </Button>
