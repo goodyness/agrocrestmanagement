@@ -30,6 +30,7 @@ import BatchProjectionCard from "./BatchProjectionCard";
 import BatchAnalyticsCharts from "./BatchAnalyticsCharts";
 import BatchEggProductionTab from "./BatchEggProductionTab";
 import AdjustBirdCountDialog from "./AdjustBirdCountDialog";
+import BatchClosureWizard from "./BatchClosureWizard";
 import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
 import { UploadedMortalityPhoto } from "@/lib/photoUpload";
 
@@ -58,6 +59,29 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const [batchData, setBatchData] = useState(batch);
   const [partnerLink, setPartnerLink] = useState<any | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // Production cycle closure
+  const [showClosure, setShowClosure] = useState(false);
+  const [closure, setClosure] = useState<any | null>(null);
+  const [weeksToRaise, setWeeksToRaise] = useState<number | null>(null);
+  const [showCycleReminder, setShowCycleReminder] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const [{ data: c }, { data: proj }] = await Promise.all([
+        supabase.from("batch_closures").select("id, submitted_at").eq("batch_id", batch.id).maybeSingle(),
+        supabase.from("batch_projections").select("weeks_to_raise").eq("batch_id", batch.id).maybeSingle(),
+      ]);
+      setClosure(c || null);
+      const wks = proj?.weeks_to_raise ? Number(proj.weeks_to_raise) : null;
+      setWeeksToRaise(wks);
+      const closed = !!c || !!(batch as any).production_closed_at;
+      if (!closed && wks && Number(batch.age_weeks || 0) >= wks) setShowCycleReminder(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batch.id]);
+
+  const cycleOverdue = !closure && !!weeksToRaise && Number(batchData?.age_weeks || 0) >= weeksToRaise;
 
   const [availabilityEvents, setAvailabilityEvents] = useState<any[]>([]);
   const [showConfirmAvailable, setShowConfirmAvailable] = useState(false);
