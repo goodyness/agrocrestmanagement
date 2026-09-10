@@ -75,13 +75,17 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       setClosure(c || null);
       const wks = proj?.weeks_to_raise ? Number(proj.weeks_to_raise) : null;
       setWeeksToRaise(wks);
-      const closed = !!c || !!(batch as any).production_closed_at;
-      if (!closed && wks && Number(batch.age_weeks || 0) >= wks) setShowCycleReminder(true);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batch.id]);
 
-  const cycleOverdue = !closure && !!weeksToRaise && Number(batchData?.age_weeks || 0) >= weeksToRaise;
+  const currentAgeWeeks = Number(batchData?.age_weeks || 0);
+  const cycleClosed = Boolean(closure || batchData?.production_closed_at);
+  const cycleOverdue = !cycleClosed && weeksToRaise !== null && currentAgeWeeks >= weeksToRaise;
+
+  useEffect(() => {
+    if (cycleOverdue) setShowCycleReminder(true);
+  }, [batch.id, cycleOverdue]);
 
   const [availabilityEvents, setAvailabilityEvents] = useState<any[]>([]);
   const [showConfirmAvailable, setShowConfirmAvailable] = useState(false);
@@ -401,7 +405,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
         </DialogContent>
       </Dialog>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
         </Button>
@@ -413,14 +417,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
             {batchData.current_quantity} animals • {batchData.age_weeks} weeks old • Stage: {batchData.stage?.replace(/_/g, " ")}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant={closure ? "outline" : cycleOverdue ? "destructive" : "secondary"}
-            onClick={() => setShowClosure(true)}
-          >
-            {closure ? "View closure report" : "Close production"}
-          </Button>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <Button size="sm" variant="outline" onClick={() => setShowAdjustCount(true)}>
             Adjust {batchData.species === "chicken" ? "bird" : "animal"} count
           </Button>
@@ -431,6 +428,30 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           )}
         </div>
       </div>
+
+      <Card className={cycleOverdue ? "border-destructive/60 bg-destructive/5" : "border-primary/30 bg-primary/5"}>
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold">
+              {cycleClosed ? "Production cycle closed" : cycleOverdue ? "Production cycle is due for closure" : "Production cycle"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {cycleClosed
+                ? "View and download the submitted closing report."
+                : weeksToRaise !== null
+                  ? `Planned for ${weeksToRaise} weeks • Current age ${currentAgeWeeks} weeks`
+                  : "You can close this batch whenever its production cycle is complete."}
+            </p>
+          </div>
+          <Button
+            className="w-full shrink-0 sm:w-auto"
+            variant={cycleClosed ? "outline" : cycleOverdue ? "destructive" : "default"}
+            onClick={() => setShowClosure(true)}
+          >
+            {cycleClosed ? "View closure report" : "Close production"}
+          </Button>
+        </CardContent>
+      </Card>
 
       <AdjustBirdCountDialog
         open={showAdjustCount}
