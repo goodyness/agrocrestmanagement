@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, CheckCircle2, Download, FileText, Loader2, Plus, Trash2, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { ArrowLeft, CheckCircle2, Download, FileText, Loader2, Plus, Trash2, AlertTriangle, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import BatchSalesTab from "./BatchSalesTab";
 import { buildClosureReportPdf, ClosureSaleLine } from "@/lib/batchClosureReportPdf";
@@ -16,13 +17,14 @@ interface Props {
   batch: any;
   onBack: () => void;
   onClosed?: () => void;
+  onReopened?: () => void;
 }
 
 const money = (n: number) => "₦" + Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
 const STEPS = ["Expenses", "Survival & sales", "Closing sales", "Report"];
 
-export default function BatchClosureWizard({ batch, onBack, onClosed }: Props) {
+export default function BatchClosureWizard({ batch, onBack, onClosed, onReopened }: Props) {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,7 +36,11 @@ export default function BatchClosureWizard({ batch, onBack, onClosed }: Props) {
   const [partnerLink, setPartnerLink] = useState<any>(null);
   const [branchName, setBranchName] = useState<string>("");
   const [existing, setExisting] = useState<any>(null);
-  const [me, setMe] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [me, setMe] = useState<{ id: string; name: string; email: string; role: string } | null>(null);
+
+  const [showClosedModal, setShowClosedModal] = useState(false);
+  const [showReopenConfirm, setShowReopenConfirm] = useState(false);
+  const [reopening, setReopening] = useState(false);
 
   const [expenseNote, setExpenseNote] = useState("");
   const [purchaseCost, setPurchaseCost] = useState(String(Number(batch?.total_cost || 0)));
@@ -69,10 +75,41 @@ export default function BatchClosureWizard({ batch, onBack, onClosed }: Props) {
 
     const { data: auth } = await supabase.auth.getUser();
     if (auth?.user) {
-      const { data: p } = await supabase.from("profiles").select("name, email").eq("id", auth.user.id).maybeSingle();
-      setMe({ id: auth.user.id, name: p?.name || auth.user.email || "", email: p?.email || auth.user.email || "" });
+      const { data: p } = await supabase.from("profiles").select("name, email, role").eq("id", auth.user.id).maybeSingle();
+      setMe({ id: auth.user.id, name: p?.name || auth.user.email || "", email: p?.email || auth.user.email || "", role: p?.role || "worker" });
     }
     setLoading(false);
+  };
+
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [batch.id]);
+
+  const isAdmin = me?.role === "admin";
+
+  const handleReopenClick = () => {
+    if (!isAdmin) {
+      setShowClosedModal(true);
+    } else {
+      setShowReopenConfirm(true);
+    }
+  };
+
+  const handleConfirmReopen = async () => {
+    setReopening(true);
+    await supabase.from("batch_closures").delete().eq("batch_id", batch.id);
+    const { error } = await supabase
+      .from("livestock_batches")
+      .update({ production_closed_at: null, production_closed_by: null, is_active: true } as any)
+      .eq("id", batch.id);
+
+    setReopening(false);
+    if (error) {
+      toast.error("Failed to reopen production cycle: " + error.message);
+    } else {
+      toast.success("Production cycle reopened successfully!");
+      setShowReopenConfirm(false);
+      onReopened?.();
+      onBack();
+    }
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [batch.id]);
@@ -224,6 +261,46 @@ export default function BatchClosureWizard({ batch, onBack, onClosed }: Props) {
     const t = (existing.totals || {}) as any;
     return (
       <div className="space-y-4">
+        {/* Modal for non-admin attempting to open closed production */}
+        <Dialog open={showClosedModal} onOpenChange={setShowClosedModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <Lock className="h-5 w-5" /> Production Cycle Closed
+              </DialogTitle>
+              <DialogDescription className="pt-2 text-base font-medium text-foreground">
+                You cannot open or modify this production cycle because it is marked closed.
+              </DialogDescription>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              This batch has already been closed. Only a system administrator can reopen a closed production cycle.
+            </p>
+            <DialogFooter>
+              <Button onClick={() => setShowClosedModal(false)}>Understand</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirmation modal for admin reopening production */}
+        <Dialog open={showReopenConfirm} onOpenChange={setShowReopenConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-primary">
+                <Unlock className="h-5 w-5" /> Reopen Production Cycle?
+              </DialogTitle>
+              <DialogDescription className="pt-2 text-sm text-muted-foreground">
+                Are you sure you want to reopen this production cycle? This will restore the batch to active status and remove the closing report snapshot.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setShowReopenConfirm(false)} disabled={reopening}>Cancel</Button>
+              <Button onClick={handleConfirmReopen} disabled={reopening}>
+                {reopening ? "Reopening..." : "Reopen Cycle"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> Back to batch</Button>
         <Card>
           <CardHeader>
@@ -248,7 +325,12 @@ export default function BatchClosureWizard({ batch, onBack, onClosed }: Props) {
             </div>
             {existing.expense_note && <p className="text-sm"><b>Expense note:</b> {existing.expense_note}</p>}
             {existing.report_note && <p className="text-sm"><b>Closing note:</b> {existing.report_note}</p>}
-            <Button onClick={downloadExisting}><Download className="h-4 w-4 mr-1" /> Download report</Button>
+            <div className="flex gap-2 flex-wrap pt-2">
+              <Button onClick={downloadExisting}><Download className="h-4 w-4 mr-1" /> Download report</Button>
+              <Button variant="outline" onClick={handleReopenClick}>
+                <Unlock className="h-4 w-4 mr-1 text-primary" /> Reopen Production Cycle
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Plus, Sparkles, CheckCircle, Clock, AlertTriangle, Loader2, DollarSign, Skull, TrendingDown, Handshake, Wallet } from "lucide-react";
+import { ArrowLeft, Plus, Sparkles, CheckCircle, Clock, AlertTriangle, Loader2, DollarSign, Skull, TrendingDown, Handshake, Wallet, Lock, Unlock } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import AddCareLogDialog from "./AddCareLogDialog";
@@ -65,23 +65,55 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const [closure, setClosure] = useState<any | null>(null);
   const [weeksToRaise, setWeeksToRaise] = useState<number | null>(null);
   const [showCycleReminder, setShowCycleReminder] = useState(false);
+  const [showClosedModal, setShowClosedModal] = useState(false);
+  const [showReopenConfirm, setShowReopenConfirm] = useState(false);
+  const [reopening, setReopening] = useState(false);
+
+  const fetchClosureState = async () => {
+    const [{ data: c }, { data: proj }] = await Promise.all([
+      supabase.from("batch_closures").select("id, submitted_at").eq("batch_id", batch.id).maybeSingle(),
+      supabase.from("batch_projections").select("weeks_to_raise").eq("batch_id", batch.id).maybeSingle(),
+    ]);
+    setClosure(c || null);
+    const wks = proj?.weeks_to_raise ? Number(proj.weeks_to_raise) : null;
+    setWeeksToRaise(wks);
+  };
 
   useEffect(() => {
-    (async () => {
-      const [{ data: c }, { data: proj }] = await Promise.all([
-        supabase.from("batch_closures").select("id, submitted_at").eq("batch_id", batch.id).maybeSingle(),
-        supabase.from("batch_projections").select("weeks_to_raise").eq("batch_id", batch.id).maybeSingle(),
-      ]);
-      setClosure(c || null);
-      const wks = proj?.weeks_to_raise ? Number(proj.weeks_to_raise) : null;
-      setWeeksToRaise(wks);
-    })();
+    fetchClosureState();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batch.id]);
 
   const currentAgeWeeks = Number(batchData?.age_weeks || 0);
   const cycleClosed = Boolean(closure || batchData?.production_closed_at);
   const cycleOverdue = !cycleClosed && weeksToRaise !== null && currentAgeWeeks >= weeksToRaise;
+
+  const handleReopenClick = () => {
+    if (!isAdmin) {
+      setShowClosedModal(true);
+    } else {
+      setShowReopenConfirm(true);
+    }
+  };
+
+  const handleConfirmReopen = async () => {
+    setReopening(true);
+    await supabase.from("batch_closures").delete().eq("batch_id", batch.id);
+    const { error } = await supabase
+      .from("livestock_batches")
+      .update({ production_closed_at: null, production_closed_by: null, is_active: true } as any)
+      .eq("id", batch.id);
+
+    setReopening(false);
+    if (error) {
+      toast.error("Failed to reopen production cycle: " + error.message);
+    } else {
+      toast.success("Production cycle reopened successfully!");
+      setShowReopenConfirm(false);
+      setClosure(null);
+      refreshBatch();
+    }
+  };
 
   useEffect(() => {
     if (cycleOverdue) setShowCycleReminder(true);
@@ -381,12 +413,53 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
         batch={batchData}
         onBack={() => setShowClosure(false)}
         onClosed={() => { setClosure({} as any); refreshBatch(); }}
+        onReopened={() => { setClosure(null); refreshBatch(); }}
       />
     );
   }
 
   return (
     <div className="space-y-4">
+      {/* Modal for non-admin attempting to open closed production */}
+      <Dialog open={showClosedModal} onOpenChange={setShowClosedModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Lock className="h-5 w-5" /> Production Cycle Closed
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-base font-medium text-foreground">
+              You cannot open or modify this production cycle because it is marked closed.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This batch has already been closed. Only a system administrator can reopen a closed production cycle.
+          </p>
+          <DialogFooter>
+            <Button onClick={() => setShowClosedModal(false)}>Understand</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation modal for admin reopening production */}
+      <Dialog open={showReopenConfirm} onOpenChange={setShowReopenConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Unlock className="h-5 w-5" /> Reopen Production Cycle?
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-sm text-muted-foreground">
+              Are you sure you want to reopen this production cycle? This will restore the batch to active status and remove the closing report snapshot.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowReopenConfirm(false)} disabled={reopening}>Cancel</Button>
+            <Button onClick={handleConfirmReopen} disabled={reopening}>
+              {reopening ? "Reopening..." : "Reopen Cycle"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Overdue cycle reminder */}
       <Dialog open={showCycleReminder} onOpenChange={setShowCycleReminder}>
         <DialogContent>
@@ -443,13 +516,24 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
                   : "You can close this batch whenever its production cycle is complete."}
             </p>
           </div>
-          <Button
-            className="w-full shrink-0 sm:w-auto"
-            variant={cycleClosed ? "outline" : cycleOverdue ? "destructive" : "default"}
-            onClick={() => setShowClosure(true)}
-          >
-            {cycleClosed ? "View closure report" : "Close production"}
-          </Button>
+          <div className="flex gap-2 flex-wrap w-full sm:w-auto">
+            <Button
+              className="w-full shrink-0 sm:w-auto"
+              variant={cycleClosed ? "outline" : cycleOverdue ? "destructive" : "default"}
+              onClick={() => setShowClosure(true)}
+            >
+              {cycleClosed ? "View closure report" : "Close production"}
+            </Button>
+            {cycleClosed && (
+              <Button
+                className="w-full shrink-0 sm:w-auto"
+                variant="outline"
+                onClick={handleReopenClick}
+              >
+                <Unlock className="h-4 w-4 mr-1 text-primary" /> Reopen Production
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
