@@ -21,7 +21,7 @@ serve(async (req) => {
     // Fetch farm context data for the AI
     const [prodRes, mortalityRes, salesRes, feedRes, livestockRes, clinicRes] = await Promise.all([
       supabase.from("daily_production").select("date, crates, pieces").order("date", { ascending: false }).limit(14),
-      supabase.from("mortality_records").select("date, quantity_dead, reason, livestock_categories:livestock_category_id(name)").order("date", { ascending: false }).limit(14),
+      supabase.from("mortality_records").select("date, quantity_dead, reason, observation_notes, livestock_categories:livestock_category_id(name)").order("date", { ascending: false }).limit(14),
       supabase.from("sales_records").select("date, product_name, quantity, total_amount").order("date", { ascending: false }).limit(14),
       supabase.from("feed_inventory").select("quantity_in_stock, unit, feed_types:feed_type_id(feed_name)"),
       supabase.from("livestock_batches").select("species, species_type, quantity, current_quantity, age_weeks, stage, is_active, has_started_laying").eq("is_active", true),
@@ -34,7 +34,7 @@ RECENT PRODUCTION (last 14 days):
 ${(prodRes.data || []).map(p => `${p.date}: ${p.crates} crates, ${p.pieces} pieces`).join("\n") || "No data"}
 
 RECENT MORTALITY (last 14 days):
-${(mortalityRes.data || []).map(m => `${m.date}: ${m.quantity_dead} dead - ${m.reason || "unknown"} (${(m as any).livestock_categories?.name || "unknown"})`).join("\n") || "No data"}
+${(mortalityRes.data || []).map(m => `${m.date}: ${m.quantity_dead} dead - ${m.reason || "unknown"} (${(m as any).livestock_categories?.name || "unknown"})${(m as any).observation_notes ? ` — notes: ${(m as any).observation_notes}` : ""}`).join("\n") || "No data"}
 
 RECENT SALES (last 14 days):
 ${(salesRes.data || []).map(s => `${s.date}: ${s.product_name} - ${s.quantity} units - ₦${s.total_amount}`).join("\n") || "No data"}

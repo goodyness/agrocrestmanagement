@@ -2952,6 +2952,7 @@ export type Database = {
           date: string
           id: string
           livestock_category_id: string
+          observation_notes: string | null
           photo_hashes: string[]
           photo_url: string | null
           photo_urls: string[]
@@ -2966,6 +2967,7 @@ export type Database = {
           date?: string
           id?: string
           livestock_category_id: string
+          observation_notes?: string | null
           photo_hashes?: string[]
           photo_url?: string | null
           photo_urls?: string[]
@@ -2980,6 +2982,7 @@ export type Database = {
           date?: string
           id?: string
           livestock_category_id?: string
+          observation_notes?: string | null
           photo_hashes?: string[]
           photo_url?: string | null
           photo_urls?: string[]

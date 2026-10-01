@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Plus, Sparkles, CheckCircle, Clock, AlertTriangle, Loader2, DollarSign, Skull, TrendingDown, Handshake, Wallet, Lock, Unlock } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -138,6 +138,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const [mortalityQuantity, setMortalityQuantity] = useState("");
   const [mortalityReason, setMortalityReason] = useState("");
   const [mortalityDate, setMortalityDate] = useState(new Date().toISOString().split("T")[0]);
+  const [mortalityNotes, setMortalityNotes] = useState("");
   const [mortalityPhotos, setMortalityPhotos] = useState<UploadedMortalityPhoto[]>([]);
   const [addingMortality, setAddingMortality] = useState(false);
 
@@ -341,6 +342,10 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       toast.error("Please fill in quantity and reason (reason is required)");
       return;
     }
+    if (mortalityNotes.trim().length < 20) {
+      toast.error("Please write a detailed note of what happened and your observations (at least 20 characters).");
+      return;
+    }
     if (mortalityPhotos.length === 0) {
       toast.error("At least one photo of the dead animal is required.");
       return;
@@ -377,6 +382,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       batch_id: batch.id,
       quantity_dead: qty,
       reason: mortalityReason,
+      observation_notes: mortalityNotes.trim(),
       date: mortalityDate,
       recorded_by: user.id,
       branch_id: batch.branch_id,
@@ -391,6 +397,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
       setShowAddMortality(false);
       setMortalityQuantity("");
       setMortalityReason("");
+      setMortalityNotes("");
       setMortalityPhotos([]);
       fetchMortality();
       refreshBatch();
@@ -886,7 +893,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead className="text-right">Quantity</TableHead>
-                      <TableHead>Reason</TableHead>
+                      <TableHead>Cause &amp; Notes</TableHead>
                       <TableHead className="hidden sm:table-cell">Recorded By</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -895,7 +902,14 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
                       <TableRow key={m.id}>
                         <TableCell className="text-sm">{new Date(m.date).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right font-bold text-destructive">{m.quantity_dead}</TableCell>
-                        <TableCell className="text-sm">{m.reason}</TableCell>
+                        <TableCell className="text-sm">
+                          <div className="font-medium">{m.reason}</div>
+                          {m.observation_notes ? (
+                            <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap max-w-md">{m.observation_notes}</p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic mt-1">No note</p>
+                          )}
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground hidden sm:table-cell">{m.profiles?.name || "Unknown"}</TableCell>
                       </TableRow>
                     ))}
@@ -1197,10 +1211,22 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
               <Label>Date</Label>
               <Input type="date" value={mortalityDate} onChange={(e) => setMortalityDate(e.target.value)} />
             </div>
+            <div>
+              <Label>What happened &amp; your observations <span className="text-destructive">*</span></Label>
+              <Textarea
+                value={mortalityNotes}
+                onChange={(e) => setMortalityNotes(e.target.value)}
+                placeholder="Describe what happened, symptoms seen (e.g. swelling, diarrhoea, gasping), when it was noticed, feed/water condition, other birds affected..."
+                rows={4}
+              />
+              <p className={`text-xs mt-1 ${mortalityNotes.trim().length < 20 ? "text-destructive" : "text-muted-foreground"}`}>
+                {mortalityNotes.trim().length}/20 characters minimum — a detailed note is required.
+              </p>
+            </div>
             <MortalityPhotoPicker value={mortalityPhotos} onChange={setMortalityPhotos} idSuffix="batch" />
             <Button
               onClick={handleAddMortality}
-              disabled={addingMortality || !mortalityQuantity || !mortalityReason || mortalityPhotos.length === 0}
+              disabled={addingMortality || !mortalityQuantity || !mortalityReason || mortalityNotes.trim().length < 20 || mortalityPhotos.length === 0}
               variant="destructive"
               className="w-full"
             >
