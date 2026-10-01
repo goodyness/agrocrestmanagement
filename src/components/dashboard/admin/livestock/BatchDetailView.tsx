@@ -893,7 +893,7 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead className="text-right">Quantity</TableHead>
-                      <TableHead>Reason</TableHead>
+                      <TableHead>Cause &amp; Notes</TableHead>
                       <TableHead className="hidden sm:table-cell">Recorded By</TableHead>
                     </TableRow>
                   </TableHeader>
