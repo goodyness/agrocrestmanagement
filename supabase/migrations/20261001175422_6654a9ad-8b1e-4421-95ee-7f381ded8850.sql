@@ -1,0 +1,1 @@
+ALTER TABLE public.mortality_records ADD COLUMN IF NOT EXISTS observation_notes text;
