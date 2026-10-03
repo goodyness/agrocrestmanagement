@@ -17,6 +17,7 @@ interface Props {
   currentPrice: number;  // per crate
   birds: number;
   ageWeeks: number;
+  weeksToRaise?: number | null;
 }
 
 const money = (n: number) => `₦${Math.round(n || 0).toLocaleString()}`;
@@ -34,7 +35,7 @@ function slope(ys: number[]) {
   return den ? num / den : 0;
 }
 
-export default function EggProfitForecast({ batchId, rows, purchaseCost, currentPrice, birds, ageWeeks }: Props) {
+export default function EggProfitForecast({ batchId, rows, purchaseCost, currentPrice, birds, ageWeeks, weeksToRaise }: Props) {
   const [expenses, setExpenses] = useState<{ date: string; amount: number }[]>([]);
 
   useEffect(() => {
@@ -151,14 +152,24 @@ export default function EggProfitForecast({ batchId, rows, purchaseCost, current
     }
     if (netDaily <= 0) tips.push({ tone: "warn", text: `Daily spending (${money(burn)}) is higher than daily egg value (${money(dailyRevenue)}). At this pace the batch will not break even — raise output, price, or cut costs.` });
 
+    // standard end of cycle: planned weeks, else 80 weeks (typical layer cycle)
+    const endWeeks = Number(weeksToRaise) > 0 ? Number(weeksToRaise) : 80;
+    const plannedEnd = Number(weeksToRaise) > 0;
+    const daysLeft = Math.max(Math.round((endWeeks - ageWeeks) * 7), 0);
+    const pick = (r: { pts: number[] }) => (daysLeft === 0 ? balance : r.pts[Math.min(daysLeft, r.pts.length) - 1]);
+    const cycle = {
+      endWeeks, plannedEnd, daysLeft, endDate: at(daysLeft),
+      base: pick(base), low: pick(pess), high: pick(opt),
+    };
+
     return {
-      totalCost, totalValue, balance, baseEggs, layRate, burn, dailyRevenue, netDaily, crackRate,
+      cycle, totalCost, totalValue, balance, baseEggs, layRate, burn, dailyRevenue, netDaily, crackRate,
       breakeven: at(base.hit), early: at(opt.hit), late: at(pess.hit), daysToBreak: base.hit,
       profit30: base.pts[29] - balance, profit90: base.pts[89] - balance,
       endOf90: base.pts[89], endOf180: base.pts[179],
       chart, conf, tips, dataDays: daily.length, rawSlope,
     };
-  }, [rows, expenses, purchaseCost, currentPrice, birds, ageWeeks]);
+  }, [rows, expenses, purchaseCost, currentPrice, birds, ageWeeks, weeksToRaise]);
 
   if (rows.length < 3) {
     return (
@@ -252,6 +263,19 @@ export default function EggProfitForecast({ batchId, rows, purchaseCost, current
           <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs text-muted-foreground">Balance today</p><p className={`font-bold ${inProfit ? "text-success" : "text-destructive"}`}>{money(m.balance)}</p></div>
           <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs text-muted-foreground">Expected in 90 days</p><p className={`font-bold ${m.endOf90 >= 0 ? "text-success" : "text-destructive"}`}>{money(m.endOf90)}</p></div>
           <div className="rounded-lg bg-muted/40 p-3"><p className="text-xs text-muted-foreground">Expected in 6 months</p><p className={`font-bold ${m.endOf180 >= 0 ? "text-success" : "text-destructive"}`}>{money(m.endOf180)}</p></div>
+        </div>
+
+        {/* end of cycle */}
+        <div className={`rounded-xl border p-4 ${m.cycle.base >= 0 ? "border-success/40 bg-success/5" : "border-destructive/40 bg-destructive/5"}`}>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Projected profit at end of cycle</p>
+          <p className={`text-2xl font-bold ${m.cycle.base >= 0 ? "text-success" : "text-destructive"}`}>{money(m.cycle.base)}</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {m.cycle.daysLeft > 0
+              ? <>Standard end at <b>{m.cycle.endWeeks} weeks</b>{m.cycle.plannedEnd ? " (your planned weeks to raise)" : " (typical layer cycle)"} — about {m.cycle.daysLeft} days from now ({m.cycle.endDate ? fmtDate(m.cycle.endDate) : "—"}).</>
+              : <>This batch has reached its standard end ({m.cycle.endWeeks} weeks). Figure shown is the current balance.</>}
+            {" "}Range: {money(m.cycle.low)} (tough case) to {money(m.cycle.high)} (good case).
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">Net of purchase cost and all expenses so far, with expected spending and egg sales until then. Excludes sale of the birds at end of lay.</p>
         </div>
 
         {/* insights */}

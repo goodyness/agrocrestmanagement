@@ -628,6 +628,7 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
         currentPrice={Number(currentPrice || 0)}
         birds={birds}
         ageWeeks={Number(batchData?.age_weeks || 0)}
+        weeksToRaise={(batchData as any)?.weeks_to_raise ?? null}
       />
 
       {/* price history */}
