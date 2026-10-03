@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { Egg, Plus, Layers, Sparkles, Loader2, TrendingDown, TrendingUp, AlertTriangle, Trash2, Coins, History } from "lucide-react";
+import EggProfitForecast from "./EggProfitForecast";
 import PaginationControls from "@/components/PaginationControls";
 import { usePagination } from "@/hooks/usePagination";
 
@@ -619,6 +620,15 @@ export default function BatchEggProductionTab({ batch, onBatchUpdated }: Props) 
           )}
         </CardContent>
       </Card>
+
+      <EggProfitForecast
+        batchId={batch.id}
+        rows={rows}
+        purchaseCost={Number(spend.purchase || 0)}
+        currentPrice={Number(currentPrice || 0)}
+        birds={birds}
+        ageWeeks={Number(batchData?.age_weeks || 0)}
+      />
 
       {/* price history */}
       <Card>
