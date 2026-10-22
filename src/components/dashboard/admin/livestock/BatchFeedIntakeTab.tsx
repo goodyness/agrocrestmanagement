@@ -307,14 +307,30 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
 
   return (
     <div className="space-y-3">
+      {/* All-time profit banner */}
+      <Card className={totals.net >= 0 ? "border-primary/40 bg-primary/5" : "border-destructive/40 bg-destructive/5"}>
+        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1"><TrendingUp className="h-3.5 w-3.5" /> All-time profit (eggs − feed − other batch expenses)</p>
+            <p className={`text-3xl font-bold ${totals.net >= 0 ? "text-primary" : "text-destructive"}`}>{money(totals.net)}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {daily.length ? `${daily[0].date} → ${daily[daily.length - 1].date} · ${daily.length} day(s) tracked` : "No production or feed rate recorded yet"}
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div><p className="text-sm font-bold">{money(totals.eggRevenue)}</p><p className="text-[10px] text-muted-foreground">Egg revenue</p></div>
+            <div><p className="text-sm font-bold text-destructive">{money(totals.feedCost)}</p><p className="text-[10px] text-muted-foreground">Feed cost</p></div>
+            <div><p className="text-sm font-bold text-destructive">{money(totals.otherExp)}</p><p className="text-[10px] text-muted-foreground">Other expenses</p></div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
-        <Stat label="All-time profit" value={money(totals.net)} accent={totals.net >= 0 ? "text-primary" : "text-destructive"} sub={`${daily.length} day(s) tracked`} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Stat label="Profit today" value={money(todayRow?.net || 0)} accent={(todayRow?.net || 0) >= 0 ? "text-primary" : "text-destructive"} />
-        <Stat label="Avg profit / day" value={money(totals.profitPerDay)} sub={`wk ${money(totals.profitPerWeek)} · mo ${money(totals.profitPerMonth)}`} />
-        <Stat label="Egg revenue (all time)" value={money(totals.eggRevenue)} />
-        <Stat label="Feed cost (all time)" value={money(totals.feedCost)} />
-        <Stat label="Other batch expenses" value={money(totals.otherExp)} sub="excludes Feed type" />
+        <Stat label="Avg profit / day" value={money(totals.profitPerDay)} />
+        <Stat label="Avg profit / week" value={money(totals.profitPerWeek)} />
+        <Stat label="Avg profit / month" value={money(totals.profitPerMonth)} />
       </div>
 
       {/* Feed rate */}
