@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { toast } from "sonner";
 import { Plus, Scale } from "lucide-react";
+import AutoLayerFcr from "./AutoLayerFcr";
 
 interface Props { batch: any; open?: boolean; onOpenChange?: (v: boolean) => void; onSaved?: () => void }
 
@@ -27,6 +28,7 @@ export default function BatchFcrTab({ batch, open, onOpenChange, onSaved }: Prop
   const [internalOpen, setInternalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const dialogOpen = open ?? internalOpen;
+  const [autoFcr, setAutoFcr] = useState(false);
   const setDialogOpen = onOpenChange ?? setInternalOpen;
 
   const [f, setF] = useState<any>({
@@ -156,7 +158,8 @@ export default function BatchFcrTab({ batch, open, onOpenChange, onSaved }: Prop
 
   return (
     <div className="space-y-3">
-      {dueForEntry && (
+      <AutoLayerFcr batch={batch} onHasData={setAutoFcr} />
+      {dueForEntry && !autoFcr && (
         <Card className="border-amber-500/40 bg-amber-500/5">
           <CardContent className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <p className="text-xs">
