@@ -171,6 +171,13 @@ export default function BatchFcrTab({ batch, open, onOpenChange, onSaved }: Prop
         </Card>
       )}
 
+      {autoFcr && rows.length === 0 ? (
+        <Card><CardContent className="p-3 flex items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">FCR is tracked automatically above. Weighing birds is optional.</p>
+          <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-1" /> Add bird weighing</Button>
+        </CardContent></Card>
+      ) : (
+      <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Stat label="Entries" value={String(rows.length)} />
         <Stat label="Latest FCR" value={last?.fcr ? Number(last.fcr).toFixed(2) : "—"} />
@@ -250,6 +257,8 @@ export default function BatchFcrTab({ batch, open, onOpenChange, onSaved }: Prop
           )}
         </CardContent>
       </Card>
+      </>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
