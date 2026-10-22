@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -725,6 +725,76 @@ export type Database = {
           },
           {
             foreignKeyName: "batch_fcr_records_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batch_feed_intake: {
+        Row: {
+          bag_size_kg: number
+          batch_id: string
+          birds_at_record: number | null
+          branch_id: string | null
+          created_at: string
+          date: string
+          feed_cost: number
+          id: string
+          kg_consumed: number
+          notes: string | null
+          price_per_bag: number
+          recorded_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          bag_size_kg?: number
+          batch_id: string
+          birds_at_record?: number | null
+          branch_id?: string | null
+          created_at?: string
+          date?: string
+          feed_cost?: number
+          id?: string
+          kg_consumed?: number
+          notes?: string | null
+          price_per_bag?: number
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bag_size_kg?: number
+          batch_id?: string
+          birds_at_record?: number | null
+          branch_id?: string | null
+          created_at?: string
+          date?: string
+          feed_cost?: number
+          id?: string
+          kg_consumed?: number
+          notes?: string | null
+          price_per_bag?: number
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_feed_intake_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_feed_intake_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_feed_intake_recorded_by_fkey"
             columns: ["recorded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
