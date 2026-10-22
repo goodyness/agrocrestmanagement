@@ -370,12 +370,41 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
           <CardContent className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <p className="text-xs"><b>Cover earlier production days?</b> Egg records start on {firstProdDate}, but the feed rate starts {firstRateDate ? `on ${firstRateDate}` : "nowhere yet"}. Set the rate you used from {firstProdDate} once, so all-time profit is complete.</p>
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => { setForm((f) => ({ ...f, date: firstProdDate!, kg: f.kg || (currentRate ? String(currentRate.kg_consumed) : "") })); window.scrollTo({ top: 0, behavior: "smooth" }); }}><History className="h-4 w-4 mr-1" /> Set rate from {firstProdDate}</Button>
-              <Button size="sm" variant="ghost" onClick={() => { setBackfillDismissed(true); localStorage.setItem(`fi_backfill_dismissed_${batchId}`, "1"); }}>Later</Button>
+              <Button type="button" size="sm" onClick={(e) => {
+                e.preventDefault();
+                setForm((f) => ({ ...f, date: firstProdDate!, kg: currentRate ? String(currentRate.kg_consumed) : f.kg, pricePerBag: currentRate ? String(currentRate.price_per_bag) : f.pricePerBag, notes: "Rate for earlier production days" }));
+                setBackfillOpen(true);
+              }}><History className="h-4 w-4 mr-1" /> Set rate from {firstProdDate}</Button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => { setBackfillDismissed(true); localStorage.setItem(`fi_backfill_dismissed_${batchId}`, "1"); }}>Later</Button>
             </div>
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={backfillOpen} onOpenChange={setBackfillOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Feed rate for earlier days</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              This rate applies from the start date until your next rate{firstRateDate ? ` (${firstRateDate})` : ""}. Your existing rates are not changed.
+            </p>
+            <div className="space-y-1"><Label className="text-xs">Starts from</Label>
+              <Input type="date" value={form.date} max={firstRateDate || undefined} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1"><Label className="text-xs">Feed per day (kg)</Label>
+                <Input type="number" step="0.01" min="0" value={form.kg} onChange={(e) => setForm({ ...form, kg: e.target.value })} placeholder="e.g. 11.5" /></div>
+              <div className="space-y-1"><Label className="text-xs">Price per bag (₦)</Label>
+                <Input type="number" min="0" value={form.pricePerBag} onChange={(e) => setForm({ ...form, pricePerBag: e.target.value })} placeholder="e.g. 22000" /></div>
+            </div>
+            {Number(form.kg) > 0 && Number(form.pricePerBag) > 0 && (
+              <p className="text-xs text-muted-foreground">Cost per day: <b className="text-foreground">{money((Number(form.kg) / settings.bagSize) * Number(form.pricePerBag))}</b></p>
+            )}
+            <Button type="button" className="w-full" disabled={saving} onClick={async () => { const ok = await saveEntry(); if (ok) setBackfillOpen(false); }}>
+              {saving ? "Saving..." : "Save rate"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Daily economics chart */}
       <Card>
