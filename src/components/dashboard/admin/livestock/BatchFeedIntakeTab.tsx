@@ -313,7 +313,8 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
     "Net profit": Math.round(d.net),
   }));
 
-  const needsBackfill = prodRows.length > 0 && feedRows.length === 0 && !backfillDismissed;
+  const missingFeedDays = prodRows.filter((r: any) => !feedRows.some((f: any) => f.date === r.date)).length;
+  const needsBackfill = missingFeedDays > 0 && !backfillDismissed;
 
   const statusBadge = intelligence.status === "well_fed"
     ? { label: "Fed well", cls: "default" as const }
