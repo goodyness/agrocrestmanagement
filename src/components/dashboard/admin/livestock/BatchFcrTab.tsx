@@ -55,21 +55,35 @@ export default function BatchFcrTab({ batch, open, onOpenChange, onSaved }: Prop
 
   useEffect(() => { if (batchId) load(); }, [batchId]);
 
-  // Prefill feed consumed from logged consumption since the last FCR entry
+  // Prefill feed consumed from daily feed intake when available; otherwise
+  // fall back to logged consumption since the last FCR entry (never both, to avoid double counting)
   useEffect(() => {
     if (!dialogOpen || !batchId) return;
     const since = rows.length ? rows[rows.length - 1].record_date : batch?.date_acquired;
+    const gteDate = since || "1970-01-01";
     supabase
-      .from("feed_consumption")
-      .select("quantity_used, unit, date")
+      .from("batch_feed_intake" as any)
+      .select("kg_consumed, date")
       .eq("batch_id", batchId)
-      .gte("date", since || "1970-01-01")
+      .gte("date", gteDate)
       .then(({ data }) => {
-        const kg = (data || []).reduce((s: number, r: any) => {
-          const q = Number(r.quantity_used || 0);
-          return s + (r.unit === "g" ? q / 1000 : r.unit === "bag" ? q * 25 : q);
-        }, 0);
-        if (kg > 0) setF((p: any) => ({ ...p, feed_consumed_kg: p.feed_consumed_kg || kg.toFixed(2) }));
+        const intakeKg = (data || []).reduce((s: number, r: any) => s + Number(r.kg_consumed || 0), 0);
+        if (intakeKg > 0) {
+          setF((p: any) => ({ ...p, feed_consumed_kg: p.feed_consumed_kg || intakeKg.toFixed(2) }));
+        } else {
+          supabase
+            .from("feed_consumption")
+            .select("quantity_used, unit, date")
+            .eq("batch_id", batchId)
+            .gte("date", gteDate)
+            .then(({ data: fcData }) => {
+              const kg = (fcData || []).reduce((s: number, r: any) => {
+                const q = Number(r.quantity_used || 0);
+                return s + (r.unit === "g" ? q / 1000 : r.unit === "bag" ? q * 25 : q);
+              }, 0);
+              if (kg > 0) setF((p: any) => ({ ...p, feed_consumed_kg: p.feed_consumed_kg || kg.toFixed(2) }));
+            });
+        }
       });
   }, [dialogOpen, batchId]);
 

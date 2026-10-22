@@ -226,11 +226,10 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
       else if (change > 5) advice.push({ level: "good", text: `Egg output is trending up (+${Math.round(change)}% week over week).` });
     }
     if (totals.net < 0 && daily.length >= 7) {
-      advice.push({ level: "warn", text: `Net position is still negative (${money(totals.net)}). Egg revenue is covering ${totals.eggRevenue > 0 ? Math.round(((feedCost + otherExpC()) / totals.eggRevenue) * 100) : 0}% of running costs so far.` });
+      const costCovered = totals.eggRevenue > 0 ? Math.round(((totals.feedCost + totals.otherExp) / totals.eggRevenue) * 100) : 0;
+      advice.push({ level: "warn", text: `Net position is still negative (${money(totals.net)}). Egg revenue has covered ${costCovered}% of running costs so far — profit begins once costs are fully covered.` });
     }
     return { actual, expected, ratio, status, advice };
-
-    function otherExpC() { return totals.otherExp; }
   }, [daily, prodRows, batch?.age_weeks, totals]);
 
   // ---- Actions ----
