@@ -762,9 +762,14 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
         </TabsContent>
         <TabsContent value="analytics" className="space-y-3"><BatchAnalyticsCharts batchId={batch.id} /></TabsContent>
         {batchData.species === "chicken" && batchData.species_type === "layer" && (
-          <TabsContent value="eggs" className="space-y-3">
-            <BatchEggProductionTab batch={batchData} onBatchUpdated={refreshBatch} />
-          </TabsContent>
+          <>
+            <TabsContent value="eggs" className="space-y-3">
+              <BatchEggProductionTab batch={batchData} onBatchUpdated={refreshBatch} />
+            </TabsContent>
+            <TabsContent value="feedprofit" className="space-y-3">
+              <BatchFeedIntakeTab batch={batchData} />
+            </TabsContent>
+          </>
         )}
 
 
