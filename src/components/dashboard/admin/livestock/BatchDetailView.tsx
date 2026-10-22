@@ -196,10 +196,17 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const fetchAvailabilityEvents = async () => {
     const { data } = await supabase
       .from("batch_availability_events" as any)
-      .select("*, profiles:changed_by(name)")
+      .select("*")
       .eq("batch_id", batch.id)
       .order("created_at", { ascending: false });
-    setAvailabilityEvents((data as any[]) || []);
+    const rows = ((data as any[]) || []);
+    const ids = [...new Set(rows.map((r) => r.changed_by).filter(Boolean))];
+    let names: Record<string, string> = {};
+    if (ids.length) {
+      const { data: profs } = await supabase.from("profiles").select("id, user_id, name").or(`id.in.(${ids.join(",")}),user_id.in.(${ids.join(",")})`);
+      (profs || []).forEach((p: any) => { names[p.id] = p.name; if (p.user_id) names[p.user_id] = p.name; });
+    }
+    setAvailabilityEvents(rows.map((r) => ({ ...r, profiles: r.changed_by ? { name: names[r.changed_by] } : null })));
   };
 
   useEffect(() => {

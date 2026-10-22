@@ -8,6 +8,13 @@
       "when": 1792660863384,
       "tag": "0000_create_batch_feed_intake",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792662342769,
+      "tag": "0001_fix_batch_financials_ambiguity",
+      "breakpoints": true
     }
   ]
 }

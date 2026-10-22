@@ -64,6 +64,11 @@ const ActivityTimeline = ({ careLogs, mortalityRecords, expenses, availabilityEv
   }, [careLogs, mortalityRecords, expenses, availabilityEvents]);
 
   const filtered = filter === "all" ? events : events.filter(e => e.type === filter);
+  const PAGE = 15;
+  const [page, setPage] = useState(1);
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE));
+  const cur = Math.min(page, pages);
+  const visible = filtered.slice((cur - 1) * PAGE, cur * PAGE);
 
   return (
     <div className="space-y-3">
@@ -71,7 +76,7 @@ const ActivityTimeline = ({ careLogs, mortalityRecords, expenses, availabilityEv
         <ListFilter className="h-4 w-4 text-muted-foreground" />
         {(["all", "care", "mortality", "expense", "availability"] as Filter[]).map(f => (
           <Button key={f} size="sm" variant={filter === f ? "default" : "outline"}
-            onClick={() => setFilter(f)} className="capitalize h-7 px-3 text-xs">
+            onClick={() => { setFilter(f); setPage(1); }} className="capitalize h-7 px-3 text-xs">
             {f}
           </Button>
         ))}
@@ -81,8 +86,9 @@ const ActivityTimeline = ({ careLogs, mortalityRecords, expenses, availabilityEv
       {filtered.length === 0 ? (
         <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">No activity to display.</CardContent></Card>
       ) : (
+        <>
         <div className="relative border-l-2 border-primary/20 ml-3 space-y-3 pl-4">
-          {filtered.map(ev => {
+          {visible.map(ev => {
             const Icon = ICONS[ev.type];
             return (
               <div key={ev.id} className="relative">
@@ -107,6 +113,19 @@ const ActivityTimeline = ({ careLogs, mortalityRecords, expenses, availabilityEv
             );
           })}
         </div>
+        {pages > 1 && (
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <span className="text-xs text-muted-foreground">
+              Showing {(cur - 1) * PAGE + 1}–{Math.min(cur * PAGE, filtered.length)} of {filtered.length}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="outline" className="h-7 text-xs" disabled={cur <= 1} onClick={() => setPage(cur - 1)}>Previous</Button>
+              <span className="text-xs px-2">Page {cur} of {pages}</span>
+              <Button size="sm" variant="outline" className="h-7 text-xs" disabled={cur >= pages} onClick={() => setPage(cur + 1)}>Next</Button>
+            </div>
+          </div>
+        )}
+        </>
       )}
     </div>
   );
