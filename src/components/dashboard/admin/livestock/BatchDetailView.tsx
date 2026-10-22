@@ -252,6 +252,12 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
   const [fcrDue, setFcrDue] = useState(false);
   const [fcrLastDate, setFcrLastDate] = useState<string | null>(null);
   const checkFcrDue = async () => {
+    // FCR is calculated automatically when a daily feed rate exists — no manual check needed
+    const { count: rateCount } = await supabase
+      .from("batch_feed_intake")
+      .select("id", { count: "exact", head: true })
+      .eq("batch_id", batch.id);
+    if ((rateCount || 0) > 0) { setFcrDue(false); return; }
     const { data } = await supabase
       .from("batch_fcr_records" as any)
       .select("record_date")
