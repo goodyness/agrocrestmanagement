@@ -65,9 +65,20 @@ export default function BatchFcrTab({ batch, open, onOpenChange, onSaved }: Prop
       .from("batch_feed_intake" as any)
       .select("kg_consumed, date")
       .eq("batch_id", batchId)
-      .gte("date", gteDate)
+      .order("date", { ascending: true })
       .then(({ data }) => {
-        const intakeKg = (data || []).reduce((s: number, r: any) => s + Number(r.kg_consumed || 0), 0);
+        // Each entry is a daily rate applying from its date until the next one
+        const rates = (data || []) as any[];
+        const end = new Date().toISOString().slice(0, 10);
+        let intakeKg = 0;
+        rates.forEach((r, i) => {
+          const from = r.date > gteDate ? r.date : gteDate;
+          const nextStart = rates[i + 1]?.date;
+          const to = nextStart ? new Date(new Date(nextStart + "T00:00:00Z").getTime() - 86400000).toISOString().slice(0, 10) : end;
+          if (to < from) return;
+          const days = Math.round((new Date(to + "T00:00:00Z").getTime() - new Date(from + "T00:00:00Z").getTime()) / 86400000) + 1;
+          intakeKg += days * Number(r.kg_consumed || 0);
+        });
         if (intakeKg > 0) {
           setF((p: any) => ({ ...p, feed_consumed_kg: p.feed_consumed_kg || intakeKg.toFixed(2) }));
         } else {
