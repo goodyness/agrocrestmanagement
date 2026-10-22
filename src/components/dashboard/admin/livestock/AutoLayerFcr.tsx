@@ -59,7 +59,7 @@ export default function AutoLayerFcr({ batch, onHasData }: { batch: any; onHasDa
     <Card className="border-primary/30">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center gap-2 flex-wrap">
-          <Sparkles className="h-4 w-4 text-primary" /> Automatic FCR (layers)
+          <Sparkles className="h-4 w-4 text-primary" /> Feed Conversion Trend
           <Badge variant="outline" className="text-[10px]">Updates itself from your Feed &amp; Profit rate + egg records</Badge>
         </CardTitle>
       </CardHeader>
