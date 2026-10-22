@@ -28,6 +28,7 @@ import BatchSalesTab from "./BatchSalesTab";
 import BatchFcrTab from "./BatchFcrTab";
 import BatchProjectionCard from "./BatchProjectionCard";
 import BatchAnalyticsCharts from "./BatchAnalyticsCharts";
+import BatchFeedIntakeTab from "./BatchFeedIntakeTab";
 import BatchEggProductionTab from "./BatchEggProductionTab";
 import AdjustBirdCountDialog from "./AdjustBirdCountDialog";
 import BatchClosureWizard from "./BatchClosureWizard";
@@ -743,7 +744,10 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           <TabsTrigger value="sales" className="text-xs">💵 Sales</TabsTrigger>
           <TabsTrigger value="fcr" className="text-xs">⚖️ FCR & Feeding</TabsTrigger>
           {batchData.species === "chicken" && batchData.species_type === "layer" && (
-            <TabsTrigger value="eggs" className="text-xs">🥚 Egg Production</TabsTrigger>
+            <>
+              <TabsTrigger value="eggs" className="text-xs">🥚 Egg Production</TabsTrigger>
+              <TabsTrigger value="feedprofit" className="text-xs">🌾 Feed & Profit</TabsTrigger>
+            </>
           )}
           <TabsTrigger value="analytics" className="text-xs">📊 Analytics</TabsTrigger>
           <TabsTrigger value="timeline" className="text-xs">🕘 Timeline</TabsTrigger>
