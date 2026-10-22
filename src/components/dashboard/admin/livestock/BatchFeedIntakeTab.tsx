@@ -269,7 +269,7 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
     // A rate is keyed by its start date; earlier rates are never modified.
     const { error } = await supabase.from("batch_feed_intake").upsert(payload, { onConflict: "batch_id,date" });
     setSaving(false);
-    if (error) { toast.error(error.message);
+    if (error) { toast.error(error.message); return false; }
     toast.success(`Feed rate saved — applies from ${form.date} until changed`);
     setForm({ date: today(), kg: "", pricePerBag: String(price), notes: "" });
     setSettings((s) => ({ ...s, pricePerBag: price }));
@@ -335,7 +335,7 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
       </div>
 
       {/* Feed rate */}
-      <Card>
+      <Card id="feed-rate-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2 flex-wrap">
             <Wheat className="h-4 w-4 text-primary" /> Daily Feed Rate
@@ -667,7 +667,7 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="Change rate from today" onClick={() => {
                               setForm({ date: today(), kg: String(r.kg_consumed), pricePerBag: String(r.price_per_bag), notes: "" });
-                              window.scrollTo({ top: 0, behavior: "smooth" });
+                              document.getElementById("feed-rate-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
                               toast.info("Adjust the values — the new rate starts from the date you pick; earlier days stay unchanged.");
                             }}><Pencil className="h-3 w-3" /></Button>
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => { if (confirm("Remove this rate? Days it covered will use the previous rate.")) deleteEntry(r.id); }}><Trash2 className="h-3 w-3" /></Button>
