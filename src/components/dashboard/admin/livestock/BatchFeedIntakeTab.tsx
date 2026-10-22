@@ -250,9 +250,9 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
   const saveEntry = async () => {
     const kg = parseFloat(form.kg);
     const price = parseFloat(form.pricePerBag);
-    if (!form.date) return toast.error("Pick the start date for this rate");
-    if (!kg || kg <= 0) return toast.error("Enter the kg of feed the flock eats per day");
-    if (!price || price <= 0) return toast.error("Enter the price per bag — it is used to compute feed cost");
+    if (!form.date) { toast.error("Pick the start date for this rate"); return false; }
+    if (!kg || kg <= 0) { toast.error("Enter the kg of feed the flock eats per day"); return false; }
+    if (!price || price <= 0) { toast.error("Enter the price per bag — it is used to compute feed cost"); return false; }
     setSaving(true);
     const { data: { user: u } } = await supabase.auth.getUser();
     const payload: any = {
@@ -269,11 +269,12 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
     // A rate is keyed by its start date; earlier rates are never modified.
     const { error } = await supabase.from("batch_feed_intake").upsert(payload, { onConflict: "batch_id,date" });
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return false; }
     toast.success(`Feed rate saved — applies from ${form.date} until changed`);
     setForm({ date: today(), kg: "", pricePerBag: String(price), notes: "" });
     setSettings((s) => ({ ...s, pricePerBag: price }));
     load();
+    return true;
   };
 
   const deleteEntry = async (id: string) => {
@@ -307,18 +308,34 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
 
   return (
     <div className="space-y-3">
+      {/* All-time profit banner */}
+      <Card className={totals.net >= 0 ? "border-primary/40 bg-primary/5" : "border-destructive/40 bg-destructive/5"}>
+        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1"><TrendingUp className="h-3.5 w-3.5" /> All-time profit (eggs − feed − other batch expenses)</p>
+            <p className={`text-3xl font-bold ${totals.net >= 0 ? "text-primary" : "text-destructive"}`}>{money(totals.net)}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {daily.length ? `${daily[0].date} → ${daily[daily.length - 1].date} · ${daily.length} day(s) tracked` : "No production or feed rate recorded yet"}
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div><p className="text-sm font-bold">{money(totals.eggRevenue)}</p><p className="text-[10px] text-muted-foreground">Egg revenue</p></div>
+            <div><p className="text-sm font-bold text-destructive">{money(totals.feedCost)}</p><p className="text-[10px] text-muted-foreground">Feed cost</p></div>
+            <div><p className="text-sm font-bold text-destructive">{money(totals.otherExp)}</p><p className="text-[10px] text-muted-foreground">Other expenses</p></div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
-        <Stat label="All-time profit" value={money(totals.net)} accent={totals.net >= 0 ? "text-primary" : "text-destructive"} sub={`${daily.length} day(s) tracked`} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Stat label="Profit today" value={money(todayRow?.net || 0)} accent={(todayRow?.net || 0) >= 0 ? "text-primary" : "text-destructive"} />
-        <Stat label="Avg profit / day" value={money(totals.profitPerDay)} sub={`wk ${money(totals.profitPerWeek)} · mo ${money(totals.profitPerMonth)}`} />
-        <Stat label="Egg revenue (all time)" value={money(totals.eggRevenue)} />
-        <Stat label="Feed cost (all time)" value={money(totals.feedCost)} />
-        <Stat label="Other batch expenses" value={money(totals.otherExp)} sub="excludes Feed type" />
+        <Stat label="Avg profit / day" value={money(totals.profitPerDay)} />
+        <Stat label="Avg profit / week" value={money(totals.profitPerWeek)} />
+        <Stat label="Avg profit / month" value={money(totals.profitPerMonth)} />
       </div>
 
       {/* Feed rate */}
-      <Card>
+      <Card id="feed-rate-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2 flex-wrap">
             <Wheat className="h-4 w-4 text-primary" /> Daily Feed Rate
@@ -354,12 +371,41 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
           <CardContent className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <p className="text-xs"><b>Cover earlier production days?</b> Egg records start on {firstProdDate}, but the feed rate starts {firstRateDate ? `on ${firstRateDate}` : "nowhere yet"}. Set the rate you used from {firstProdDate} once, so all-time profit is complete.</p>
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => { setForm((f) => ({ ...f, date: firstProdDate!, kg: f.kg || (currentRate ? String(currentRate.kg_consumed) : "") })); window.scrollTo({ top: 0, behavior: "smooth" }); }}><History className="h-4 w-4 mr-1" /> Set rate from {firstProdDate}</Button>
-              <Button size="sm" variant="ghost" onClick={() => { setBackfillDismissed(true); localStorage.setItem(`fi_backfill_dismissed_${batchId}`, "1"); }}>Later</Button>
+              <Button type="button" size="sm" onClick={(e) => {
+                e.preventDefault();
+                setForm((f) => ({ ...f, date: firstProdDate!, kg: currentRate ? String(currentRate.kg_consumed) : f.kg, pricePerBag: currentRate ? String(currentRate.price_per_bag) : f.pricePerBag, notes: "Rate for earlier production days" }));
+                setBackfillOpen(true);
+              }}><History className="h-4 w-4 mr-1" /> Set rate from {firstProdDate}</Button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => { setBackfillDismissed(true); localStorage.setItem(`fi_backfill_dismissed_${batchId}`, "1"); }}>Later</Button>
             </div>
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={backfillOpen} onOpenChange={setBackfillOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Feed rate for earlier days</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              This rate applies from the start date until your next rate{firstRateDate ? ` (${firstRateDate})` : ""}. Your existing rates are not changed.
+            </p>
+            <div className="space-y-1"><Label className="text-xs">Starts from</Label>
+              <Input type="date" value={form.date} max={firstRateDate || undefined} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1"><Label className="text-xs">Feed per day (kg)</Label>
+                <Input type="number" step="0.01" min="0" value={form.kg} onChange={(e) => setForm({ ...form, kg: e.target.value })} placeholder="e.g. 11.5" /></div>
+              <div className="space-y-1"><Label className="text-xs">Price per bag (₦)</Label>
+                <Input type="number" min="0" value={form.pricePerBag} onChange={(e) => setForm({ ...form, pricePerBag: e.target.value })} placeholder="e.g. 22000" /></div>
+            </div>
+            {Number(form.kg) > 0 && Number(form.pricePerBag) > 0 && (
+              <p className="text-xs text-muted-foreground">Cost per day: <b className="text-foreground">{money((Number(form.kg) / settings.bagSize) * Number(form.pricePerBag))}</b></p>
+            )}
+            <Button type="button" className="w-full" disabled={saving} onClick={async () => { const ok = await saveEntry(); if (ok) setBackfillOpen(false); }}>
+              {saving ? "Saving..." : "Save rate"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Daily economics chart */}
       <Card>
@@ -621,7 +667,7 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="Change rate from today" onClick={() => {
                               setForm({ date: today(), kg: String(r.kg_consumed), pricePerBag: String(r.price_per_bag), notes: "" });
-                              window.scrollTo({ top: 0, behavior: "smooth" });
+                              document.getElementById("feed-rate-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
                               toast.info("Adjust the values — the new rate starts from the date you pick; earlier days stay unchanged.");
                             }}><Pencil className="h-3 w-3" /></Button>
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => { if (confirm("Remove this rate? Days it covered will use the previous rate.")) deleteEntry(r.id); }}><Trash2 className="h-3 w-3" /></Button>
