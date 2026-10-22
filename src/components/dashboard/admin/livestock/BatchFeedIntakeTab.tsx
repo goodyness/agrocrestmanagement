@@ -38,6 +38,12 @@ function expectedLayerFeedG(ageWeeks: number): number {
   return 110;
 }
 
+const today = () => new Date().toISOString().slice(0, 10);
+const addDays = (d: string, n: number) => {
+  const dt = new Date(d + "T00:00:00Z");
+  dt.setUTCDate(dt.getUTCDate() + n);
+  return dt.toISOString().slice(0, 10);
+};
 const mondayOf = (d: string) => {
   const dt = new Date(d + "T00:00:00");
   const day = (dt.getDay() + 6) % 7;
@@ -90,10 +96,8 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
   };
   useEffect(() => { load(); }, [batchId]);
 
-  const isFeedExpense = (r: any) => {
-    const t = `${r.expense_type || ""} ${r.description || ""}`.toLowerCase();
-    return t.includes("feed");
-  };
+  // Only batch expenses whose TYPE is Feed are excluded (feed cost comes from the daily rate)
+  const isFeedExpense = (r: any) => String(r.expense_type || "").trim().toLowerCase().includes("feed");
   const nonFeedExpenses = useMemo(() => expenseRows.filter((r) => !isFeedExpense(r)), [expenseRows]);
   const expenseByDate = useMemo(() => {
     const m: Record<string, number> = {};
@@ -102,7 +106,6 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
   }, [nonFeedExpenses]);
 
   const eggPriceByDate = useMemo(() => {
-    // Last known crate price up to each date (price changes only affect later days)
     const priceEvents = prodRows
       .filter((r: any) => Number(r.price_per_crate || 0) > 0)
       .sort((a: any, b: any) => a.date.localeCompare(b.date));
@@ -113,28 +116,39 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
     };
   }, [prodRows]);
 
-  // Per-day economics for every date that has either feed or eggs
+  // Feed rates sorted oldest → newest; each applies from its date until the next one
+  const ratesAsc = useMemo(() => [...feedRows].sort((a: any, b: any) => a.date.localeCompare(b.date)), [feedRows]);
+  const rateFor = (d: string) => {
+    let r: any = null;
+    for (const x of ratesAsc) { if (x.date <= d) r = x; else break; }
+    return r;
+  };
+
+  // Per-day economics: every production date + every calendar day covered by a feed rate (up to today)
   const daily = useMemo(() => {
-    const dates = new Set<string>([...feedRows.map((r: any) => r.date), ...prodRows.map((r: any) => r.date)]);
-    const sorted = [...dates].sort((a, b) => a.localeCompare(b));
+    const dates = new Set<string>(prodRows.map((r: any) => r.date));
+    Object.keys(expenseByDate).forEach((d) => { if (ratesAsc.length && d >= ratesAsc[0].date) dates.add(d); });
+    if (ratesAsc.length) {
+      const end = today();
+      for (let d = ratesAsc[0].date; d <= end; d = addDays(d, 1)) dates.add(d);
+    }
+    const sorted = [...dates].filter((d) => d <= today()).sort((a, b) => a.localeCompare(b));
     return sorted.map((d) => {
-      const feed = feedRows.find((r: any) => r.date === d);
+      const rate = rateFor(d);
       const prod = prodRows.find((r: any) => r.date === d);
       const eggs = prod ? Number(prod.crates) * PIECES_PER_CRATE + Number(prod.pieces) : 0;
       const cratePrice = prod?.price_per_crate != null ? Number(prod.price_per_crate) : eggPriceByDate(d);
-      const eggRevenue = prod?.egg_value != null
-        ? Number(prod.egg_value)
-        : eggs * (cratePrice / PIECES_PER_CRATE);
-      const feedCost = feed ? Number(feed.feed_cost || 0) : 0;
+      const eggRevenue = prod?.egg_value != null ? Number(prod.egg_value) : eggs * (cratePrice / PIECES_PER_CRATE);
+      const feedKg = rate ? Number(rate.kg_consumed || 0) : 0;
+      const feedCost = rate ? (feedKg / Number(rate.bag_size_kg || 25)) * Number(rate.price_per_bag || 0) : 0;
       const otherExp = expenseByDate[d] || 0;
       const net = eggRevenue - feedCost - otherExp;
       return {
-        date: d, eggs, cratePrice, eggRevenue, feedCost, otherExp, net,
-        feedKg: feed ? Number(feed.kg_consumed || 0) : 0,
-        gPerBird: feed && birds > 0 ? (Number(feed.kg_consumed || 0) * 1000) / birds : 0,
+        date: d, eggs, cratePrice, eggRevenue, feedCost, otherExp, net, feedKg,
+        gPerBird: feedKg && birds > 0 ? (feedKg * 1000) / birds : 0,
       };
     });
-  }, [feedRows, prodRows, expenseByDate, eggPriceByDate, birds]);
+  }, [ratesAsc, prodRows, expenseByDate, eggPriceByDate, birds]);
 
   const weekly = useMemo(() => {
     const m: Record<string, any> = {};
@@ -235,8 +249,9 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
   // ---- Actions ----
   const saveEntry = async () => {
     const kg = parseFloat(form.kg);
-    const price = parseFloat(form.pricePerBag || String(settings.pricePerBag));
-    if (!kg || kg <= 0) return toast.error("Enter the kg of feed consumed");
+    const price = parseFloat(form.pricePerBag);
+    if (!form.date) return toast.error("Pick the start date for this rate");
+    if (!kg || kg <= 0) return toast.error("Enter the kg of feed the flock eats per day");
     if (!price || price <= 0) return toast.error("Enter the price per bag — it is used to compute feed cost");
     setSaving(true);
     const { data: { user: u } } = await supabase.auth.getUser();
@@ -251,16 +266,12 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
       notes: form.notes?.slice(0, 500) || null,
       recorded_by: u?.id || null,
     };
-    const q = supabase.from("batch_feed_intake");
-    const { error } = editingId
-      ? await q.update(payload).eq("id", editingId)
-      : await q.upsert(payload, { onConflict: "batch_id,date" });
+    // A rate is keyed by its start date; earlier rates are never modified.
+    const { error } = await supabase.from("batch_feed_intake").upsert(payload, { onConflict: "batch_id,date" });
     setSaving(false);
     if (error) return toast.error(error.message);
-    localStorage.setItem(`fi_bag_${batchId}`, String(price));
-    toast.success(editingId ? "Feed entry updated" : "Feed intake recorded");
-    setEditingId(null);
-    setForm({ date: new Date().toISOString().slice(0, 10), kg: "", pricePerBag: String(price), notes: "" });
+    toast.success(`Feed rate saved — applies from ${form.date} until changed`);
+    setForm({ date: today(), kg: "", pricePerBag: String(price), notes: "" });
     setSettings((s) => ({ ...s, pricePerBag: price }));
     load();
   };
@@ -268,40 +279,7 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
   const deleteEntry = async (id: string) => {
     const { error } = await supabase.from("batch_feed_intake").delete().eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Entry removed");
-    load();
-  };
-
-  const runBackfill = async () => {
-    const missing = prodRows.filter((r: any) => !feedRows.some((f: any) => f.date === r.date));
-    if (!missing.length) return toast.error("All production dates already have feed entries");
-    let kgPerDay = parseFloat(backfill.kgPerDay) || 0;
-    if (backfill.mode === "total") {
-      const totalKg = parseFloat(backfill.totalKg) || 0;
-      if (!totalKg) return toast.error("Enter the total kg consumed over the period");
-      kgPerDay = totalKg / missing.length;
-    }
-    if (!kgPerDay) return toast.error("Enter the average kg consumed per day");
-    setSaving(true);
-    const { data: { user: u } } = await supabase.auth.getUser();
-    const payload = missing.map((r: any) => ({
-      batch_id: batchId,
-      branch_id: batch?.branch_id || null,
-      date: r.date,
-      kg_consumed: Number(kgPerDay.toFixed(2)),
-      bag_size_kg: settings.bagSize,
-      price_per_bag: Number(backfill.kgPerDay ? settings.pricePerBag : settings.pricePerBag) || 0,
-      birds_at_record: birds || null,
-      notes: "Backfill estimate for existing production records",
-      recorded_by: u?.id || null,
-    }));
-    const { error } = await supabase.from("batch_feed_intake").upsert(payload, { onConflict: "batch_id,date" });
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success(`Feed intake filled for ${missing.length} day(s)`);
-    setBackfillOpen(false);
-    setBackfillDismissed(true);
-    localStorage.setItem(`fi_backfill_dismissed_${batchId}`, "1");
+    toast.success("Rate removed");
     load();
   };
 
@@ -313,8 +291,11 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
     "Net profit": Math.round(d.net),
   }));
 
-  const missingFeedDays = prodRows.filter((r: any) => !feedRows.some((f: any) => f.date === r.date)).length;
-  const needsBackfill = missingFeedDays > 0 && !backfillDismissed;
+  const currentRate = feedRows[0] || null;
+  const todayRow = daily.find((d) => d.date === today());
+  const firstProdDate: string | null = prodRows[0]?.date || null;
+  const firstRateDate: string | null = feedRows.length ? feedRows[feedRows.length - 1].date : null;
+  const needsBackfill = !!firstProdDate && (!firstRateDate || firstRateDate > firstProdDate) && !backfillDismissed && feedRows.length > 0;
 
   const statusBadge = intelligence.status === "well_fed"
     ? { label: "Fed well", cls: "default" as const }
@@ -327,66 +308,53 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
   return (
     <div className="space-y-3">
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+        <Stat label="All-time profit" value={money(totals.net)} accent={totals.net >= 0 ? "text-primary" : "text-destructive"} sub={`${daily.length} day(s) tracked`} />
+        <Stat label="Profit today" value={money(todayRow?.net || 0)} accent={(todayRow?.net || 0) >= 0 ? "text-primary" : "text-destructive"} />
+        <Stat label="Avg profit / day" value={money(totals.profitPerDay)} sub={`wk ${money(totals.profitPerWeek)} · mo ${money(totals.profitPerMonth)}`} />
         <Stat label="Egg revenue (all time)" value={money(totals.eggRevenue)} />
         <Stat label="Feed cost (all time)" value={money(totals.feedCost)} />
-        <Stat label="Other expenses" value={money(totals.otherExp)} />
-        <Stat label="Net profit" value={money(totals.net)} accent={totals.net >= 0 ? "text-primary" : "text-destructive"} />
-        <Stat label="Avg / day" value={money(totals.profitPerDay)} sub={`wk ${money(totals.profitPerWeek)} · mo ${money(totals.profitPerMonth)}`} />
+        <Stat label="Other batch expenses" value={money(totals.otherExp)} sub="excludes Feed type" />
       </div>
 
-      {/* Daily entry + settings */}
+      {/* Feed rate */}
       <Card>
-        <CardHeader className="pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Wheat className="h-4 w-4 text-primary" /> Daily Feed Intake
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2 flex-wrap">
+            <Wheat className="h-4 w-4 text-primary" /> Daily Feed Rate
             <Badge variant="outline" className="text-[10px]">{settings.bagSize}kg = 1 bag</Badge>
+            {currentRate && <Badge className="text-[10px]">Current: {Number(currentRate.kg_consumed)}kg/day · {money(currentRate.price_per_bag)}/bag since {currentRate.date}</Badge>}
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <Label className="text-xs whitespace-nowrap">Price / bag (₦)</Label>
-            <Input
-              type="number" min="0" className="w-28 h-7 text-xs"
-              value={settings.pricePerBag || ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                setSettings((s) => ({ ...s, pricePerBag: Number(v) }));
-                setForm((f) => ({ ...f, pricePerBag: v }));
-              }}
-              placeholder="e.g. 22000"
-            />
-          </div>
+          <p className="text-xs text-muted-foreground">Set it once — it applies to every day automatically until you set a new rate. A new rate only affects days from its start date onward.</p>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <div className="space-y-1"><Label className="text-xs">Date</Label>
+            <div className="space-y-1"><Label className="text-xs">Starts from</Label>
               <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
-            <div className="space-y-1"><Label className="text-xs">Feed consumed (kg)</Label>
+            <div className="space-y-1"><Label className="text-xs">Feed per day (kg)</Label>
               <Input type="number" step="0.01" min="0" value={form.kg} onChange={(e) => setForm({ ...form, kg: e.target.value })} placeholder="e.g. 11.5" /></div>
-            <div className="space-y-1"><Label className="text-xs">Price / bag that day (₦)</Label>
-              <Input type="number" min="0" value={form.pricePerBag} onChange={(e) => setForm({ ...form, pricePerBag: e.target.value })} /></div>
+            <div className="space-y-1"><Label className="text-xs">Price per bag (₦)</Label>
+              <Input type="number" min="0" value={form.pricePerBag} onChange={(e) => setForm({ ...form, pricePerBag: e.target.value })} placeholder="e.g. 22000" /></div>
             <div className="space-y-1"><Label className="text-xs">Notes (optional)</Label>
-              <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Feed brand, observation..." /></div>
+              <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Feed brand, reason for change..." /></div>
           </div>
           {Number(form.kg) > 0 && Number(form.pricePerBag) > 0 && (
             <p className="text-xs text-muted-foreground">
-              Cost: {(Number(form.kg) / settings.bagSize).toFixed(2)} bag(s) × {money(Number(form.pricePerBag))} = <b className="text-foreground">{money((Number(form.kg) / settings.bagSize) * Number(form.pricePerBag))}</b>
+              Cost per day: {(Number(form.kg) / settings.bagSize).toFixed(2)} bag(s) × {money(Number(form.pricePerBag))} = <b className="text-foreground">{money((Number(form.kg) / settings.bagSize) * Number(form.pricePerBag))}</b>
               {birds > 0 && <> · {Math.round((Number(form.kg) * 1000) / birds)} g/bird/day</>}
             </p>
           )}
-          <div className="flex gap-2">
-            <Button size="sm" onClick={saveEntry} disabled={saving}>{editingId ? "Update entry" : "Save entry"}</Button>
-            {editingId && <Button size="sm" variant="ghost" onClick={() => { setEditingId(null); setForm({ date: new Date().toISOString().slice(0, 10), kg: "", pricePerBag: String(settings.pricePerBag || ""), notes: "" }); }}>Cancel edit</Button>}
-          </div>
+          <Button size="sm" onClick={saveEntry} disabled={saving}>{currentRate ? "Save new rate" : "Set feed rate"}</Button>
         </CardContent>
       </Card>
 
-      {/* One-time backfill */}
+      {/* Start-date gap prompt */}
       {needsBackfill && (
         <Card className="border-amber-500/40 bg-amber-500/5">
           <CardContent className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <p className="text-xs"><b>Backfill past records?</b> This batch has {prodRows.length} egg production day(s) with no feed intake entries. Add them once so the profit-per-day history is complete.</p>
+            <p className="text-xs"><b>Cover earlier production days?</b> Egg records start on {firstProdDate}, but the feed rate starts {firstRateDate ? `on ${firstRateDate}` : "nowhere yet"}. Set the rate you used from {firstProdDate} once, so all-time profit is complete.</p>
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => setBackfillOpen(true)}><History className="h-4 w-4 mr-1" /> Fill past records</Button>
+              <Button size="sm" onClick={() => { setForm((f) => ({ ...f, date: firstProdDate!, kg: f.kg || (currentRate ? String(currentRate.kg_consumed) : "") })); window.scrollTo({ top: 0, behavior: "smooth" }); }}><History className="h-4 w-4 mr-1" /> Set rate from {firstProdDate}</Button>
               <Button size="sm" variant="ghost" onClick={() => { setBackfillDismissed(true); localStorage.setItem(`fi_backfill_dismissed_${batchId}`, "1"); }}>Later</Button>
             </div>
           </CardContent>
@@ -616,85 +584,58 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
         </CardContent>
       </Card>
 
-      {/* Entries log */}
+      {/* Rate history */}
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Feed Intake Entries</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><History className="h-4 w-4" /> Feed Rate History</CardTitle></CardHeader>
         <CardContent>
+          <p className="text-[10px] text-muted-foreground mb-2">Each rate applies every day from its start date until the next rate begins. Changing the rate never rewrites earlier days.</p>
           {feedRows.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-4">No feed entries yet</p>
+            <p className="text-xs text-muted-foreground text-center py-4">No feed rate set yet</p>
           ) : (
             <div className="overflow-x-auto max-h-72 overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Date</TableHead>
-                    <TableHead className="text-xs">Kg</TableHead>
+                    <TableHead className="text-xs">Effective from</TableHead>
+                    <TableHead className="text-xs">Until</TableHead>
+                    <TableHead className="text-xs">Kg / day</TableHead>
                     <TableHead className="text-xs">₦/bag</TableHead>
-                    <TableHead className="text-xs">Cost</TableHead>
+                    <TableHead className="text-xs">Cost / day</TableHead>
                     <TableHead className="text-xs">Notes</TableHead>
                     <TableHead className="text-xs"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {feedRows.map((r: any) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="text-xs">{r.date}</TableCell>
-                      <TableCell className="text-xs">{Number(r.kg_consumed).toFixed(2)}</TableCell>
-                      <TableCell className="text-xs">{money(r.price_per_bag)}</TableCell>
-                      <TableCell className="text-xs font-medium">{money(r.feed_cost)}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-40 truncate">{r.notes || "—"}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => {
-                            setEditingId(r.id);
-                            setForm({ date: r.date, kg: String(r.kg_consumed), pricePerBag: String(r.price_per_bag), notes: r.notes || "" });
-                          }}><Pencil className="h-3 w-3" /></Button>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => deleteEntry(r.id)}><Trash2 className="h-3 w-3" /></Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {feedRows.map((r: any, i: number) => {
+                    const next = i > 0 ? feedRows[i - 1] : null; // feedRows is newest first
+                    const until = next ? addDays(next.date, -1) : null;
+                    return (
+                      <TableRow key={r.id}>
+                        <TableCell className="text-xs font-medium">{r.date}</TableCell>
+                        <TableCell className="text-xs">{until ? until : <Badge variant="default" className="text-[10px]">Current</Badge>}</TableCell>
+                        <TableCell className="text-xs">{Number(r.kg_consumed).toFixed(2)}</TableCell>
+                        <TableCell className="text-xs">{money(r.price_per_bag)}</TableCell>
+                        <TableCell className="text-xs font-medium">{money(r.feed_cost)}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-40 truncate">{r.notes || "—"}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="Change rate from today" onClick={() => {
+                              setForm({ date: today(), kg: String(r.kg_consumed), pricePerBag: String(r.price_per_bag), notes: "" });
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                              toast.info("Adjust the values — the new rate starts from the date you pick; earlier days stay unchanged.");
+                            }}><Pencil className="h-3 w-3" /></Button>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => { if (confirm("Remove this rate? Days it covered will use the previous rate.")) deleteEntry(r.id); }}><Trash2 className="h-3 w-3" /></Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Backfill dialog */}
-      <Dialog open={backfillOpen} onOpenChange={setBackfillOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Backfill feed intake for past production days</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">
-              {prodRows.filter((r: any) => !feedRows.some((f: any) => f.date === r.date)).length} production day(s) have no feed entry. This is a one-time estimate — you can edit any day later.
-            </p>
-            <div className="space-y-1">
-              <Label className="text-xs">Mode</Label>
-              <div className="flex gap-2">
-                <Button size="sm" variant={backfill.mode === "avg" ? "default" : "outline"} onClick={() => setBackfill({ ...backfill, mode: "avg" })}>Average kg/day</Button>
-                <Button size="sm" variant={backfill.mode === "total" ? "default" : "outline"} onClick={() => setBackfill({ ...backfill, mode: "total" })}>Total kg over period</Button>
-              </div>
-            </div>
-            {backfill.mode === "avg" ? (
-              <div className="space-y-1">
-                <Label className="text-xs">Average feed consumed per day (kg)</Label>
-                <Input type="number" step="0.01" min="0" value={backfill.kgPerDay} onChange={(e) => setBackfill({ ...backfill, kgPerDay: e.target.value })} placeholder="e.g. 11.5" />
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <Label className="text-xs">Total kg consumed over the whole period</Label>
-                <Input type="number" step="0.01" min="0" value={backfill.totalKg} onChange={(e) => setBackfill({ ...backfill, totalKg: e.target.value })} placeholder="e.g. 345" />
-              </div>
-            )}
-            <div className="space-y-1">
-              <Label className="text-xs">Price per bag used for that period (₦)</Label>
-              <Input type="number" min="0" value={settings.pricePerBag || ""} onChange={(e) => setSettings((s) => ({ ...s, pricePerBag: Number(e.target.value) }))} />
-            </div>
-            <Button className="w-full" onClick={runBackfill} disabled={saving}>{saving ? "Saving..." : "Fill past records"}</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
