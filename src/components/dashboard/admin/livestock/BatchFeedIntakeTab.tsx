@@ -250,9 +250,9 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
   const saveEntry = async () => {
     const kg = parseFloat(form.kg);
     const price = parseFloat(form.pricePerBag);
-    if (!form.date) return toast.error("Pick the start date for this rate");
-    if (!kg || kg <= 0) return toast.error("Enter the kg of feed the flock eats per day");
-    if (!price || price <= 0) return toast.error("Enter the price per bag — it is used to compute feed cost");
+    if (!form.date) { toast.error("Pick the start date for this rate"); return false; }
+    if (!kg || kg <= 0) { toast.error("Enter the kg of feed the flock eats per day"); return false; }
+    if (!price || price <= 0) { toast.error("Enter the price per bag — it is used to compute feed cost"); return false; }
     setSaving(true);
     const { data: { user: u } } = await supabase.auth.getUser();
     const payload: any = {
@@ -269,11 +269,12 @@ export default function BatchFeedIntakeTab({ batch, user }: Props) {
     // A rate is keyed by its start date; earlier rates are never modified.
     const { error } = await supabase.from("batch_feed_intake").upsert(payload, { onConflict: "batch_id,date" });
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message);
     toast.success(`Feed rate saved — applies from ${form.date} until changed`);
     setForm({ date: today(), kg: "", pricePerBag: String(price), notes: "" });
     setSettings((s) => ({ ...s, pricePerBag: price }));
     load();
+    return true;
   };
 
   const deleteEntry = async (id: string) => {
