@@ -536,6 +536,50 @@ export type Database = {
           },
         ]
       }
+      batch_documents: {
+        Row: {
+          batch_id: string
+          category: string
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          title: string
+          uploaded_by: string
+        }
+        Insert: {
+          batch_id: string
+          category?: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size: number
+          id?: string
+          title: string
+          uploaded_by: string
+        }
+        Update: {
+          batch_id?: string
+          category?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          title?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_documents_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_egg_prices: {
         Row: {
           batch_id: string
@@ -982,6 +1026,50 @@ export type Database = {
             columns: ["sales_record_id"]
             isOneToOne: false
             referencedRelation: "sales_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batch_water_records: {
+        Row: {
+          batch_id: string
+          birds_at_record: number
+          created_at: string
+          date: string
+          id: string
+          litres: number
+          notes: string | null
+          recorded_by: string
+          temperature_c: number | null
+        }
+        Insert: {
+          batch_id: string
+          birds_at_record: number
+          created_at?: string
+          date: string
+          id?: string
+          litres: number
+          notes?: string | null
+          recorded_by: string
+          temperature_c?: number | null
+        }
+        Update: {
+          batch_id?: string
+          birds_at_record?: number
+          created_at?: string
+          date?: string
+          id?: string
+          litres?: number
+          notes?: string | null
+          recorded_by?: string
+          temperature_c?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_water_records_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_batches"
             referencedColumns: ["id"]
           },
         ]
@@ -1559,6 +1647,51 @@ export type Database = {
           },
         ]
       }
+      customer_payment_reminders: {
+        Row: {
+          customer_id: string
+          id: string
+          reminder_date: string
+          sale_id: string
+          sent_at: string | null
+          sent_by: string
+          status: string
+        }
+        Insert: {
+          customer_id: string
+          id?: string
+          reminder_date?: string
+          sale_id: string
+          sent_at?: string | null
+          sent_by: string
+          status?: string
+        }
+        Update: {
+          customer_id?: string
+          id?: string
+          reminder_date?: string
+          sale_id?: string
+          sent_at?: string | null
+          sent_by?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_payment_reminders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_payment_reminders_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_purchases: {
         Row: {
           amount_paid: number
@@ -1609,12 +1742,14 @@ export type Database = {
           address: string | null
           branch_id: string | null
           created_at: string
+          credit_limit: number | null
           customer_type: string
           email: string | null
           id: string
           is_active: boolean
           name: string
           notes: string | null
+          payment_terms_days: number
           phone: string | null
           updated_at: string
         }
@@ -1622,12 +1757,14 @@ export type Database = {
           address?: string | null
           branch_id?: string | null
           created_at?: string
+          credit_limit?: number | null
           customer_type?: string
           email?: string | null
           id?: string
           is_active?: boolean
           name: string
           notes?: string | null
+          payment_terms_days?: number
           phone?: string | null
           updated_at?: string
         }
@@ -1635,12 +1772,14 @@ export type Database = {
           address?: string | null
           branch_id?: string | null
           created_at?: string
+          credit_limit?: number | null
           customer_type?: string
           email?: string | null
           id?: string
           is_active?: boolean
           name?: string
           notes?: string | null
+          payment_terms_days?: number
           phone?: string | null
           updated_at?: string
         }
@@ -4729,6 +4868,7 @@ export type Database = {
           total_sales: number
         }[]
       }
+      get_batch_trace: { Args: { _batch_id: string }; Returns: Json }
       get_partner_wallet: {
         Args: { _profile_id: string }
         Returns: {
