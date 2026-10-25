@@ -15,6 +15,13 @@
       "when": 1792662342769,
       "tag": "0001_fix_batch_financials_ambiguity",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792947234414,
+      "tag": "0002_customer_credit_batch_tools",
+      "breakpoints": true
     }
   ]
 }
