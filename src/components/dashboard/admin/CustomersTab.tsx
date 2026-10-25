@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Edit2, Phone, Mail, MapPin, Users, ShoppingBag, TrendingUp, Upload, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBranch } from "@/contexts/BranchContext";
+import { outstanding } from "@/lib/batchTools";
 
 interface Customer {
   id: string;
@@ -25,6 +26,8 @@ interface Customer {
   created_at: string;
   total_purchases?: number;
   total_paid?: number;
+  credit_limit?: number | null;
+  payment_terms_days?: number;
 }
 
 interface SalesRecord {
@@ -35,6 +38,7 @@ interface SalesRecord {
   unit: string;
   total_amount: number;
   payment_status: string;
+  amount_paid: number;
 }
 
 const CustomersTab = () => {
@@ -48,6 +52,10 @@ const CustomersTab = () => {
   const [unmatchedBuyers, setUnmatchedBuyers] = useState<{ name: string; count: number; total: number }[]>([]);
   const [importLoading, setImportLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [reminding, setReminding] = useState<string | null>(null);
+  const [paymentSale, setPaymentSale] = useState<SalesRecord | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [historyPage, setHistoryPage] = useState(1);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -56,6 +64,8 @@ const CustomersTab = () => {
     address: "",
     customer_type: "regular",
     notes: "",
+    credit_limit: "",
+    payment_terms_days: "14",
   });
 
   useEffect(() => {
@@ -177,13 +187,13 @@ const CustomersTab = () => {
         customersData.map(async (customer) => {
           let salesQuery = supabase
             .from("sales_records")
-            .select("total_amount, amount_paid")
+            .select("total_amount, amount_paid, payment_status")
             .eq("customer_id", customer.id);
           if (currentBranchId) salesQuery = salesQuery.eq("branch_id", currentBranchId);
           const { data: sales } = await salesQuery;
 
           const total_purchases = sales?.reduce((acc, s) => acc + Number(s.total_amount), 0) || 0;
-          const total_paid = sales?.reduce((acc, s) => acc + Number(s.amount_paid), 0) || 0;
+          const total_paid = sales?.reduce((acc, s) => acc + Number(s.total_amount) - outstanding(s), 0) || 0;
 
           return { ...customer, total_purchases, total_paid };
         })
@@ -197,13 +207,39 @@ const CustomersTab = () => {
   const fetchCustomerSales = async (customerId: string) => {
     let query = supabase
       .from("sales_records")
-      .select("id, date, product_name, quantity, unit, total_amount, payment_status")
+      .select("id, date, product_name, quantity, unit, total_amount, payment_status, amount_paid")
       .eq("customer_id", customerId)
-      .order("date", { ascending: false })
-      .limit(20);
+      .order("date", { ascending: false });
     if (currentBranchId) query = query.eq("branch_id", currentBranchId);
     const { data } = await query;
     setCustomerSales(data || []);
+    setHistoryPage(1);
+  };
+
+  const sendReminder = async (sale: SalesRecord) => {
+    if (!selectedCustomer?.email) return toast.error("Add the customer's email address first");
+    if (!window.confirm(`Send a payment reminder to ${selectedCustomer.name}?`)) return;
+    setReminding(sale.id);
+    const { data, error } = await supabase.functions.invoke("send-customer-payment-reminder", { body: { saleId: sale.id } });
+    setReminding(null);
+    if (error) { const context = error.context; const details = context instanceof Response ? await context.json().catch(() => null) : null; toast.error(details?.error || "Could not send payment reminder"); }
+    else if (data?.error) toast.error(data.error); else toast.success("Payment reminder sent");
+  };
+  const recordPayment = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!paymentSale) return;
+    const added = Number(paymentAmount); const owed = outstanding(paymentSale);
+    if (!(added > 0) || added > owed) return toast.error("Payment must be positive and not exceed the balance");
+    setLoading(true);
+    const paid = Number(paymentSale.total_amount) - owed + added;
+    const status = paid >= Number(paymentSale.total_amount) ? "paid" : "partial";
+    const { error } = await supabase.from("sales_records").update({ amount_paid: paid, payment_status: status }).eq("id", paymentSale.id);
+    if (error) toast.error(error.message);
+    else {
+      const { error: linkedError } = await supabase.from("batch_sales").update({ amount_paid: paid, payment_status: status }).eq("sales_record_id", paymentSale.id);
+      if (linkedError) toast.error("Payment saved; linked batch payment could not be updated"); else toast.success("Payment recorded");
+      setPaymentSale(null); setPaymentAmount(""); fetchCustomers(); if (selectedCustomer) fetchCustomerSales(selectedCustomer.id);
+    }
+    setLoading(false);
   };
 
   const handleAddCustomer = async (e: React.FormEvent) => {
@@ -212,6 +248,8 @@ const CustomersTab = () => {
 
     const { error } = await supabase.from("customers").insert({
       ...formData,
+      credit_limit: formData.credit_limit === "" ? null : Number(formData.credit_limit),
+      payment_terms_days: Number(formData.payment_terms_days),
       branch_id: currentBranchId,
     });
 
@@ -234,7 +272,7 @@ const CustomersTab = () => {
 
     const { error } = await supabase
       .from("customers")
-      .update(formData)
+      .update({ ...formData, credit_limit: formData.credit_limit === "" ? null : Number(formData.credit_limit), payment_terms_days: Number(formData.payment_terms_days) })
       .eq("id", selectedCustomer.id);
 
     if (error) {
@@ -280,7 +318,7 @@ const CustomersTab = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: "", phone: "", email: "", address: "", customer_type: "regular", notes: "" });
+    setFormData({ name: "", phone: "", email: "", address: "", customer_type: "regular", notes: "", credit_limit: "", payment_terms_days: "14" });
     setSelectedCustomer(null);
   };
 
@@ -293,6 +331,8 @@ const CustomersTab = () => {
       address: customer.address || "",
       customer_type: customer.customer_type,
       notes: customer.notes || "",
+      credit_limit: customer.credit_limit == null ? "" : String(customer.credit_limit),
+      payment_terms_days: String(customer.payment_terms_days ?? 14),
     });
     setEditDialogOpen(true);
   };
@@ -452,6 +492,7 @@ const CustomersTab = () => {
                     rows={2}
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-3"><div><Label htmlFor="customer-credit">Credit limit (₦)</Label><Input id="customer-credit" type="number" min={0} step="0.01" placeholder="No limit" value={formData.credit_limit} onChange={e => setFormData({ ...formData, credit_limit: e.target.value })}/></div><div><Label htmlFor="customer-terms">Payment terms (days)</Label><Input id="customer-terms" type="number" min={0} max={365} required value={formData.payment_terms_days} onChange={e => setFormData({ ...formData, payment_terms_days: e.target.value })}/></div></div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Adding..." : "Add Customer"}
                 </Button>
@@ -540,6 +581,9 @@ const CustomersTab = () => {
                               {customer.phone}
                             </p>
                           )}
+                          {customer.email && <p className="text-xs text-muted-foreground mt-1 break-all">{customer.email}</p>}
+                          <p className="text-xs text-muted-foreground mt-1">Credit limit: {customer.credit_limit == null ? "Not set" : `₦${Number(customer.credit_limit).toLocaleString()}`} · {customer.payment_terms_days ?? 14} day terms</p>
+                          {customer.credit_limit != null && owed > Number(customer.credit_limit) && <Badge variant="destructive" className="mt-1">Over credit limit</Badge>}
                           <div className="flex items-center gap-4 mt-2 text-sm">
                             <span className="text-muted-foreground">
                               Purchased: <span className="font-medium text-foreground">₦{(customer.total_purchases || 0).toLocaleString()}</span>
@@ -605,17 +649,19 @@ const CustomersTab = () => {
                 No purchase history yet
               </p>
             ) : (
-              <Table>
+              <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Product</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Balance / due</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {customerSales.map((sale) => (
+                  {customerSales.slice((historyPage - 1) * 15, historyPage * 15).map((sale) => (
                     <TableRow key={sale.id}>
                       <TableCell className="text-sm">
                         {new Date(sale.date).toLocaleDateString()}
@@ -642,10 +688,12 @@ const CustomersTab = () => {
                           {sale.payment_status}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">₦{outstanding(sale).toLocaleString()}<br/>{new Date(Date.parse(sale.date) + (selectedCustomer.payment_terms_days ?? 14) * 86400000).toLocaleDateString()}</TableCell>
+                      <TableCell>{outstanding(sale) > 0 && <div className="flex gap-1"><Button variant="outline" size="sm" onClick={() => { setPaymentSale(sale); setPaymentAmount(""); }}>Add payment</Button><Button size="icon" variant="outline" title={selectedCustomer.email ? "Send payment reminder" : "Add customer email first"} aria-label="Send payment reminder" disabled={!selectedCustomer.email || reminding === sale.id} onClick={() => sendReminder(sale)}>{reminding === sale.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Mail className="h-4 w-4"/>}</Button></div>}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table>{customerSales.length > 15 && <div className="flex gap-3 justify-end mt-3"><Button variant="outline" disabled={historyPage===1} onClick={()=>setHistoryPage(historyPage-1)}>Previous</Button><span>{historyPage} / {Math.ceil(customerSales.length/15)}</span><Button variant="outline" disabled={historyPage*15>=customerSales.length} onClick={()=>setHistoryPage(historyPage+1)}>Next</Button></div>}</div>
             )}
           </CardContent>
         </Card>
@@ -722,12 +770,14 @@ const CustomersTab = () => {
                 rows={2}
               />
             </div>
+            <div className="grid grid-cols-2 gap-3"><div><Label htmlFor="edit-customer-credit">Credit limit (₦)</Label><Input id="edit-customer-credit" type="number" min={0} step="0.01" placeholder="No limit" value={formData.credit_limit} onChange={e => setFormData({ ...formData, credit_limit: e.target.value })}/></div><div><Label htmlFor="edit-customer-terms">Payment terms (days)</Label><Input id="edit-customer-terms" type="number" min={0} max={365} required value={formData.payment_terms_days} onChange={e => setFormData({ ...formData, payment_terms_days: e.target.value })}/></div></div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Updating..." : "Update Customer"}
             </Button>
           </form>
         </DialogContent>
       </Dialog>
+      <Dialog open={Boolean(paymentSale)} onOpenChange={open => { if (!open) setPaymentSale(null); }}><DialogContent><DialogHeader><DialogTitle>Record customer payment</DialogTitle><DialogDescription>Remaining balance: ₦{paymentSale ? outstanding(paymentSale).toLocaleString() : 0}</DialogDescription></DialogHeader><form onSubmit={recordPayment} className="space-y-4"><Label htmlFor="customer-payment">Amount received (₦)</Label><Input id="customer-payment" type="number" min="0.01" step="0.01" max={paymentSale ? outstanding(paymentSale) : 0} required value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)}/><Button disabled={loading}>Save payment</Button></form></DialogContent></Dialog>
     </div>
   );
 };
