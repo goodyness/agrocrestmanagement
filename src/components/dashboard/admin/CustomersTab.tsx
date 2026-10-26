@@ -13,6 +13,7 @@ import { Plus, Edit2, Phone, Mail, MapPin, Users, ShoppingBag, TrendingUp, Uploa
 import { toast } from "sonner";
 import { useBranch } from "@/contexts/BranchContext";
 import { outstanding } from "@/lib/batchTools";
+import { customerEmailSchema } from "@/lib/customerEmail";
 
 interface Customer {
   id: string;
@@ -56,6 +57,10 @@ const CustomersTab = () => {
   const [paymentSale, setPaymentSale] = useState<SalesRecord | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [historyPage, setHistoryPage] = useState(1);
+  const [emailReminder, setEmailReminder] = useState<{ sale: SalesRecord; customer: Customer } | null>(null);
+  const [reminderEmail, setReminderEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -216,14 +221,40 @@ const CustomersTab = () => {
     setHistoryPage(1);
   };
 
-  const sendReminder = async (sale: SalesRecord) => {
-    if (!selectedCustomer?.email) return toast.error("Add the customer's email address first");
-    if (!window.confirm(`Send a payment reminder to ${selectedCustomer.name}?`)) return;
+  const deliverReminder = async (sale: SalesRecord) => {
     setReminding(sale.id);
-    const { data, error } = await supabase.functions.invoke("send-customer-payment-reminder", { body: { saleId: sale.id } });
-    setReminding(null);
-    if (error) { const context = error.context; const details = context instanceof Response ? await context.json().catch(() => null) : null; toast.error(details?.error || "Could not send payment reminder"); }
-    else if (data?.error) toast.error(data.error); else toast.success("Payment reminder sent");
+    try {
+      const { data, error } = await supabase.functions.invoke("send-customer-payment-reminder", { body: { saleId: sale.id } });
+      if (error) { const context = error.context; const details = context instanceof Response ? await context.json().catch(() => null) : null; toast.error(details?.error || "Could not send payment reminder"); }
+      else if (data?.error) toast.error(data.error); else toast.success("Payment reminder sent");
+    } catch { toast.error("Could not send payment reminder. Your saved email is available for retry."); }
+    finally { setReminding(null); }
+  };
+  const sendReminder = async (sale: SalesRecord) => {
+    if (!selectedCustomer) return;
+    if (!customerEmailSchema.safeParse(selectedCustomer.email || "").success) {
+      setEmailReminder({ sale, customer: selectedCustomer });
+      setReminderEmail(selectedCustomer.email || ""); setEmailError("");
+      return;
+    }
+    if (!window.confirm(`Send a payment reminder to ${selectedCustomer.name}?`)) return;
+    await deliverReminder(sale);
+  };
+  const saveEmailAndSend = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!emailReminder || savingEmail) return;
+    const parsed = customerEmailSchema.safeParse(reminderEmail);
+    if (!parsed.success) { setEmailError("Enter a valid email address"); return; }
+    setSavingEmail(true); setEmailError("");
+    try {
+      const { data, error } = await supabase.from("customers").update({ email: parsed.data }).eq("id", emailReminder.customer.id).select("id").single();
+      if (error || !data) { setEmailError("Could not save this email. Please try again."); return; }
+      const updated = { ...emailReminder.customer, email: parsed.data };
+      setCustomers(previous => previous.map(c => c.id === updated.id ? { ...c, email: parsed.data } : c));
+      setSelectedCustomer(previous => previous?.id === updated.id ? { ...previous, email: parsed.data } : previous);
+      const sale = emailReminder.sale; setEmailReminder(null);
+      await deliverReminder(sale);
+    } catch { setEmailError("Could not save this email. Please try again."); }
+    finally { setSavingEmail(false); }
   };
   const recordPayment = async (e: React.FormEvent) => {
     e.preventDefault(); if (!paymentSale) return;
@@ -689,7 +720,7 @@ const CustomersTab = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs whitespace-nowrap">₦{outstanding(sale).toLocaleString()}<br/>{new Date(Date.parse(sale.date) + (selectedCustomer.payment_terms_days ?? 14) * 86400000).toLocaleDateString()}</TableCell>
-                      <TableCell>{outstanding(sale) > 0 && <div className="flex gap-1"><Button variant="outline" size="sm" onClick={() => { setPaymentSale(sale); setPaymentAmount(""); }}>Add payment</Button><Button size="icon" variant="outline" title={selectedCustomer.email ? "Send payment reminder" : "Add customer email first"} aria-label="Send payment reminder" disabled={!selectedCustomer.email || reminding === sale.id} onClick={() => sendReminder(sale)}>{reminding === sale.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Mail className="h-4 w-4"/>}</Button></div>}</TableCell>
+                      <TableCell>{outstanding(sale) > 0 && <div className="flex gap-1"><Button variant="outline" size="sm" onClick={() => { setPaymentSale(sale); setPaymentAmount(""); }}>Add payment</Button><Button size="icon" variant="outline" title="Send payment reminder" aria-label="Send payment reminder" disabled={reminding !== null || savingEmail} onClick={() => sendReminder(sale)}>{reminding === sale.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Mail className="h-4 w-4"/>}</Button></div>}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -777,6 +808,7 @@ const CustomersTab = () => {
           </form>
         </DialogContent>
       </Dialog>
+      <Dialog open={Boolean(emailReminder)} onOpenChange={open => { if (!open && !savingEmail) setEmailReminder(null); }}><DialogContent><DialogHeader><DialogTitle>Add customer email</DialogTitle><DialogDescription>{emailReminder?.customer.name} · Outstanding purchase balance: ₦{emailReminder ? outstanding(emailReminder.sale).toLocaleString() : 0}</DialogDescription></DialogHeader><form onSubmit={saveEmailAndSend} noValidate className="space-y-4"><div className="space-y-2"><Label htmlFor="reminder-customer-email">Customer email</Label><Input id="reminder-customer-email" type="email" autoComplete="email" autoFocus value={reminderEmail} disabled={savingEmail} aria-invalid={Boolean(emailError)} aria-describedby={emailError ? "reminder-email-error" : undefined} onChange={e=>{setReminderEmail(e.target.value);setEmailError("");}}/>{emailError && <p id="reminder-email-error" role="alert" className="text-sm text-destructive">{emailError}</p>}</div><div className="flex justify-end gap-2"><Button type="button" variant="outline" disabled={savingEmail} onClick={()=>setEmailReminder(null)}>Cancel</Button><Button type="submit" disabled={savingEmail}>{savingEmail ? "Saving & sending…" : "Save email & send reminder"}</Button></div></form></DialogContent></Dialog>
       <Dialog open={Boolean(paymentSale)} onOpenChange={open => { if (!open) setPaymentSale(null); }}><DialogContent><DialogHeader><DialogTitle>Record customer payment</DialogTitle><DialogDescription>Remaining balance: ₦{paymentSale ? outstanding(paymentSale).toLocaleString() : 0}</DialogDescription></DialogHeader><form onSubmit={recordPayment} className="space-y-4"><Label htmlFor="customer-payment">Amount received (₦)</Label><Input id="customer-payment" type="number" min="0.01" step="0.01" max={paymentSale ? outstanding(paymentSale) : 0} required value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)}/><Button disabled={loading}>Save payment</Button></form></DialogContent></Dialog>
     </div>
   );
