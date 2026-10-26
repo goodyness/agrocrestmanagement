@@ -1,3 +1,4 @@
+/// <reference types="bun" />
 import { describe, expect, test } from 'bun:test';
 import { outstanding, simulateProfit, waterChange } from './batchTools';
 describe('Customer unpaid goods', () => {
