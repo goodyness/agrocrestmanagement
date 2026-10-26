@@ -51,6 +51,7 @@ import PartnerComplaintsTab from "./admin/PartnerComplaintsTab";
 import BatchComparisonTab from "./admin/BatchComparisonTab";
 import MortalityCauseAnalytics from "./admin/MortalityCauseAnalytics";
 import FeedRecipesTab from "./admin/FeedRecipesTab";
+import ProductionCalendarTab from "./admin/ProductionCalendarTab";
 
 interface AdminDashboardProps {
   user: User | null;
@@ -66,6 +67,7 @@ const TAB_TITLES: Record<AdminTabKey, string> = {
   cleaning: "Cleaning", operations: "Operations", balancing: "Balancing",
   reports: "Reports", notes: "Notes", "ai-advisor": "AI Advisor", analytics: "Cost Analytics", "batch-compare": "Batch Comparison", "mortality-analytics": "Mortality Cause Analytics", "feed-recipes": "Feed Recipes",
   branches: "Branches",
+  "production-calendar": "Production Calendar",
 };
 
 const AdminDashboard = ({ user }: AdminDashboardProps) => {
@@ -98,6 +100,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
       case "clinic": return <FarmClinicTab />;
       case "health": return <HealthDashboard />;
       case "production": return <><ProductionTab /><ProductionForecast /></>;
+      case "production-calendar": return <ProductionCalendarTab />;
       case "egg-grading": return <EggGradingTab />;
       case "cracked-eggs": return <CrackedEggsTab />;
       case "feed": return <FeedTab />;

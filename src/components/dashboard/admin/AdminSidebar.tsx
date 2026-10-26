@@ -13,13 +13,13 @@ import {
   BarChart3, Activity, Sprout, PawPrint, Syringe, Heart, Stethoscope, Egg, AlertTriangle,
   TrendingUp, Package, Boxes, DollarSign, Landmark, Wallet, Users as UsersIcon, Handshake,
   ClipboardCheck, Truck, Users, Brush, Wrench, Scale, FileText, StickyNote, Bot, Calculator,
-  Building2, GitCompareArrows, Skull, ChefHat,
+  Building2, GitCompareArrows, Skull, ChefHat, CalendarDays,
 } from "lucide-react";
 
 export type AdminTabKey =
   | "overview" | "activity"
   | "intake" | "livestock" | "vaccination" | "clinic" | "health"
-  | "production" | "egg-grading" | "cracked-eggs"
+  | "production" | "egg-grading" | "cracked-eggs" | "production-calendar"
   | "feed" | "inventory-plus" | "expected-stock"
   | "sales" | "expenses" | "finance" | "expected-profit" | "salary"
   | "users" | "partners" | "withdrawals" | "complaints" | "reviews" | "suppliers" | "customers"
@@ -54,6 +54,7 @@ const GROUPS: Group[] = [
     label: "Production",
     items: [
       { key: "production", title: "Production", icon: TrendingUp },
+      { key: "production-calendar", title: "Production Calendar", icon: CalendarDays },
       { key: "egg-grading", title: "Egg Grading", icon: Egg },
       { key: "cracked-eggs", title: "Cracked Eggs", icon: AlertTriangle },
     ],

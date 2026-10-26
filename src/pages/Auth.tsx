@@ -12,18 +12,23 @@ import { Sprout } from "lucide-react";
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const afterSignIn = () => {
+    const target = sessionStorage.getItem("batch-trace-return");
+    sessionStorage.removeItem("batch-trace-return");
+    navigate(target && /^\/batch-trace\/[0-9a-f-]{36}$/i.test(target) ? target : "/dashboard");
+  };
 
   useEffect(() => {
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/dashboard");
+        afterSignIn();
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        navigate("/dashboard");
+        afterSignIn();
       }
     });
 

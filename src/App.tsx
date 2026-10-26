@@ -14,6 +14,7 @@ import FarmSummary from "./pages/FarmSummary";
 import NotFound from "./pages/NotFound";
 import CustomerPortal from "./pages/CustomerPortal";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import BatchTrace from "./pages/BatchTrace";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/farm-summary" element={<FarmSummary />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/customer-portal" element={<CustomerPortal />} />
+            <Route path="/batch-trace/:id" element={<BatchTrace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

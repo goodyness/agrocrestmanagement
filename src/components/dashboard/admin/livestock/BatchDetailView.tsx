@@ -34,6 +34,10 @@ import AdjustBirdCountDialog from "./AdjustBirdCountDialog";
 import BatchClosureWizard from "./BatchClosureWizard";
 import MortalityPhotoPicker from "@/components/dashboard/shared/MortalityPhotoPicker";
 import { UploadedMortalityPhoto } from "@/lib/photoUpload";
+import BatchDocumentsTab from "./BatchDocumentsTab";
+import BatchWaterTab from "./BatchWaterTab";
+import BatchWhatIfTab from "./BatchWhatIfTab";
+import BatchTraceTab from "./BatchTraceTab";
 
 interface Props {
   batch: any;
@@ -763,6 +767,10 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
             </>
           )}
           <TabsTrigger value="analytics" className="text-xs">📊 Analytics</TabsTrigger>
+          <TabsTrigger value="water" className="text-xs">Water</TabsTrigger>
+          <TabsTrigger value="documents" className="text-xs">Documents</TabsTrigger>
+          <TabsTrigger value="whatif" className="text-xs">What-if Profit</TabsTrigger>
+          <TabsTrigger value="trace" className="text-xs">Batch QR</TabsTrigger>
           <TabsTrigger value="timeline" className="text-xs">🕘 Timeline</TabsTrigger>
           <TabsTrigger value="ai" className="text-xs">✨ AI</TabsTrigger>
           <TabsTrigger value="info" className="text-xs">ℹ️ Details</TabsTrigger>
@@ -774,6 +782,10 @@ const BatchDetailView = ({ batch, onBack }: Props) => {
           <BatchFcrTab batch={batchData} onSaved={() => { refreshBatch(); checkFcrDue(); }} />
         </TabsContent>
         <TabsContent value="analytics" className="space-y-3"><BatchAnalyticsCharts batchId={batch.id} /></TabsContent>
+        <TabsContent value="water"><BatchWaterTab batch={batchData}/></TabsContent>
+        <TabsContent value="documents"><BatchDocumentsTab batchId={batch.id} isAdmin={isAdmin}/></TabsContent>
+        <TabsContent value="whatif"><BatchWhatIfTab batch={batchData}/></TabsContent>
+        <TabsContent value="trace"><BatchTraceTab batch={batchData}/></TabsContent>
         {batchData.species === "chicken" && batchData.species_type === "layer" && (
           <>
             <TabsContent value="eggs" className="space-y-3">
