@@ -1,4 +1,8 @@
 # Requested upgrades
+- [ ] Add admin Market products, variants, stock, order status and delivery settings.
+- [ ] Replace homepage feature cards with recent products and a public shopping flow.
+- [ ] Connect BursaPay test checkout with server-verified prices, payments and stock.
+- [ ] Verify admin product creation, public shopping, checkout and stock rules.
 - [x] Customer credit limits, payment tracking and individual styled SMTP reminders.
 - [x] Private batch document vault.
 - [x] Batch water consumption monitoring.
