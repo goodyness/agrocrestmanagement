@@ -3000,6 +3000,158 @@ export type Database = {
           },
         ]
       }
+      market_orders: {
+        Row: {
+          access_token: string
+          admin_note: string
+          created_at: string
+          customer_name: string
+          delivery_address: string
+          delivery_fee: number
+          email: string
+          id: string
+          items: Json
+          order_number: string
+          payment_status: string
+          phone: string
+          provider_fee: number | null
+          provider_reference: string | null
+          status: string
+          subtotal: number
+          total: number
+        }
+        Insert: {
+          access_token?: string
+          admin_note?: string
+          created_at?: string
+          customer_name: string
+          delivery_address: string
+          delivery_fee: number
+          email: string
+          id?: string
+          items: Json
+          order_number?: string
+          payment_status?: string
+          phone: string
+          provider_fee?: number | null
+          provider_reference?: string | null
+          status?: string
+          subtotal: number
+          total: number
+        }
+        Update: {
+          access_token?: string
+          admin_note?: string
+          created_at?: string
+          customer_name?: string
+          delivery_address?: string
+          delivery_fee?: number
+          email?: string
+          id?: string
+          items?: Json
+          order_number?: string
+          payment_status?: string
+          phone?: string
+          provider_fee?: number | null
+          provider_reference?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+        }
+        Relationships: []
+      }
+      market_products: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          description: string
+          id: string
+          image_path: string | null
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_path?: string | null
+          name: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_path?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
+      market_settings: {
+        Row: {
+          delivery_fee: number
+          delivery_note: string
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          delivery_fee?: number
+          delivery_note?: string
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          delivery_fee?: number
+          delivery_note?: string
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      market_variants: {
+        Row: {
+          active: boolean
+          id: string
+          name: string
+          price: number
+          product_id: string
+          stock: number
+          unit: string
+          weight_kg: number | null
+        }
+        Insert: {
+          active?: boolean
+          id?: string
+          name: string
+          price: number
+          product_id: string
+          stock?: number
+          unit: string
+          weight_kg?: number | null
+        }
+        Update: {
+          active?: boolean
+          id?: string
+          name?: string
+          price?: number
+          product_id?: string
+          stock?: number
+          unit?: string
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "market_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medicine_movements: {
         Row: {
           branch_id: string | null
@@ -4412,6 +4564,24 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       vaccination_records: {
         Row: {
           administered_by: string | null
@@ -4881,6 +5051,15 @@ export type Database = {
       increment_batch_ages: { Args: never; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
       is_partner: { Args: never; Returns: boolean }
+      market_create_order: {
+        Args: { _customer: Json; _items: Json }
+        Returns: Json
+      }
+      market_is_admin: { Args: never; Returns: boolean }
+      market_update_order: {
+        Args: { _id: string; _note: string; _status: string }
+        Returns: undefined
+      }
       partner_has_batch: { Args: { _batch_id: string }; Returns: boolean }
       recalc_batch_quantity: { Args: { _batch_id: string }; Returns: undefined }
     }
