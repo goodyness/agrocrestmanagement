@@ -1,53 +1,21 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Sprout, BarChart3, Package, Shield } from "lucide-react";
+import { Sprout, ArrowRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { loadMarket } from "@/lib/market";
+import ProductGrid from "@/components/market/ProductGrid";
+import farmPhoto from "@/assets/farm-market.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
+  const products = useQuery({ queryKey: ['public-market'], queryFn: () => loadMarket() });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/10">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center max-w-4xl mx-auto space-y-8">
-          <div className="flex justify-center mb-6">
-            <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Sprout className="h-12 w-12 text-primary" />
-            </div>
-          </div>
-          
-          <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-4">
-            Agrocrest Farm Management
-          </h1>
-          
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Complete farm management system for livestock tracking, production monitoring, sales records, and financial analytics
-          </p>
-
-          <div className="flex justify-center gap-4 pt-6">
-            <Button size="lg" onClick={() => navigate("/auth")}>
-              Get Started
-            </Button>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6 pt-12">
-            <div className="p-6 bg-card rounded-xl border border-border">
-              <BarChart3 className="h-8 w-8 text-primary mb-3" />
-              <h3 className="font-semibold text-lg mb-2">Analytics Dashboard</h3>
-              <p className="text-sm text-muted-foreground">Real-time insights and profit tracking</p>
-            </div>
-            <div className="p-6 bg-card rounded-xl border border-border">
-              <Package className="h-8 w-8 text-primary mb-3" />
-              <h3 className="font-semibold text-lg mb-2">Inventory Management</h3>
-              <p className="text-sm text-muted-foreground">Track livestock, feed, and resources</p>
-            </div>
-            <div className="p-6 bg-card rounded-xl border border-border">
-              <Shield className="h-8 w-8 text-primary mb-3" />
-              <h3 className="font-semibold text-lg mb-2">Role-Based Access</h3>
-              <p className="text-sm text-muted-foreground">Admin and worker permissions</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-background">
+      <header className="container py-5 flex justify-between items-center gap-4"><Link to="/" className="flex items-center gap-2 font-semibold text-lg"><Sprout className="text-success"/>Agrocrest Farm</Link><Button variant="ghost" onClick={()=>navigate('/shop')}>Farm shop <ArrowRight className="ml-2 h-4 w-4"/></Button></header>
+      <section className="market-hero relative min-h-[480px] flex items-center overflow-hidden"><img src={farmPhoto} alt="Chickens and fresh eggs on a farm" width={1536} height={1024} className="absolute inset-0 w-full h-full object-cover"/><div className="market-hero-shade absolute inset-0"/><div className="container relative py-16"><div className="max-w-xl space-y-6"><p className="text-sm uppercase">From our farm, to your table</p><h1 className="text-5xl sm:text-6xl font-bold">Agrocrest Farm</h1><p className="text-lg max-w-md">Farm-raised poultry, eggs and livestock. Choose your variety and shop directly from our latest collection.</p><div className="flex gap-3 flex-wrap"><Button size="lg" onClick={()=>navigate('/shop')}>Buy / Explore products <ArrowRight className="ml-2 h-4 w-4"/></Button><Button size="lg" variant="secondary" onClick={()=>navigate('/auth')}>Get Started</Button></div></div></div></section>
+      <section className="container py-12 space-y-7"><div className="flex items-center justify-between gap-4"><div><p className="text-sm uppercase text-muted-foreground">Fresh from Agrocrest</p><h2 className="text-3xl font-semibold mt-2">Recently added</h2></div><Button variant="outline" onClick={()=>navigate('/shop')}>View all <ArrowRight className="ml-2 h-4 w-4"/></Button></div>{products.isLoading?<p>Loading products…</p>:products.isError?<p className="text-destructive">Our products could not load. <Button variant="outline" onClick={()=>products.refetch()}>Try again</Button></p>:products.data?.length?<ProductGrid products={products.data.slice(0,3)} onSelect={()=>navigate('/shop')}/>:<p className="py-10 border-y text-muted-foreground">Our next collection is on its way. Visit the farm shop for availability.</p>}</section>
+      <footer className="border-t"><div className="container py-6 flex justify-between flex-wrap gap-4 text-sm text-muted-foreground"><span>Agrocrest Farm</span><Link to="/auth">Farm account</Link></div></footer>
     </div>
   );
 };
