@@ -29,6 +29,13 @@
       "when": 1793220155808,
       "tag": "0003_farm_market_catalog_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793263683685,
+      "tag": "0004_market_image_policy_path",
+      "breakpoints": true
     }
   ]
 }

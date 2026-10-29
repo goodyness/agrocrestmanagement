@@ -1,0 +1,1 @@
+ALTER POLICY market_images_read ON storage.objects USING(bucket_id='market-products' AND (public.market_is_admin() OR EXISTS(SELECT 1 FROM public.market_products p WHERE p.active AND p.image_path=storage.objects.name)));
