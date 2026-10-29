@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import CustomerPortal from "./pages/CustomerPortal";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import BatchTrace from "./pages/BatchTrace";
+import Shop from "./pages/Shop";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/shop" element={<Shop />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/dashboard" element={<Dashboard />} />

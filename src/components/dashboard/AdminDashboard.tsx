@@ -52,12 +52,14 @@ import BatchComparisonTab from "./admin/BatchComparisonTab";
 import MortalityCauseAnalytics from "./admin/MortalityCauseAnalytics";
 import FeedRecipesTab from "./admin/FeedRecipesTab";
 import ProductionCalendarTab from "./admin/ProductionCalendarTab";
+import MarketTab from "./admin/MarketTab";
 
 interface AdminDashboardProps {
   user: User | null;
 }
 
 const TAB_TITLES: Record<AdminTabKey, string> = {
+  market: "Market",
   overview: "Dashboard", activity: "Activity",
   intake: "Livestock Intake", livestock: "Livestock", vaccination: "Vaccination", clinic: "Farm Clinic", health: "Health",
   production: "Production", "egg-grading": "Egg Grading", "cracked-eggs": "Cracked Eggs",
@@ -92,6 +94,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
   const renderTab = () => {
     switch (activeTab) {
+      case "market": return <MarketTab />;
       case "overview": return <OverviewTab />;
       case "activity": return <ActivityTab />;
       case "intake": return <LivestockIntakeTab />;

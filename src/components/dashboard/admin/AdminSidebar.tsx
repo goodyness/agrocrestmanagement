@@ -13,7 +13,7 @@ import {
   BarChart3, Activity, Sprout, PawPrint, Syringe, Heart, Stethoscope, Egg, AlertTriangle,
   TrendingUp, Package, Boxes, DollarSign, Landmark, Wallet, Users as UsersIcon, Handshake,
   ClipboardCheck, Truck, Users, Brush, Wrench, Scale, FileText, StickyNote, Bot, Calculator,
-  Building2, GitCompareArrows, Skull, ChefHat, CalendarDays,
+  Building2, GitCompareArrows, Skull, ChefHat, CalendarDays, ShoppingBag,
 } from "lucide-react";
 
 export type AdminTabKey =
@@ -25,7 +25,7 @@ export type AdminTabKey =
   | "users" | "partners" | "withdrawals" | "complaints" | "reviews" | "suppliers" | "customers"
   | "cleaning" | "operations" | "balancing"
   | "reports" | "notes" | "ai-advisor" | "analytics" | "batch-compare" | "mortality-analytics" | "feed-recipes"
-  | "branches";
+  | "branches" | "market";
 
 interface Group {
   label: string;
@@ -33,6 +33,7 @@ interface Group {
 }
 
 const GROUPS: Group[] = [
+  { label: "Market", items: [{ key: "market", title: "Market", icon: ShoppingBag }] },
   {
     label: "Overview",
     items: [
