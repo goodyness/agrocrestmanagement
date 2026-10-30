@@ -3004,6 +3004,7 @@ export type Database = {
         Row: {
           access_token: string
           admin_note: string
+          amount_charged: number | null
           created_at: string
           customer_name: string
           delivery_address: string
@@ -3012,17 +3013,21 @@ export type Database = {
           id: string
           items: Json
           order_number: string
+          paid_at: string | null
+          payment_mode: string
           payment_status: string
           phone: string
           provider_fee: number | null
           provider_reference: string | null
           status: string
+          stock_settled: boolean
           subtotal: number
           total: number
         }
         Insert: {
           access_token?: string
           admin_note?: string
+          amount_charged?: number | null
           created_at?: string
           customer_name: string
           delivery_address: string
@@ -3031,17 +3036,21 @@ export type Database = {
           id?: string
           items: Json
           order_number?: string
+          paid_at?: string | null
+          payment_mode?: string
           payment_status?: string
           phone: string
           provider_fee?: number | null
           provider_reference?: string | null
           status?: string
+          stock_settled?: boolean
           subtotal: number
           total: number
         }
         Update: {
           access_token?: string
           admin_note?: string
+          amount_charged?: number | null
           created_at?: string
           customer_name?: string
           delivery_address?: string
@@ -3050,11 +3059,14 @@ export type Database = {
           id?: string
           items?: Json
           order_number?: string
+          paid_at?: string | null
+          payment_mode?: string
           payment_status?: string
           phone?: string
           provider_fee?: number | null
           provider_reference?: string | null
           status?: string
+          stock_settled?: boolean
           subtotal?: number
           total?: number
         }
@@ -3063,30 +3075,39 @@ export type Database = {
       market_products: {
         Row: {
           active: boolean
+          allow_pod: boolean
           category: string
           created_at: string
           description: string
           id: string
           image_path: string | null
+          image_paths: string[]
           name: string
+          pod_min_quantity: number
         }
         Insert: {
           active?: boolean
+          allow_pod?: boolean
           category: string
           created_at?: string
           description?: string
           id?: string
           image_path?: string | null
+          image_paths?: string[]
           name: string
+          pod_min_quantity?: number
         }
         Update: {
           active?: boolean
+          allow_pod?: boolean
           category?: string
           created_at?: string
           description?: string
           id?: string
           image_path?: string | null
+          image_paths?: string[]
           name?: string
+          pod_min_quantity?: number
         }
         Relationships: []
       }
@@ -3095,18 +3116,27 @@ export type Database = {
           delivery_fee: number
           delivery_note: string
           id: number
+          pod_enabled: boolean
+          pod_max_total: number | null
+          pod_note: string
           updated_at: string
         }
         Insert: {
           delivery_fee?: number
           delivery_note?: string
           id?: number
+          pod_enabled?: boolean
+          pod_max_total?: number | null
+          pod_note?: string
           updated_at?: string
         }
         Update: {
           delivery_fee?: number
           delivery_note?: string
           id?: number
+          pod_enabled?: boolean
+          pod_max_total?: number | null
+          pod_note?: string
           updated_at?: string
         }
         Relationships: []
@@ -5051,11 +5081,15 @@ export type Database = {
       increment_batch_ages: { Args: never; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
       is_partner: { Args: never; Returns: boolean }
-      market_create_order: {
-        Args: { _customer: Json; _items: Json }
-        Returns: Json
-      }
+      market_create_order:
+        | { Args: { _customer: Json; _items: Json }; Returns: Json }
+        | {
+            Args: { _customer: Json; _items: Json; _mode: string }
+            Returns: Json
+          }
       market_is_admin: { Args: never; Returns: boolean }
+      market_mark_paid: { Args: { _id: string }; Returns: undefined }
+      market_settle_stock: { Args: { _id: string }; Returns: undefined }
       market_update_order: {
         Args: { _id: string; _note: string; _status: string }
         Returns: undefined
