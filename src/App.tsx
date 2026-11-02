@@ -16,6 +16,9 @@ import CustomerPortal from "./pages/CustomerPortal";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import BatchTrace from "./pages/BatchTrace";
 import Shop from "./pages/Shop";
+import ShopProduct from "./pages/ShopProduct";
+import ShopCheckout from "./pages/ShopCheckout";
+import ShopOrder from "./pages/ShopOrder";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +32,9 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/shop" element={<Shop />} />
+            <Route path="/shop/product/:id" element={<ShopProduct />} />
+            <Route path="/shop/checkout" element={<ShopCheckout />} />
+            <Route path="/shop/order" element={<ShopOrder />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/dashboard" element={<Dashboard />} />

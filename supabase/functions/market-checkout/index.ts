@@ -32,7 +32,7 @@ Deno.serve(async req => {
     try {
       const pay = await initializePayment({ amount: Number(order.total), email: order.email, callback_url: orderLink(origin, order), order_id: id, order_number: order.order_number, attempt: 1 });
       await db.from('market_orders').update({ provider_reference: pay.reference, provider_fee: Math.max(0, Number(pay.amount) - Number(order.total)), amount_charged: Number(pay.amount) }).eq('id', id);
-      return respond({ mode, order_id: id, token: order.access_token, order_number: order.order_number, authorization_url: pay.authorization_url, amount: Number(pay.amount), fees: Math.max(0, Number(pay.amount) - Number(order.total)) });
+      return respond({ mode, order_id: id, token: order.access_token, order_number: order.order_number, authorization_url: pay.authorization_url, amount: Number(pay.amount), fees: Math.round(Math.max(0, Number(pay.amount) - Number(order.total)) * 100) / 100 });
     } catch (e) {
       await db.from('market_orders').update({ payment_status: 'failed', admin_note: 'Payment could not start' }).eq('id', id);
       return respond({ error: `Online payment could not start: ${e instanceof Error ? e.message : 'unknown error'}` }, 502);
