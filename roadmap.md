@@ -1,7 +1,8 @@
 # Requested upgrades
 - [x] Add admin Market products, variants, stock, order status and delivery settings.
 - [x] Replace homepage feature cards with recent products and a public shopping flow.
-- [ ] Connect BursaPay test checkout with server-verified prices, payments and stock. Blocked: official REST amount units, fee response, verification schema and credential-validation endpoint are not confirmed; securely connect a rotated key afterward. No payment calls implemented.
+- [x] BursaPay checkout (test key) with server verification, stock settlement, pay-on-delivery rules, 3-photo product pages, booking/status emails, payment mode & status in admin orders.
+- [ ] Switch to BursaPay live key when the owner has it (waits on owner).
 - [x] Verify admin product creation/photo upload, public shopping, unpaid guest order submission, totals, admin readback/cancellation and phone layout; pricing tests passed. Paid checkout and stock settlement await BursaPay documentation.
 - [x] Customer credit limits, payment tracking and individual styled SMTP reminders.
 - [x] Private batch document vault.
