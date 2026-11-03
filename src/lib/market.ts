@@ -12,7 +12,7 @@ export function variantOptions(category: string) { return category === 'broiler'
 export const unitLabel = (unit: string, n = 2) => unit === 'crate' ? (n === 1 ? 'crate' : 'crates') : unit === 'kg' ? (n === 1 ? 'bird' : 'birds') : (n === 1 ? 'animal' : 'animals');
 
 export type PodLine = { productName: string; allowPod: boolean; podMinQuantity: number; quantity: number };
-export type PodSettings = { enabled: boolean; maxTotal: number | null };
+export type PodSettings = { enabled: boolean; minTotal: number | null };
 /** Mirrors the server rule: returns reasons payment on delivery is not allowed (empty = allowed). */
 export function podBlockers(lines: PodLine[], total: number, s: PodSettings): string[] {
   const out: string[] = [];
@@ -21,10 +21,20 @@ export function podBlockers(lines: PodLine[], total: number, s: PodSettings): st
     if (!l.allowPod) out.push(`${l.productName} must be paid online.`);
     else if (l.quantity < l.podMinQuantity) out.push(`${l.productName}: payment on delivery needs at least ${l.podMinQuantity} units (you have ${l.quantity}).`);
   }
-  if (s.maxTotal !== null && total > s.maxTotal) out.push(`Orders above ${money(s.maxTotal)} must be paid online.`);
+  if (s.minTotal !== null && total < s.minTotal) out.push(`Payment on delivery is only for orders of ${money(s.minTotal)} or more. Your total is ${money(total)}, so please pay online.`);
   return out;
 }
 
+// Reuse signed URLs so the browser cache keeps images instead of re-downloading them on each refresh.
+const urlCache = new Map<string, { url: string; exp: number }>();
+async function signedImages(paths: string[]): Promise<string[]> {
+  const now = Date.now(); const missing = paths.filter(p => !(urlCache.get(p)?.exp! > now));
+  if (missing.length) {
+    const { data } = await supabase.storage.from('market-products').createSignedUrls(missing, 6 * 3600);
+    (data || []).forEach(d => { if (d.signedUrl && d.path) { urlCache.set(d.path, { url: d.signedUrl, exp: now + 5 * 3600 * 1000 }); const i = new Image(); i.src = d.signedUrl; } });
+  }
+  return paths.map(p => urlCache.get(p)?.url).filter(Boolean) as string[];
+}
 export async function loadMarket(admin = false): Promise<MarketProduct[]> {
   let query = supabase.from('market_products').select('*').order('created_at', { ascending: false });
   if (!admin) query = query.eq('active', true);
@@ -32,7 +42,7 @@ export async function loadMarket(admin = false): Promise<MarketProduct[]> {
   const { data: variants, error: ve } = await supabase.from('market_variants').select('*'); if (ve) throw ve;
   return Promise.all((data || []).map(async p => {
     const paths = p.image_paths?.length ? p.image_paths : p.image_path ? [p.image_path] : [];
-    const images = paths.length ? ((await supabase.storage.from('market-products').createSignedUrls(paths, 3600)).data || []).map(s => s.signedUrl).filter(Boolean) as string[] : [];
+    const images = await signedImages(paths);
     return { ...p, images, image: images[0], variants: (variants || []).filter(v => v.product_id === p.id && (admin || v.active)) };
   }));
 }
