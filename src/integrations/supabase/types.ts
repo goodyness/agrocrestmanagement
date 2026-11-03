@@ -3118,6 +3118,7 @@ export type Database = {
           id: number
           pod_enabled: boolean
           pod_max_total: number | null
+          pod_min_total: number | null
           pod_note: string
           updated_at: string
         }
@@ -3127,6 +3128,7 @@ export type Database = {
           id?: number
           pod_enabled?: boolean
           pod_max_total?: number | null
+          pod_min_total?: number | null
           pod_note?: string
           updated_at?: string
         }
@@ -3136,6 +3138,7 @@ export type Database = {
           id?: number
           pod_enabled?: boolean
           pod_max_total?: number | null
+          pod_min_total?: number | null
           pod_note?: string
           updated_at?: string
         }

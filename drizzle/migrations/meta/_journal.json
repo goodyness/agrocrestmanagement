@@ -43,6 +43,13 @@
       "when": 1793352799769,
       "tag": "0005_market_payments_pod_gallery",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793726996684,
+      "tag": "0006_market_pod_min_total",
+      "breakpoints": true
     }
   ]
 }
