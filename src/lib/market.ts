@@ -12,7 +12,7 @@ export function variantOptions(category: string) { return category === 'broiler'
 export const unitLabel = (unit: string, n = 2) => unit === 'crate' ? (n === 1 ? 'crate' : 'crates') : unit === 'kg' ? (n === 1 ? 'bird' : 'birds') : (n === 1 ? 'animal' : 'animals');
 
 export type PodLine = { productName: string; allowPod: boolean; podMinQuantity: number; quantity: number };
-export type PodSettings = { enabled: boolean; maxTotal: number | null };
+export type PodSettings = { enabled: boolean; minTotal: number | null };
 /** Mirrors the server rule: returns reasons payment on delivery is not allowed (empty = allowed). */
 export function podBlockers(lines: PodLine[], total: number, s: PodSettings): string[] {
   const out: string[] = [];
@@ -21,7 +21,7 @@ export function podBlockers(lines: PodLine[], total: number, s: PodSettings): st
     if (!l.allowPod) out.push(`${l.productName} must be paid online.`);
     else if (l.quantity < l.podMinQuantity) out.push(`${l.productName}: payment on delivery needs at least ${l.podMinQuantity} units (you have ${l.quantity}).`);
   }
-  if (s.maxTotal !== null && total > s.maxTotal) out.push(`Orders above ${money(s.maxTotal)} must be paid online.`);
+  if (s.minTotal !== null && total < s.minTotal) out.push(`Payment on delivery is only for orders of ${money(s.minTotal)} or more. Your total is ${money(total)}, so please pay online.`);
   return out;
 }
 
