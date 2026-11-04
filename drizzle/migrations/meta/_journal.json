@@ -50,6 +50,13 @@
       "when": 1793726996684,
       "tag": "0006_market_pod_min_total",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793783561070,
+      "tag": "0007_farm_manager_role",
+      "breakpoints": true
     }
   ]
 }

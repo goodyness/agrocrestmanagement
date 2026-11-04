@@ -5101,7 +5101,7 @@ export type Database = {
       recalc_batch_quantity: { Args: { _batch_id: string }; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "worker" | "partner"
+      app_role: "admin" | "worker" | "partner" | "farm_manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5229,7 +5229,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "worker", "partner"],
+      app_role: ["admin", "worker", "partner", "farm_manager"],
     },
   },
 } as const
