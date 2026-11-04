@@ -1,4 +1,7 @@
 # Requested upgrades
+- [ ] Fix raw HTML in admin order email and production shop image rendering.
+- [ ] Add admin Farm Managers creation/invitations and time-scoped read-only manager dashboard with own notes.
+- [ ] Verify manager isolation, notes, metrics, shop images and email formatting.
 - [x] Add admin Market products, variants, stock, order status and delivery settings.
 - [x] Replace homepage feature cards with recent products and a public shopping flow.
 - [x] BursaPay checkout (test key) with server verification, stock settlement, pay-on-delivery rules, 3-photo product pages, booking/status emails, payment mode & status in admin orders.
