@@ -57,6 +57,13 @@
       "when": 1793783561070,
       "tag": "0007_farm_manager_role",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793783613552,
+      "tag": "0008_manager_access_and_shop_images",
+      "breakpoints": true
     }
   ]
 }

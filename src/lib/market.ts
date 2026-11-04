@@ -28,9 +28,11 @@ export function podBlockers(lines: PodLine[], total: number, s: PodSettings): st
 // Reuse signed URLs so the browser cache keeps images instead of re-downloading them on each refresh.
 const urlCache = new Map<string, { url: string; exp: number }>();
 async function signedImages(paths: string[]): Promise<string[]> {
-  const now = Date.now(); const missing = paths.filter(p => !(urlCache.get(p)?.exp! > now));
+  const now = Date.now(); const missing = paths.filter(p => (urlCache.get(p)?.exp ?? 0) <= now);
   if (missing.length) {
-    const { data } = await supabase.storage.from('market-products').createSignedUrls(missing, 6 * 3600);
+    const { data, error } = await supabase.storage.from('market-products').createSignedUrls(missing, 6 * 3600);
+    if (error) throw error;
+    if (data?.some(d => d.error)) throw new Error('Unable to load product images. Please retry.');
     (data || []).forEach(d => { if (d.signedUrl && d.path) { urlCache.set(d.path, { url: d.signedUrl, exp: now + 5 * 3600 * 1000 }); const i = new Image(); i.src = d.signedUrl; } });
   }
   return paths.map(p => urlCache.get(p)?.url).filter(Boolean) as string[];

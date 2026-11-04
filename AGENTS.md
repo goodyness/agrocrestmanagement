@@ -4,4 +4,6 @@
 - QR codes link to an authenticated traceability page backed by a permission-checked summary function; a QR code grants no access.
 - Keep what-if calculations pure and separate from saved records so simulations never change actual production, expenses or profit.
 - Market catalog and guest orders are separate from operational farm sales; orders are created only by the market-checkout function, online orders count as paid only after server-side BursaPay verification, and fulfilment requires verified payment or an admin-allowed pay-on-delivery order, to prevent tampered totals and unpaid dispatch.
-- Market authorization uses protected user_roles and market_is_admin, never editable profile fields; product images use permission-gated signed storage URLs.
+- Market authorization uses protected user_roles and market_is_admin, never editable profile fields; product images use permission-gated signed storage URLs with storage object paths explicitly qualified in policies to avoid name-column shadowing.
+- Farm manager roles are assigned server-side in user_roles; farm_managers holds the immutable onboarding cutoff. Restrictive database policies enforce post-onboarding read-only operational records and block other farm data; manager_notes is owner-private.
+- SMTP subjects use RFC 2047 base64 encoded words without embedded newlines, because the existing mailer's quoted-printable subject wrapping corrupts MIME headers.

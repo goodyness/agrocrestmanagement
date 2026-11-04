@@ -2033,6 +2033,41 @@ export type Database = {
           },
         ]
       }
+      farm_managers: {
+        Row: {
+          active: boolean
+          created_by: string | null
+          onboarded_at: string
+          phone: string | null
+          preferences: string
+          profile_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_by?: string | null
+          onboarded_at?: string
+          phone?: string | null
+          preferences?: string
+          profile_id: string
+        }
+        Update: {
+          active?: boolean
+          created_by?: string | null
+          onboarded_at?: string
+          phone?: string | null
+          preferences?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_managers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       farm_tasks: {
         Row: {
           assigned_by: string | null
@@ -2996,6 +3031,41 @@ export type Database = {
             columns: ["equipment_id"]
             isOneToOne: false
             referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manager_notes: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          owner_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          owner_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          owner_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_notes_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -5083,7 +5153,9 @@ export type Database = {
       }
       increment_batch_ages: { Args: never; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
+      is_farm_manager: { Args: never; Returns: boolean }
       is_partner: { Args: never; Returns: boolean }
+      manager_can_read: { Args: { _created_at: string }; Returns: boolean }
       market_create_order:
         | { Args: { _customer: Json; _items: Json }; Returns: Json }
         | {

@@ -1,4 +1,5 @@
 import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
+import { mailSubject } from './mail-subject.ts';
 // deno-lint-ignore no-explicit-any
 type Db = any;
 export type Order = {
@@ -64,7 +65,7 @@ async function send(to: string, subject: string, html: string) {
   const client = new SMTPClient({ connection: { hostname: 'smtp.gmail.com', port: 465, tls: true, auth: { username: user, password: pass } } });
   // Collapse whitespace/newlines: multi-line HTML gets mangled by the mailer's encoding and shows as raw code.
   const flat = html.replace(/\s*\n\s*/g, ' ').replace(/>\s+</g, '><');
-  try { await client.send({ from: `Agrocrest Farm <${user}>`, to, subject, content: subject, html: flat }); } finally { await client.close(); }
+  try { await client.send({ from: `Agrocrest Farm <${user}>`, to, subject: mailSubject(subject), content: subject, html: flat }); } finally { await client.close(); }
 }
 
 export function orderLink(origin: string, o: Order) { return `${origin}/shop/order?id=${o.id}&token=${o.access_token}`; }
