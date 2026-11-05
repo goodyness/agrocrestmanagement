@@ -22,7 +22,7 @@ export type AdminTabKey =
   | "production" | "egg-grading" | "cracked-eggs" | "production-calendar"
   | "feed" | "inventory-plus" | "expected-stock"
   | "sales" | "expenses" | "finance" | "expected-profit" | "salary"
-  | "users" | "partners" | "withdrawals" | "complaints" | "reviews" | "suppliers" | "customers"
+  | "users" | "farm-managers" | "partners" | "withdrawals" | "complaints" | "reviews" | "suppliers" | "customers"
   | "cleaning" | "operations" | "balancing"
   | "reports" | "notes" | "ai-advisor" | "analytics" | "batch-compare" | "mortality-analytics" | "feed-recipes"
   | "branches" | "market";
@@ -83,6 +83,7 @@ const GROUPS: Group[] = [
     label: "People",
     items: [
       { key: "users", title: "Users", icon: UsersIcon },
+      { key: "farm-managers", title: "Farm Managers", icon: UsersIcon },
       { key: "partners", title: "Partners", icon: Handshake },
       { key: "withdrawals", title: "Withdrawals", icon: Wallet },
       { key: "complaints", title: "Complaints", icon: AlertTriangle },

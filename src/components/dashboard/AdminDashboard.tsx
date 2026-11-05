@@ -53,6 +53,7 @@ import MortalityCauseAnalytics from "./admin/MortalityCauseAnalytics";
 import FeedRecipesTab from "./admin/FeedRecipesTab";
 import ProductionCalendarTab from "./admin/ProductionCalendarTab";
 import MarketTab from "./admin/MarketTab";
+import FarmManagersTab from "./admin/FarmManagersTab";
 
 interface AdminDashboardProps {
   user: User | null;
@@ -65,7 +66,7 @@ const TAB_TITLES: Record<AdminTabKey, string> = {
   production: "Production", "egg-grading": "Egg Grading", "cracked-eggs": "Cracked Eggs",
   feed: "Feed", "inventory-plus": "Inventory+", "expected-stock": "Expected Stock",
   sales: "Sales", expenses: "Expenses", finance: "Finance", "expected-profit": "Expected Profit", salary: "Salary",
-  users: "Users", partners: "Partners", withdrawals: "Withdrawals", complaints: "Complaints", reviews: "Reviews", suppliers: "Suppliers", customers: "Customers",
+  users: "Users", "farm-managers": "Farm Managers", partners: "Partners", withdrawals: "Withdrawals", complaints: "Complaints", reviews: "Reviews", suppliers: "Suppliers", customers: "Customers",
   cleaning: "Cleaning", operations: "Operations", balancing: "Balancing",
   reports: "Reports", notes: "Notes", "ai-advisor": "AI Advisor", analytics: "Cost Analytics", "batch-compare": "Batch Comparison", "mortality-analytics": "Mortality Cause Analytics", "feed-recipes": "Feed Recipes",
   branches: "Branches",
@@ -116,6 +117,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
       case "salary": return <WorkerSalaryTab />;
       case "users": return <><UsersTab /><WorkerBranchAssignment /></>;
       case "partners": return <PartnersTab />;
+      case "farm-managers": return <FarmManagersTab />;
       case "withdrawals": return <PartnerWithdrawalsTab />;
       case "complaints": return <PartnerComplaintsTab />;
       case "reviews": return <WorkerReviewsTab />;

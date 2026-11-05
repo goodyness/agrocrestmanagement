@@ -5,6 +5,7 @@ import { Session, User } from "@supabase/supabase-js";
 import AdminDashboard from "@/components/dashboard/AdminDashboard";
 import WorkerDashboard from "@/components/dashboard/WorkerDashboard";
 import PartnerDashboard from "@/components/dashboard/PartnerDashboard";
+import FarmManagerDashboard from "@/components/dashboard/FarmManagerDashboard";
 import SuspensionOverlay from "@/components/dashboard/SuspensionOverlay";
 
 interface UserProfile {
@@ -33,10 +34,9 @@ const Dashboard = () => {
     });
 
     // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (!session) {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      if (!user) {
         navigate("/auth");
       }
     });
@@ -54,8 +54,9 @@ const Dashboard = () => {
           .eq("id", user.id)
           .single();
 
+        const { data: managerRole } = await supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'farm_manager').maybeSingle();
         if (!error && data) {
-          setUserProfile(data);
+          setUserProfile({ ...data, role: managerRole ? 'farm_manager' : data.role });
         }
         setLoading(false);
       };
@@ -85,6 +86,10 @@ const Dashboard = () => {
         suspendedAt={userProfile.suspended_at || new Date().toISOString()}
       />
     );
+  }
+
+  if (userProfile?.role === "farm_manager") {
+    return <FarmManagerDashboard user={user} />;
   }
 
   if (userProfile?.role === "admin") {
