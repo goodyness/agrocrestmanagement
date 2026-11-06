@@ -1,0 +1,1 @@
+ALTER POLICY manager_read_boundary ON public.mortality_records USING (NOT public.is_farm_manager() OR public.manager_can_read(created_at));

@@ -71,6 +71,13 @@
       "when": 1793952863112,
       "tag": "0009_manager_rpc_boundaries",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793953588449,
+      "tag": "0010_manager_post_onboarding_mortality",
+      "breakpoints": true
     }
   ]
 }

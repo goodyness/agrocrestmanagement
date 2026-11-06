@@ -8,6 +8,16 @@ describe('Manager scope and totals', () => {
   test('backdated entries are included only when created after onboarding', () => {
     expect(afterOnboarding([{ date: '2026-10-01', created_at: '2026-11-05T00:00:00Z' }], '2026-11-04T09:00:00Z')).toHaveLength(1);
   });
+  test('mortality respects the exact onboarding boundary, including backdated deaths', () => {
+    const deaths = [
+      { date: '2026-11-06', created_at: '2026-11-06T08:24:59Z', quantity_dead: 8 },
+      { date: '2026-11-06', created_at: '2026-11-06T08:25:00Z', quantity_dead: 2 },
+      { date: '2026-10-01', created_at: '2026-11-06T08:26:00Z', quantity_dead: 3 },
+    ];
+    const visible = afterOnboarding(deaths, '2026-11-06T08:25:00Z');
+    expect(visible).toEqual(deaths.slice(1));
+    expect(visible.reduce((total, row) => total + row.quantity_dead, 0)).toBe(5);
+  });
   test('crate and piece eggs include cracked eggs without inflating good eggs', () => {
     const result = managerMetrics([{ id: 'a', date: '2026-11-04', created_at: '', crates: 3, pieces: 4, cracked_pieces: 2 }], [], []);
     expect(result.eggs).toBe(96); expect(result.good).toBe(94); expect(result.cracked).toBe(2);
