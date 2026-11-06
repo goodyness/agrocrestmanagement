@@ -64,6 +64,13 @@
       "when": 1793783613552,
       "tag": "0008_manager_access_and_shop_images",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793952863112,
+      "tag": "0009_manager_rpc_boundaries",
+      "breakpoints": true
     }
   ]
 }
