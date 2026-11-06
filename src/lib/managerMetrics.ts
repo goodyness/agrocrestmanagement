@@ -1,6 +1,7 @@
 export type ManagerProduction = { id: string; date: string; created_at: string; crates: number; pieces: number; cracked_pieces?: number; egg_type?: string; comment?: string | null; notes?: string | null };
 export type ManagerSale = { id: string; date: string; created_at: string; product_name: string; quantity: number; unit: string; total_amount: number; buyer_name: string; payment_status: string | null };
 export type ManagerExpense = { id: string; date: string; created_at: string; expense_type: string; amount: number; description: string | null };
+export type ManagerMortality = { id: string; date: string; created_at: string; quantity_dead: number; reason: string; observation_notes: string | null; batch_id: string | null };
 export const afterOnboarding = <T extends { created_at: string }>(rows: T[], cutoff: string) => rows.filter(row => Date.parse(row.created_at) >= Date.parse(cutoff));
 export function managerMetrics(production: ManagerProduction[], sales: ManagerSale[], expenses: ManagerExpense[]) {
   let eggs = 0; let cracked = 0;

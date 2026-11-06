@@ -1,4 +1,5 @@
 # Requested upgrades
+- [ ] Add post-onboarding mortality records for managers and dedicated pages with a dismissible left menu and analytics home.
 - [x] Fix malformed order email headers; verify published shop images load.
 - [x] Add admin Farm Managers creation/invitations and time-scoped read-only manager dashboard with own notes.
 - [x] Verify metrics, MIME formatting regression, deployed access policies and published shop images.
